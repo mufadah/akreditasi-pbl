@@ -1,0 +1,10 @@
+{
+    "agents": [
+        "antigravity",
+        "cursor",
+        "copilot"
+    ],
+    "mcp": true,
+    "nightwatch": false,
+    "sail": false
+}
