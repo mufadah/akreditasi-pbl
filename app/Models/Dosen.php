@@ -6,12 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Dosen extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'dosen';
+
     protected $primaryKey = 'id_dosen';
+
     protected $guarded = ['id_dosen'];
 
     public function jabatanAkademik(): BelongsTo
