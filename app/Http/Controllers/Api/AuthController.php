@@ -6,27 +6,17 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Firebase\JWT\JWT;
 
-/**
- * Controller autentikasi kredensial pengguna dan penerbitan JSON Web Token (JWT).
- * Mengintegrasikan payload klaim peran (Role-Based Access Control) dan izin modular.
- */
 class AuthController extends Controller
 {
-    /**
-     * Memvalidasi kredensial pengguna dan menerbitkan Bearer Token JWT berbasis klaim peran.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function login(Request $request)
     {
-        // 1. Validasi masukan dasar: format email harus valid dan kata sandi wajib terisi
+        // Validasi masukan dasar: format email harus valid dan kata sandi wajib terisi
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required'
         ]);
 
-        // 2. Verifikasi kredensial akun administrator (pendekatan Dummy Auth untuk simulasi)
+        // Verifikasi kredensial akun administrator (pendekatan Dummy Auth untuk simulasi)
         if ($request->email !== 'admin@pbl.com' || $request->password !== 'password123') {
             return response()->json([
                 'success' => false,
@@ -36,7 +26,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // 3. Susun payload standar RFC 7519: penerbit (iss), waktu rilis (iat), kedaluwarsa (exp 1 jam), subjek, peran, dan hak akses
+        // Susun payload standar RFC 7519: penerbit, waktu rilis, kedaluwarsa, subjek, peran, dan hak akses
         $payload = [
             'iss'         => 'http://localhost:8000/api/auth/login',
             'iat'         => time(),
@@ -57,11 +47,11 @@ class AuthController extends Controller
             ]
         ];
 
-        // 4. Ambil kunci rahasia dari environment (.env) dan enkripsi payload menggunakan algoritma HMAC-SHA256 (HS256)
+        // Ambil kunci rahasia dari environment (.env) dan enkripsi payload menggunakan algoritma HMAC-SHA256 (HS256)
         $key = env('JWT_SECRET', 'secret-key-default');
         $jwt = JWT::encode($payload, $key, 'HS256');
 
-        // 5. Kembalikan respon 200 OK dengan format envelope terstandarisasi beserta token otorisasi Bearer
+        // Kembalikan respon 200 OK dengan format envelope terstandarisasi beserta token otorisasi Bearer
         return response()->json([
             'success' => true,
             'code'    => 200,
