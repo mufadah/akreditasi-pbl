@@ -10,13 +10,13 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        // Validasi masukan dasar: format email harus valid dan kata sandi wajib terisi
+        // Validasi input email dan password
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required'
         ]);
 
-        // Verifikasi kredensial akun administrator (pendekatan Dummy Auth untuk simulasi)
+        // Cek kecocokan email dan password admin
         if ($request->email !== 'admin@pbl.com' || $request->password !== 'password123') {
             return response()->json([
                 'success' => false,
@@ -26,7 +26,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Susun payload standar RFC 7519: penerbit, waktu rilis, kedaluwarsa, subjek, peran, dan hak akses
+        // Siapkan data payload JWT (info user, role, dan permission)
         $payload = [
             'iss'         => 'http://localhost:8000/api/auth/login',
             'iat'         => time(),
@@ -47,11 +47,11 @@ class AuthController extends Controller
             ]
         ];
 
-        // Ambil kunci rahasia dari environment (.env) dan enkripsi payload menggunakan algoritma HMAC-SHA256 (HS256)
+        // Generate token JWT pakai secret key
         $key = env('JWT_SECRET', 'secret-key-default');
         $jwt = JWT::encode($payload, $key, 'HS256');
 
-        // Kembalikan respon 200 OK dengan format envelope terstandarisasi beserta token otorisasi Bearer
+        // Kembalikan respon login berhasil beserta token
         return response()->json([
             'success' => true,
             'code'    => 200,

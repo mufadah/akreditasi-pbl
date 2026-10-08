@@ -14,21 +14,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Controller penyedia metrik analitik, agregasi data Tridharma, dan monitoring instrumen akreditasi.
- * Seluruh komputasi didorong ke level SQL database engine untuk mencegah memory exhaustion di PHP.
- */
 class StatistikController extends Controller
 {
-    /**
-     * Helper response standar: {success, code, message, data}
-     *
-     * @param  bool  $success
-     * @param  int  $code
-     * @param  string  $message
-     * @param  mixed  $data
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Helper format response JSON standar
     private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
     {
         return response()->json([
@@ -39,23 +27,19 @@ class StatistikController extends Controller
         ], $code);
     }
 
-    /**
-     * Menghitung demografi dosen, rasio keaktifan, sebaran jabatan, dan jenjang pendidikan via SQL agregat.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Statistik demografi, status, jabatan, dan jenjang pendidikan dosen
     public function dosenStatistik(): JsonResponse
     {
-        // 1. Hitung total seluruh dosen serta dosen dengan status 'Aktif' (mengecualikan soft-deleted secara otomatis)
+        // Hitung total seluruh dosen dan dosen yang aktif
         $totalDosen = Dosen::count();
         $totalAktif = Dosen::where('status_dosen', 'Aktif')->count();
 
-        // 2. Agregasi sebaran dosen per status kepegawaian menggunakan GROUP BY SQL
+        // Agregasi sebaran status kepegawaian
         $sebaranStatus = Dosen::select('status_dosen', DB::raw('count(*) as total'))
             ->groupBy('status_dosen')
             ->pluck('total', 'status_dosen');
 
-        // 3. Agregasi per jabatan akademik menggunakan withCount agar jabatan berkuota 0 tetap muncul dalam matriks akreditasi
+        // Agregasi sebaran jabatan akademik
         $sebaranJabatan = JabatanAkademik::withCount([
             'dosen' => fn ($q) => $q->whereNull('deleted_at'),
         ])
@@ -66,7 +50,7 @@ class StatistikController extends Controller
                 'total_dosen'  => $j->dosen_count,
             ]);
 
-        // 4. Agregasi per jenjang pendidikan tertinggi (S2, S3, dll.) via JOIN dengan filter soft deletes
+        // Agregasi sebaran jenjang pendidikan (S2, S3, dll.)
         $sebaranPendidikan = DB::table('dosen')
             ->join('pendidikan', 'dosen.id_pendidikan', '=', 'pendidikan.id_pendidikan')
             ->whereNull('dosen.deleted_at')
@@ -75,7 +59,6 @@ class StatistikController extends Controller
             ->orderBy('pendidikan.jenjang')
             ->get();
 
-        // 5. Kembalikan data metrik demografi dosen lengkap
         return $this->respond(true, 200, 'Statistik data dosen berhasil dihitung.', [
             'total_dosen'        => $totalDosen,
             'total_aktif'        => $totalAktif,
@@ -85,54 +68,48 @@ class StatistikController extends Controller
         ]);
     }
 
-    /**
-     * Merekapitulasi produktivitas Tridharma dengan pemisahan status menggunakan query cloning terisolasi.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Rekapitulasi kuantitas kegiatan Tridharma (penelitian, PKM, publikasi)
     public function tridharmaSummary(Request $request): JsonResponse
     {
-        // 1. Ekstrak dan validasi format query parameter tahun
+        // Validasi parameter tahun jika dikirimkan
         $tahun = $request->query('tahun');
 
         if ($tahun && ! is_numeric($tahun)) {
             return $this->respond(false, 422, 'Parameter tahun harus berupa angka 4 digit.');
         }
 
-        // 2. Siapkan query builder dasar untuk masing-masing pilar kegiatan Tridharma
+        // Query builder dasar untuk masing-masing bidang
         $penelitianQuery = Penelitian::query();
         $pkmQuery        = Pkm::query();
         $publikasiQuery  = Publikasi::query();
 
-        // 3. Terapkan filter tahun secara seragam jika parameter tahun dikirimkan
+        // Filter berdasarkan tahun jika ada
         if ($tahun) {
             $penelitianQuery->where('tahun', $tahun);
             $pkmQuery->where('tahun', $tahun);
             $publikasiQuery->where('tahun', $tahun);
         }
 
-        // 4. Komputasi kuantitas penelitian (total dan per status 'Berjalan'/'Selesai') menggunakan clone query builder
+        // Hitung total dan sebaran status penelitian
         $totalPenelitian    = (clone $penelitianQuery)->count();
         $penelitianByStatus = (clone $penelitianQuery)
             ->select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        // 5. Komputasi kuantitas PKM (total dan per status 'Berjalan'/'Selesai')
+        // Hitung total dan sebaran status PKM
         $totalPkm    = (clone $pkmQuery)->count();
         $pkmByStatus = (clone $pkmQuery)
             ->select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        // 6. Komputasi kuantitas publikasi ilmiah
+        // Hitung total publikasi ilmiah
         $totalPublikasi = (clone $publikasiQuery)->count();
 
-        // 7. Kalkulasi akumulasi grand total aktivitas Tridharma
+        // Hitung total keseluruhan kegiatan Tridharma
         $grandTotal = $totalPenelitian + $totalPkm + $totalPublikasi;
 
-        // 8. Sajikan respon rangkuman kegiatan
         return $this->respond(true, 200, 'Ringkasan kegiatan Tridharma berhasil dihitung.', [
             'filter_tahun' => $tahun ? (int) $tahun : null,
             'penelitian'   => [
@@ -158,22 +135,16 @@ class StatistikController extends Controller
         ]);
     }
 
-    /**
-     * Menyajikan daftar kemitraan yang masih aktif berbasis perbandingan sargable index tanggal selesai.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Ambil daftar kerja sama yang masih aktif (tanggal selesai >= hari ini)
     public function kerjasamaAktif(Request $request): JsonResponse
     {
-        // 1. Dapatkan tanggal hari ini (YYYY-MM-DD) sebagai acuan batas aktif
         $today = Carbon::today()->toDateString();
 
-        // 2. Query kerja sama aktif dengan eager loading mitra (sargable query memanfaatkan indeks B-Tree tanggal_selesai)
+        // Query kerja sama aktif dengan relasi mitra
         $query = KerjaSama::with('mitra')
             ->where('tanggal_selesai', '>=', $today);
 
-        // 3. Pencarian opsional berdasarkan judul dokumen atau nama instansi mitra
+        // Filter pencarian judul atau nama mitra
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('judul_kerja_sama', 'like', "%{$search}%")
@@ -183,14 +154,13 @@ class StatistikController extends Controller
             });
         }
 
-        // 4. Hitung total data aktif sebelum dilakukan limitasi per halaman
+        // Hitung total data kerja sama aktif
         $totalAktif = (clone $query)->count();
 
-        // 5. Paginasikan data dengan pengurutan tanggal selesai terdekat (ascending)
+        // Paginasi data berdasarkan tanggal selesai terdekat
         $perPage   = $request->integer('per_page', 10);
         $paginated = $query->orderBy('tanggal_selesai', 'asc')->paginate($perPage);
 
-        // 6. Kembalikan data daftar kerja sama aktif beserta total kuantitasnya
         return $this->respond(true, 200, 'Daftar kerja sama aktif berhasil diambil.', [
             'total_aktif' => $totalAktif,
             'kerjasama'   => $paginated,

@@ -7,44 +7,29 @@ use App\Models\Pendidikan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * Controller pengelolaan data master Jenjang Pendidikan Dosen dan Tendik.
- * Menyediakan referensi kualifikasi akademik (S2, S3, dsb.) untuk perhitungan indikator akreditasi.
- */
 class PendidikanController extends Controller
 {
-    /**
-     * Mengambil seluruh daftar master data jenjang pendidikan.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Ambil semua data jenjang pendidikan
     public function index(): JsonResponse
     {
-        // 1. Ambil seluruh record jenjang pendidikan dari database
         return response()->json([
             'success' => true,
             'data' => Pendidikan::all(),
         ]);
     }
 
-    /**
-     * Menyimpan data jenjang pendidikan baru dengan validasi keunikan nama jenjang.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Validation\ValidationException
-     */
+    // Tambah data jenjang pendidikan baru
     public function store(Request $request): JsonResponse
     {
-        // 1. Validasi: jenjang pendidikan wajib diisi, maksimal 50 karakter, dan tidak boleh duplikat
+        // Validasi nama jenjang wajib dan unik
         $validated = $request->validate([
             'jenjang' => 'required|string|max:50|unique:pendidikan,jenjang',
         ]);
 
-        // 2. Simpan record jenjang pendidikan baru
+        // Simpan ke database
         $pendidikan = Pendidikan::create($validated);
 
-        // 3. Kembalikan respon 201 Created
+        // Kembalikan respon sukses
         return response()->json([
             'success' => true,
             'message' => 'Jenjang pendidikan berhasil ditambahkan.',
@@ -52,53 +37,37 @@ class PendidikanController extends Controller
         ], 201);
     }
 
-    /**
-     * Menampilkan detail satu record jenjang pendidikan.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Ambil detail satu jenjang pendidikan
     public function show(int $id): JsonResponse
     {
-        // 1. Cari record jenjang pendidikan berdasarkan ID
         $pendidikan = Pendidikan::find($id);
 
-        // 2. Proteksi 404 jika ID tidak ditemukan
+        // Cek data ada atau tidak
         if (! $pendidikan) {
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
 
-        // 3. Kembalikan detail data jenjang pendidikan
         return response()->json(['success' => true, 'data' => $pendidikan]);
     }
 
-    /**
-     * Memperbarui nama jenjang pendidikan dengan mengabaikan ID aktif pada pengecekan unique.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Validation\ValidationException
-     */
+    // Update data jenjang pendidikan
     public function update(Request $request, int $id): JsonResponse
     {
-        // 1. Cari record jenjang pendidikan yang hendak diperbarui
         $pendidikan = Pendidikan::find($id);
 
-        // 2. Proteksi 404 jika record tidak ditemukan
+        // Cek data ada atau tidak
         if (! $pendidikan) {
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
 
-        // 3. Validasi keunikan jenjang dengan mengecualikan ID yang sedang diperbarui
+        // Validasi jenjang unik kecuali untuk id ini
         $validated = $request->validate([
             'jenjang' => 'required|string|max:50|unique:pendidikan,jenjang,'.$id.',id_pendidikan',
         ]);
 
-        // 4. Perbarui data di basis data
+        // Update data di database
         $pendidikan->update($validated);
 
-        // 5. Kembalikan respon sukses pembaruan data
         return response()->json([
             'success' => true,
             'message' => 'Jenjang pendidikan berhasil diperbarui.',
@@ -106,26 +75,19 @@ class PendidikanController extends Controller
         ]);
     }
 
-    /**
-     * Menghapus record jenjang pendidikan dari database.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
+    // Hapus data jenjang pendidikan
     public function destroy(int $id): JsonResponse
     {
-        // 1. Cari record jenjang pendidikan
         $pendidikan = Pendidikan::find($id);
 
-        // 2. Proteksi 404 jika record tidak ditemukan
+        // Cek data ada atau tidak
         if (! $pendidikan) {
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
 
-        // 3. Eksekusi penghapusan record
+        // Hapus dari database
         $pendidikan->delete();
 
-        // 4. Kembalikan respon konfirmasi penghapusan
         return response()->json([
             'success' => true,
             'message' => 'Jenjang pendidikan berhasil dihapus.',
