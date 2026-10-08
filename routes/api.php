@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PkmController;
 use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\PublikasiController;
+use App\Http\Controllers\Api\StatistikController;
 
 
 Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
@@ -41,4 +42,11 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('pkm', PkmController::class);
     Route::apiResource('kerja-sama', KerjaSamaController::class);
     Route::apiResource('publikasi', PublikasiController::class);
+    
+    // API V1: Endpoint Statistik & Agregasi Data
+    Route::prefix('v1')->middleware('jwt.role:ADMINISTRATOR')->group(function () {
+        Route::get('/dosen/statistik', [StatistikController::class, 'dosenStatistik']);
+        Route::get('/tridharma/summary', [StatistikController::class, 'tridharmaSummary']);
+        Route::get('/kerjasama/aktif', [StatistikController::class, 'kerjasamaAktif']);
+    });
 });
