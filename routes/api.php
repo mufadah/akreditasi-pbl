@@ -12,6 +12,10 @@ use App\Http\Controllers\Api\JenisPublikasiController;
 use App\Http\Controllers\Api\MitraController;
 use App\Http\Controllers\Api\PenelitianController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PkmController;
+use App\Http\Controllers\Api\KerjaSamaController;
+use App\Http\Controllers\Api\PublikasiController;
+
 
 Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
     return response()->json([
@@ -34,5 +38,7 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('jenis-publikasi', JenisPublikasiController::class);
     Route::apiResource('mitra', MitraController::class);
     Route::apiResource('penelitian', PenelitianController::class);
-
+    Route::apiResource('pkm', PkmController::class);
+    Route::apiResource('kerja-sama', KerjaSamaController::class);
+    Route::apiResource('publikasi', PublikasiController::class);
 });
