@@ -2,9 +2,11 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AktivitasKerjaSamaController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\BukuController;
 use App\Http\Controllers\Api\DosenController;
+use App\Http\Controllers\Api\EvidenceController;
 use App\Http\Controllers\Api\HkiController;
 use App\Http\Controllers\Api\JabatanAkademikController;
 use App\Http\Controllers\Api\PendidikanController;
@@ -47,6 +49,9 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('publikasi', PublikasiController::class);
     Route::apiResource('buku', BukuController::class);
     Route::apiResource('hki', HkiController::class);
+    Route::apiResource('evidence', EvidenceController::class);
+    Route::get('evidence/{id}/download', [EvidenceController::class, 'download']);
+    Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
     
     // API V1: Endpoint Statistik & Agregasi Data
     Route::prefix('v1')->middleware('jwt.role:ADMINISTRATOR')->group(function () {
