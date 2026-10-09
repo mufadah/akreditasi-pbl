@@ -63,6 +63,7 @@ class PublikasiController extends Controller
             'nama_jurnal'        => ['nullable', 'string', 'max:255'],
             'tahun'              => [...$req, 'integer', 'digits:4'],
             'tautan'             => ['nullable', 'string', 'max:255'],
+            'jumlah_sitasi'      => ['nullable', 'integer', 'min:0'],
         ];
     }
 

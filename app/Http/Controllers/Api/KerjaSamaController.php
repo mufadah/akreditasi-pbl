@@ -15,6 +15,8 @@ class KerjaSamaController extends Controller
     // Relasi yang selalu dimuat untuk mencegah N+1 query
     private array $relations = [
         'mitra',
+        'jenisKerjaSama',
+        'dosen',
     ];
 
     // Helper format response JSON standar
@@ -35,29 +37,36 @@ class KerjaSamaController extends Controller
 
         return [
             // Validasi mitra, judul, tingkat, bentuk kegiatan, dan tanggal
-            'id_mitra'          => [...$req, 'integer', Rule::exists('mitra', 'id_mitra')],
-            'judul_kerja_sama'  => [...$req, 'string', 'max:255'],
-            'tingkat'           => [...$req, 'string', 'max:100'],
-            'bentuk_kegiatan'   => [...$req, 'string', 'max:255'],
-            'tanggal_mulai'     => [...$req, 'date'],
-            'tanggal_selesai'   => [...$req, 'date', 'after_or_equal:tanggal_mulai'],
-            'bukti_dokumen'     => ['nullable', 'string', 'max:255'],
+            'id_mitra'            => [...$req, 'integer', Rule::exists('mitra', 'id_mitra')],
+            'id_jenis_kerjasama'  => ['nullable', 'integer', Rule::exists('jenis_kerja_sama', 'id_jenis_kerjasama')],
+            'id_dosen'            => ['nullable', 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
+            'judul_kerja_sama'    => [...$req, 'string', 'max:255'],
+            'tingkat'             => [...$req, 'string', 'max:100'],
+            'bentuk_kegiatan'     => [...$req, 'string', 'max:255'],
+            'tanggal_mulai'       => [...$req, 'date'],
+            'tanggal_selesai'     => [...$req, 'date', 'after_or_equal:tanggal_mulai'],
+            'bukti_dokumen'       => ['nullable', 'string', 'max:255'],
+            'nomor_dokumen'       => ['nullable', 'string', 'max:255'],
+            'jenis_dokumen'       => ['nullable', 'string', 'max:100'],
         ];
     }
 
     // Ambil daftar kerja sama dengan filter pencarian
     public function index(Request $request): JsonResponse
     {
-        // Query dengan relasi mitra
+        // Query dengan relasi mitra, jenis kerja sama, dan dosen
         $query = KerjaSama::with($this->relations);
 
-        // Filter pencarian judul kerja sama
+        // Filter pencarian judul atau nomor dokumen kerja sama
         if ($search = $request->query('search')) {
-            $query->where('judul_kerja_sama', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('judul_kerja_sama', 'like', "%{$search}%")
+                  ->orWhere('nomor_dokumen', 'like', "%{$search}%");
+            });
         }
 
-        // Filter berdasarkan mitra dan tingkat
-        foreach (['id_mitra', 'tingkat'] as $filter) {
+        // Filter berdasarkan mitra, tingkat, jenis kerja sama, dan dosen
+        foreach (['id_mitra', 'tingkat', 'id_jenis_kerjasama', 'id_dosen'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->query($filter));
             }
@@ -93,7 +102,7 @@ class KerjaSamaController extends Controller
         return $this->respond(true, 201, 'Data kerja sama berhasil ditambahkan.', $kerjaSama->load($this->relations));
     }
 
-    // Ambil detail satu kerja sama beserta profil mitra
+    // Ambil detail satu kerja sama beserta profil mitra, jenis, dan dosen
     public function show(int $id): JsonResponse
     {
         $kerjaSama = KerjaSama::with($this->relations)->find($id);
