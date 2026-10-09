@@ -3,7 +3,9 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\BidangKeahlianController;
+use App\Http\Controllers\Api\BukuController;
 use App\Http\Controllers\Api\DosenController;
+use App\Http\Controllers\Api\HkiController;
 use App\Http\Controllers\Api\JabatanAkademikController;
 use App\Http\Controllers\Api\PendidikanController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
@@ -17,7 +19,6 @@ use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\PublikasiController;
 use App\Http\Controllers\Api\StatistikController;
 
-
 Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
     return response()->json([
         'status'    => 'OK',
@@ -25,7 +26,9 @@ Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
         'auth_user' => $request->input('auth_user'),
     ]);
 });
+
 Route::post('/login', [AuthController::class, 'login']);
+
 Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::post('/dosen/import', [DosenController::class, 'importExcel']);
     Route::post('/dosen/{id}/restore', [DosenController::class, 'restore']);
@@ -42,6 +45,8 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('pkm', PkmController::class);
     Route::apiResource('kerja-sama', KerjaSamaController::class);
     Route::apiResource('publikasi', PublikasiController::class);
+    Route::apiResource('buku', BukuController::class);
+    Route::apiResource('hki', HkiController::class);
     
     // API V1: Endpoint Statistik & Agregasi Data
     Route::prefix('v1')->middleware('jwt.role:ADMINISTRATOR')->group(function () {
