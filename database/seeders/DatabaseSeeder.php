@@ -69,5 +69,12 @@ class DatabaseSeeder extends Seeder
 
         // 5. Tahun Akademik
         TahunAkademik::firstOrCreate(['tahun_akademik' => 2025]);
+
+        // 6. Master Data Baru (Revisi ERD)
+        $this->call([
+            JenisHkiSeeder::class,
+            JenisPkmSeeder::class,
+            JenisKerjaSamaSeeder::class,
+        ]);
     }
 }
