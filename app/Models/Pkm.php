@@ -33,4 +33,19 @@ class Pkm extends Model
     {
         return $this->hasMany(Publikasi::class, 'id_pkm', 'id_pkm');
     }
+
+    public function jenisPkm(): BelongsTo
+    {
+        return $this->belongsTo(JenisPkm::class, 'id_jenis_pkm', 'id_jenis_pkm');
+    }
+
+    public function anggota(): HasMany
+    {
+        return $this->hasMany(AnggotaPkm::class, 'id_pkm', 'id_pkm');
+    }
+
+    public function anggotaPkm(): HasMany
+    {
+        return $this->hasMany(AnggotaPkm::class, 'id_pkm', 'id_pkm');
+    }
 }
