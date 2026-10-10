@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Penelitian;
+use App\Services\K1ApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +27,9 @@ class PenelitianController extends Controller
     {
         return response()->json([
             'success' => $success,
-            'code'    => $code,
+            'code' => $code,
             'message' => $message,
-            'data'    => $data,
+            'data' => $data,
         ], $code);
     }
 
@@ -39,29 +40,29 @@ class PenelitianController extends Controller
 
         return [
             // Validasi data utama penelitian
-            'id_dosen'            => [$req, 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
+            'id_dosen' => [$req, 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
             'id_jenis_penelitian' => [$req, 'integer', Rule::exists('jenis_penelitian', 'id_jenis_penelitian')],
-            'id_tahun_akademik'   => [$req, 'integer', Rule::exists('tahun_akademik', 'id_tahun_akademik')],
-            'judul_penelitian'    => "{$req}|string|max:255",
-            'tahun'               => "{$req}|integer|digits:4",
-            'status'              => 'sometimes|string|in:Berjalan,Selesai',
+            'id_tahun_akademik' => [$req, 'integer', Rule::exists('tahun_akademik', 'id_tahun_akademik')],
+            'judul_penelitian' => "{$req}|string|max:255",
+            'tahun' => "{$req}|integer|digits:4",
+            'status' => 'sometimes|string|in:Berjalan,Selesai',
 
             // Validasi anggota penelitian (opsional)
-            'anggota'                 => 'sometimes|array',
+            'anggota' => 'sometimes|array',
             'anggota.*.jenis_anggota' => 'required_with:anggota|string|in:Dosen,Mahasiswa',
-            'anggota.*.id_dosen'      => [
+            'anggota.*.id_dosen' => [
                 'nullable',
                 'required_if:anggota.*.jenis_anggota,Dosen',
                 'integer',
                 Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at'),
             ],
-            'anggota.*.mahasiswa'     => 'nullable|required_if:anggota.*.jenis_anggota,Mahasiswa|string|max:255',
+            'anggota.*.mahasiswa' => 'nullable|required_if:anggota.*.jenis_anggota,Mahasiswa|string|max:255',
 
             // Validasi pendanaan penelitian (opsional)
-            'pendanaan'               => 'sometimes|array',
+            'pendanaan' => 'sometimes|array',
             'pendanaan.*.sumber_dana' => 'required_with:pendanaan|string|max:255',
-            'pendanaan.*.nominal'     => 'required_with:pendanaan|numeric|min:0',
-            'pendanaan.*.tahun'       => 'required_with:pendanaan|integer|digits:4',
+            'pendanaan.*.nominal' => 'required_with:pendanaan|numeric|min:0',
+            'pendanaan.*.tahun' => 'required_with:pendanaan|integer|digits:4',
         ];
     }
 
@@ -99,7 +100,18 @@ class PenelitianController extends Controller
         }
 
         $validated = $validator->validated();
+        // VALIDASI NIM MAHASISWA VIA API K1 (Tugas 1)
+        if (! empty($validated['anggota'])) {
+            $k1Service = app(K1ApiService::class);
 
+            foreach ($validated['anggota'] as $anggota) {
+                if (($anggota['jenis_anggota'] ?? '') === 'Mahasiswa' && ! empty($anggota['mahasiswa'])) {
+                    if (! $k1Service->validateNim($anggota['mahasiswa'])) {
+                        return $this->respond(false, 422, "NIM Tidak Valid: Mahasiswa dengan NIM '{$anggota['mahasiswa']}' tidak ditemukan atau tidak aktif di sistem K1.");
+                    }
+                }
+            }
+        }
         try {
             // Bungkus dalam transaksi database agar tersimpan utuh
             $penelitian = DB::transaction(function () use ($validated) {
@@ -121,7 +133,7 @@ class PenelitianController extends Controller
                 return $penelitian;
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menyimpan data penelitian: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal menyimpan data penelitian: '.$e->getMessage());
         }
 
         return $this->respond(true, 201, 'Data penelitian berhasil ditambahkan.', $penelitian->load($this->relations));
@@ -158,6 +170,18 @@ class PenelitianController extends Controller
         }
 
         $validated = $validator->validated();
+        // VALIDASI NIM MAHASISWA VIA API K1 (Tugas 1)
+        if (! empty($validated['anggota'])) {
+            $k1Service = app(K1ApiService::class);
+
+            foreach ($validated['anggota'] as $anggota) {
+                if (($anggota['jenis_anggota'] ?? '') === 'Mahasiswa' && ! empty($anggota['mahasiswa'])) {
+                    if (! $k1Service->validateNim($anggota['mahasiswa'])) {
+                        return $this->respond(false, 422, "NIM Tidak Valid: Mahasiswa dengan NIM '{$anggota['mahasiswa']}' tidak ditemukan atau tidak aktif di sistem K1.");
+                    }
+                }
+            }
+        }
 
         try {
             // Update dalam transaksi database
@@ -180,7 +204,7 @@ class PenelitianController extends Controller
                 }
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal memperbarui data penelitian: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal memperbarui data penelitian: '.$e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data penelitian berhasil diperbarui.', $penelitian->fresh($this->relations));

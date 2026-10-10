@@ -50,3 +50,25 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
         Route::get('/kerjasama/aktif', [StatistikController::class, 'kerjasamaAktif']);
     });
 });
+
+    // Endpoint Interoperabilitas: Validasi NIM Mahasiswa via API K1
+    Route::post('/k1/validasi-nim', function (\Illuminate\Http\Request $request, \App\Services\K1ApiService $k1) {
+        $request->validate(['nim' => 'required|string']);
+        $isValid = $k1->validateNim($request->input('nim'));
+
+        if (!$isValid) {
+            return response()->json([
+                'success' => false,
+                'code'    => 422,
+                'message' => "NIM Tidak Valid: '{$request->input('nim')}' tidak terdaftar di sistem K1.",
+                'data'    => ['valid' => false]
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'code'    => 200,
+            'message' => 'NIM valid dan aktif di sistem K1.',
+            'data'    => ['valid' => true, 'nim' => $request->input('nim')]
+        ], 200);
+    });

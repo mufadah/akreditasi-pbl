@@ -23,54 +23,34 @@ class K1ApiService
     {
         $cleanNim = trim($nim);
 
-        // Jika URL K1 belum dikonfigurasi di .env, gunakan fallback pola NIM
-        if (empty($this->baseUrl)) {
-            // Standar NIM valid: panjang 8-15 digit numerik
-            return (bool) preg_match('/^[0-9]{8,15}$/', $cleanNim);
+        // Jika string kosong, langsung tidak valid
+        if (empty($cleanNim)) {
+            return false;
         }
 
-        try {
-            $response = Http::timeout(5)
-                ->withHeaders(['X-API-KEY' => $this->apiKey])
-                ->get("{$this->baseUrl}/mahasiswa/{$cleanNim}/check");
+        // 1. Jika URL server K1 sudah ada di .env, tembak API K1 secara riil
+        if (!empty($this->baseUrl)) {
+            try {
+                $response = Http::timeout(5)
+                    ->withHeaders(['X-API-KEY' => $this->apiKey])
+                    ->get("{$this->baseUrl}/mahasiswa/{$cleanNim}/check");
 
-            if ($response->successful()) {
-                return (bool) ($response->json('is_active') ?? true);
+                if ($response->successful()) {
+                    return (bool) ($response->json('is_active') ?? $response->json('valid') ?? true);
+                }
+
+                // Jika server K1 merespon 404 (Mahasiswa tidak ditemukan)
+                if ($response->status() === 404) {
+                    return false;
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Gagal menghubungi API K1 untuk NIM {$cleanNim}: " . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            Log::warning("Gagal menghubungi API K1 untuk validasi NIM: {$cleanNim}. Error: {$e->getMessage()}");
         }
 
-        // Fallback jika API K1 tidak merespon saat testing
-        return (bool) preg_match('/^[0-9]{8,15}$/', $cleanNim);
-    }
-
-    /**
-     * Ambil statistik mahasiswa untuk perhitungan rasio dosen:mahasiswa di Dashboard.
-     */
-    public function getStatistikMahasiswa(array $params = []): ?array
-    {
-        if (empty($this->baseUrl)) {
-            // Mock data saat offline
-            return [
-                'total_mahasiswa' => 450,
-                'prodi' => 'Teknik Informatika',
-                'tahun_akademik' => '2025/2026',
-            ];
-        }
-
-        try {
-            $response = Http::timeout(5)
-                ->withHeaders(['X-API-KEY' => $this->apiKey])
-                ->get("{$this->baseUrl}/statistik/mahasiswa", $params);
-
-            if ($response->successful()) {
-                return $response->json('data');
-            }
-        } catch (\Throwable $e) {
-            Log::warning("Gagal mengambil statistik mahasiswa dari API K1: {$e->getMessage()}");
-        }
-
-        return null;
+        // 2. Fallback cerdas saat offline / pengujian lokal mandiri:
+        // Standar format NIM di kampus: panjang 8 s/d 14 digit angka murni
+        // (Contoh: '3312301045' -> valid, 'abc' atau '123' -> tidak valid)
+        return (bool) preg_match('/^[0-9]{8,14}$/', $cleanNim);
     }
 }
