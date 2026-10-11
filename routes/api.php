@@ -1,32 +1,36 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\DosenController;
+use App\Http\Controllers\Api\EvidenceController;
 use App\Http\Controllers\Api\JabatanAkademikController;
-use App\Http\Controllers\Api\PendidikanController;
-use App\Http\Controllers\Api\TenagaKependidikanController;
 use App\Http\Controllers\Api\JenisPenelitianController;
 use App\Http\Controllers\Api\JenisPublikasiController;
-use App\Http\Controllers\Api\MitraController;
-use App\Http\Controllers\Api\PenelitianController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\PkmController;
 use App\Http\Controllers\Api\KerjaSamaController;
+use App\Http\Controllers\Api\MitraController;
+use App\Http\Controllers\Api\PendidikanController;
+use App\Http\Controllers\Api\PenelitianController;
+use App\Http\Controllers\Api\PkmController;
 use App\Http\Controllers\Api\PublikasiController;
 use App\Http\Controllers\Api\StatistikController;
-
+use App\Http\Controllers\Api\TenagaKependidikanController;
+use App\Services\K1ApiService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
     return response()->json([
-        'status'    => 'OK',
-        'message'   => 'Middleware berhasil membaca token!',
+        'status' => 'OK',
+        'message' => 'Middleware berhasil membaca token!',
         'auth_user' => $request->input('auth_user'),
     ]);
 });
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
+    Route::get('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'getAktivitas']);
+    Route::post('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'storeAktivitas']);
+    Route::post('/kerja-sama/{id}/perpanjang', [KerjaSamaController::class, 'perpanjang']);
     Route::post('/dosen/import', [DosenController::class, 'importExcel']);
     Route::post('/dosen/{id}/restore', [DosenController::class, 'restore']);
     Route::apiResource('dosen', DosenController::class);
@@ -42,33 +46,37 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('pkm', PkmController::class);
     Route::apiResource('kerja-sama', KerjaSamaController::class);
     Route::apiResource('publikasi', PublikasiController::class);
-    
+    Route::post('/evidence/{id}/validasi', [EvidenceController::class, 'validasi']);
+    Route::post('/evidence/{id}/ganti-link', [EvidenceController::class, 'gantiLink']);
+    Route::apiResource('evidence', EvidenceController::class);
+
     // API V1: Endpoint Statistik & Agregasi Data
     Route::prefix('v1')->middleware('jwt.role:ADMINISTRATOR')->group(function () {
         Route::get('/dosen/statistik', [StatistikController::class, 'dosenStatistik']);
         Route::get('/tridharma/summary', [StatistikController::class, 'tridharmaSummary']);
         Route::get('/kerjasama/aktif', [StatistikController::class, 'kerjasamaAktif']);
+
     });
 });
 
-    // Endpoint Interoperabilitas: Validasi NIM Mahasiswa via API K1
-    Route::post('/k1/validasi-nim', function (\Illuminate\Http\Request $request, \App\Services\K1ApiService $k1) {
-        $request->validate(['nim' => 'required|string']);
-        $isValid = $k1->validateNim($request->input('nim'));
+// Endpoint Interoperabilitas: Validasi NIM Mahasiswa via API K1
+Route::post('/k1/validasi-nim', function (Request $request, K1ApiService $k1) {
+    $request->validate(['nim' => 'required|string']);
+    $isValid = $k1->validateNim($request->input('nim'));
 
-        if (!$isValid) {
-            return response()->json([
-                'success' => false,
-                'code'    => 422,
-                'message' => "NIM Tidak Valid: '{$request->input('nim')}' tidak terdaftar di sistem K1.",
-                'data'    => ['valid' => false]
-            ], 422);
-        }
-
+    if (! $isValid) {
         return response()->json([
-            'success' => true,
-            'code'    => 200,
-            'message' => 'NIM valid dan aktif di sistem K1.',
-            'data'    => ['valid' => true, 'nim' => $request->input('nim')]
-        ], 200);
-    });
+            'success' => false,
+            'code' => 422,
+            'message' => "NIM Tidak Valid: '{$request->input('nim')}' tidak terdaftar di sistem K1.",
+            'data' => ['valid' => false],
+        ], 422);
+    }
+
+    return response()->json([
+        'success' => true,
+        'code' => 200,
+        'message' => 'NIM valid dan aktif di sistem K1.',
+        'data' => ['valid' => true, 'nim' => $request->input('nim')],
+    ], 200);
+});
