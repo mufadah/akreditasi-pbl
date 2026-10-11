@@ -55,6 +55,11 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
         Route::get('/dosen/statistik', [StatistikController::class, 'dosenStatistik']);
         Route::get('/tridharma/summary', [StatistikController::class, 'tridharmaSummary']);
         Route::get('/kerjasama/aktif', [StatistikController::class, 'kerjasamaAktif']);
+        // Rute Dashboard & 4 Tab Analitik (Tugas 7, 8, 10)
+        Route::get('/dashboard', [StatistikController::class, 'dashboard']);
+        Route::get('/rasio-dosen-mahasiswa', [StatistikController::class, 'rasioDosenMahasiswa']);
+        Route::get('/produktivitas-dosen', [StatistikController::class, 'produktivitasDosen']);
+        Route::get('/tren-tridharma', [StatistikController::class, 'trenTriDharma']);
 
     });
 });

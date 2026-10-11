@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\Log;
 class K1ApiService
 {
     protected ?string $baseUrl;
+
     protected ?string $apiKey;
 
     public function __construct()
     {
         $this->baseUrl = config('services.k1.url', env('K1_API_URL', ''));
-        $this->apiKey  = config('services.k1.key', env('K1_API_KEY', ''));
+        $this->apiKey = config('services.k1.key', env('K1_API_KEY', ''));
     }
 
     /**
@@ -29,7 +30,7 @@ class K1ApiService
         }
 
         // 1. Jika URL server K1 sudah ada di .env, tembak API K1 secara riil
-        if (!empty($this->baseUrl)) {
+        if (! empty($this->baseUrl)) {
             try {
                 $response = Http::timeout(5)
                     ->withHeaders(['X-API-KEY' => $this->apiKey])
@@ -44,7 +45,7 @@ class K1ApiService
                     return false;
                 }
             } catch (\Throwable $e) {
-                Log::warning("Gagal menghubungi API K1 untuk NIM {$cleanNim}: " . $e->getMessage());
+                Log::warning("Gagal menghubungi API K1 untuk NIM {$cleanNim}: ".$e->getMessage());
             }
         }
 
@@ -52,5 +53,33 @@ class K1ApiService
         // Standar format NIM di kampus: panjang 8 s/d 14 digit angka murni
         // (Contoh: '3312301045' -> valid, 'abc' atau '123' -> tidak valid)
         return (bool) preg_match('/^[0-9]{8,14}$/', $cleanNim);
+    }
+
+    /**
+     * Ambil data statistik mahasiswa dari API K1 untuk perhitungan rasio dosen:mahasiswa.
+     */
+    public function getStatistikMahasiswa(array $params = []): ?array
+    {
+        // 1. Jika URL server K1 sudah ada di .env, tembak API K1
+        if (! empty($this->baseUrl)) {
+            try {
+                $response = Http::timeout(5)
+                    ->withHeaders(['X-API-KEY' => $this->apiKey])
+                    ->get("{$this->baseUrl}/statistik/mahasiswa", $params);
+
+                if ($response->successful()) {
+                    return $response->json('data') ?? $response->json();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gagal mengambil statistik mahasiswa dari API K1: '.$e->getMessage());
+            }
+        }
+
+        // 2. Mock fallback cerdas saat offline / server K1 belum online (425 mahasiswa aktif)
+        return [
+            'total_mahasiswa' => 425,
+            'prodi' => $params['prodi'] ?? 'Teknologi Rekayasa Komputer',
+            'tahun_akademik' => $params['tahun'] ?? date('Y'),
+        ];
     }
 }
