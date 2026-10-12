@@ -42,4 +42,9 @@ class Dosen extends Model
     {
         return $this->hasMany(Pkm::class, 'id_dosen', 'id_dosen');
     }
+
+    public function publikasi(): HasMany
+    {
+        return $this->hasMany(Publikasi::class, 'id_dosen', 'id_dosen');
+    }
 }

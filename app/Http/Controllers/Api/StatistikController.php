@@ -186,8 +186,11 @@ class StatistikController extends Controller
 
         if ($totalMahasiswa !== null && $totalDtps > 0) {
             $rasio = round($totalMahasiswa / $totalDtps, 2);
+            $statusRasio = 'Tersedia';
+        } elseif ($totalDtps === 0) {
+            $statusRasio = 'Peringatan: Belum ada data Dosen DTPS di database untuk menghitung rasio.';
         } else {
-            $statusPeringatan = 'Peringatan: Data mahasiswa dari API K1 belum tersedia untuk kalkulasi rasio.';
+            $statusRasio = 'Peringatan: Data mahasiswa dari API K1 belum tersedia.';
         }
 
         // Sebaran Jabatan Akademik
@@ -205,7 +208,7 @@ class StatistikController extends Controller
             'total_dtps' => $totalDtps,
             'total_dosen_aktif' => $totalDosenAktif,
             'rasio_dosen_mahasiswa' => $rasio,
-            'status_rasio' => $rasio !== null ? 'Tersedia' : $statusPeringatan,
+            'status_rasio' => $statusRasio,
             'sebaran_jabatan' => $sebaranJabatan,
         ]);
     }
@@ -264,7 +267,6 @@ class StatistikController extends Controller
         ]);
     }
 
-    // TUGAS 10: Analitik Tren Multi-Tahun TS s/d TS-n
     public function trenTriDharma(Request $request): JsonResponse
     {
         $ts = (int) $request->query('ts', date('Y'));
