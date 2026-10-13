@@ -14,6 +14,24 @@ use Illuminate\Validation\Rule;
 
 class KerjaSamaController extends Controller
 {
+    // Relasi yang selalu dimuat untuk mencegah N+1 query
+    private array $relations = [
+        'mitra',
+        'jenisKerjaSama',
+        'dosen',
+    ];
+
+    // Helper format response JSON standar
+    private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
+    {
+        return response()->json([
+            'success' => $success,
+            'code' => $code,
+            'message' => $message,
+            'data' => $data,
+        ], $code);
+    }
+
     // Ambil daftar aktivitas implementasi dari satu kerja sama
     public function getAktivitas(int $id): JsonResponse
     {
@@ -49,7 +67,7 @@ class KerjaSamaController extends Controller
         }
 
         $validated = $validator->validated();
-        $validated['id_kerja_sama'] = $id;
+        $validated['id_kerjasama'] = $id;
 
         $aktivitas = AktivitasKerjaSama::create($validated);
 
@@ -84,7 +102,7 @@ class KerjaSamaController extends Controller
 
         // Catat aktivitas perpanjangan otomatis
         AktivitasKerjaSama::create([
-            'id_kerja_sama' => $id,
+            'id_kerjasama' => $id,
             'judul_aktivitas' => 'Perpanjangan Masa Berlaku Kerja Sama',
             'tanggal_pelaksanaan' => now()->toDateString(),
             'deskripsi' => 'Diperpanjang dari '.$oldDate.' sampai '.$request->input('tanggal_selesai_baru').'. '.($request->input('keterangan') ?? ''),
@@ -95,59 +113,42 @@ class KerjaSamaController extends Controller
         return $this->respond(true, 200, 'Masa berlaku kerja sama berhasil diperpanjang.', $kerjaSama->fresh($this->relations));
     }
 
-    // Relasi yang selalu dimuat untuk mencegah N+1 query
-    private array $relations = [
-        'mitra',
-    ];
-
-    // Helper format response JSON standar
-    private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
-    {
-        return response()->json([
-            'success' => $success,
-            'code' => $code,
-            'message' => $message,
-            'data' => $data,
-        ], $code);
-    }
-
     // Aturan validasi data kerja sama
     private function rules(bool $isUpdate = false): array
     {
         $req = $isUpdate ? ['sometimes', 'required'] : ['required'];
 
         return [
-            // Validasi mitra, judul, tingkat, bentuk kegiatan, dan tanggal
             'id_mitra' => [...$req, 'integer', Rule::exists('mitra', 'id_mitra')],
-            'judul_kerja_sama' => [...$req, 'string', 'max:255'],
-            'tingkat' => [...$req, 'string', 'max:100'],
-            'bentuk_kegiatan' => [...$req, 'string', 'max:255'],
+            'id_jenis_kerjasama' => [...$req, 'integer', Rule::exists('jenis_kerja_sama', 'id_jenis_kerjasama')],
+            'id_dosen' => [...$req, 'integer', Rule::exists('dosen', 'id_dosen')],
+            'nomor_dokumen' => [...$req, 'string', 'max:255'],
+            'jenis_dokumen' => [...$req, 'string', 'max:100'],
             'tanggal_mulai' => [...$req, 'date'],
-            'tanggal_selesai' => [...$req, 'date', 'after_or_equal:tanggal_mulai'],
-            'bukti_dokumen' => ['nullable', 'string', 'max:255'],
+            'tanggal_selesai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+            'status' => ['nullable', 'string', 'max:50'],
         ];
     }
 
     // Ambil daftar kerja sama dengan filter pencarian
     public function index(Request $request): JsonResponse
     {
-        // Query dengan relasi mitra
         $query = KerjaSama::with($this->relations);
 
-        // Filter pencarian judul kerja sama
         if ($search = $request->query('search')) {
-            $query->where('judul_kerja_sama', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('nomor_dokumen', 'like', "%{$search}%")
+                  ->orWhere('jenis_dokumen', 'like', "%{$search}%");
+            });
         }
 
-        // Filter berdasarkan mitra dan tingkat
-        foreach (['id_mitra', 'tingkat'] as $filter) {
+        foreach (['id_mitra', 'id_jenis_kerjasama', 'id_dosen', 'status'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->query($filter));
             }
         }
 
-        // Paginasi data 10 per halaman
-        $kerjaSama = $query->latest()->paginate($request->integer('per_page', 10));
+        $kerjaSama = $query->latest('id_kerjasama')->paginate($request->integer('per_page', 10));
 
         return $this->respond(true, 200, 'Data kerja sama berhasil diambil.', $kerjaSama);
     }
@@ -155,7 +156,6 @@ class KerjaSamaController extends Controller
     // Tambah data kerja sama baru
     public function store(Request $request): JsonResponse
     {
-        // Validasi input data
         $validator = Validator::make($request->all(), $this->rules());
 
         if ($validator->fails()) {
@@ -165,10 +165,10 @@ class KerjaSamaController extends Controller
         $validated = $validator->validated();
 
         try {
-            // Simpan data dalam transaksi DB
             $kerjaSama = DB::transaction(function () use ($validated) {
                 return KerjaSama::create($validated);
             });
+            AuditLogService::log('CREATE', 'KerjaSama', $kerjaSama->id_kerjasama, null, $kerjaSama->toArray());
         } catch (\Throwable $e) {
             return $this->respond(false, 500, 'Gagal menyimpan data kerja sama: '.$e->getMessage());
         }
@@ -181,7 +181,6 @@ class KerjaSamaController extends Controller
     {
         $kerjaSama = KerjaSama::with($this->relations)->find($id);
 
-        // Cek data ada atau tidak
         if (! $kerjaSama) {
             return $this->respond(false, 404, 'Data kerja sama tidak ditemukan.');
         }
@@ -194,12 +193,10 @@ class KerjaSamaController extends Controller
     {
         $kerjaSama = KerjaSama::find($id);
 
-        // Cek data ada atau tidak
         if (! $kerjaSama) {
             return $this->respond(false, 404, 'Data kerja sama tidak ditemukan.');
         }
 
-        // Validasi input update parsial
         $validator = Validator::make($request->all(), $this->rules(true));
 
         if ($validator->fails()) {
@@ -207,12 +204,13 @@ class KerjaSamaController extends Controller
         }
 
         $validated = $validator->validated();
+        $oldValues = $kerjaSama->toArray();
 
         try {
-            // Update data dalam transaksi DB
             DB::transaction(function () use ($kerjaSama, $validated) {
                 $kerjaSama->update($validated);
             });
+            AuditLogService::log('UPDATE', 'KerjaSama', $id, $oldValues, $kerjaSama->fresh()->toArray());
         } catch (\Throwable $e) {
             return $this->respond(false, 500, 'Gagal memperbarui data kerja sama: '.$e->getMessage());
         }
@@ -225,13 +223,12 @@ class KerjaSamaController extends Controller
     {
         $kerjaSama = KerjaSama::find($id);
 
-        // Cek data ada atau tidak
         if (! $kerjaSama) {
             return $this->respond(false, 404, 'Data kerja sama tidak ditemukan.');
         }
 
         try {
-            // Hapus data dari database
+            AuditLogService::log('DELETE', 'KerjaSama', $id, $kerjaSama->toArray(), null);
             $kerjaSama->delete();
         } catch (\Throwable $e) {
             return $this->respond(false, 500, 'Gagal menghapus data kerja sama: '.$e->getMessage());

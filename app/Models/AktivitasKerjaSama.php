@@ -11,7 +11,7 @@ class AktivitasKerjaSama extends Model
     protected $primaryKey = 'id_aktivitas';
 
     protected $fillable = [
-        'id_kerja_sama',
+        'id_kerjasama',
         'judul_aktivitas',
         'tanggal_pelaksanaan',
         'deskripsi',
@@ -20,6 +20,6 @@ class AktivitasKerjaSama extends Model
 
     public function kerjaSama(): BelongsTo
     {
-        return $this->belongsTo(KerjaSama::class, 'id_kerja_sama', 'id_kerja_sama');
+        return $this->belongsTo(KerjaSama::class, 'id_kerjasama', 'id_kerjasama');
     }
 }

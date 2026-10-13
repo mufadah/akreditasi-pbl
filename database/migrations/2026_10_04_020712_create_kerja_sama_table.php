@@ -12,17 +12,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kerja_sama', function (Blueprint $table) {
-            $table->increments('id_kerja_sama');
+            $table->increments('id_kerjasama');
             $table->unsignedInteger('id_mitra');
-            $table->string('judul_kerja_sama');
-            $table->string('tingkat');
-            $table->string('bentuk_kegiatan');
+            $table->unsignedInteger('id_jenis_kerjasama');
+            $table->unsignedInteger('id_dosen');
+            $table->string('nomor_dokumen');
+            $table->string('jenis_dokumen');
             $table->date('tanggal_mulai');
-            $table->date('tanggal_selesai');
-            $table->string('bukti_dokumen')->nullable();
+            $table->date('tanggal_selesai')->nullable();
+            $table->string('status')->default('Aktif');
             $table->timestamps();
 
             $table->foreign('id_mitra')->references('id_mitra')->on('mitra')->restrictOnDelete();
+            $table->foreign('id_jenis_kerjasama')->references('id_jenis_kerjasama')->on('jenis_kerja_sama')->restrictOnDelete();
+            $table->foreign('id_dosen')->references('id_dosen')->on('dosen')->restrictOnDelete();
         });
     }
 
