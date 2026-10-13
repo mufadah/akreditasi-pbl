@@ -33,18 +33,34 @@ class Dosen extends Model
         return $this->belongsToMany(BidangKeahlian::class, 'bidang_keahlian_dosen', 'id_dosen', 'id_bidang_keahlian');
     }
 
-    public function penelitian(): HasMany
+    public function sertifikasi(): HasMany
     {
-        return $this->hasMany(Penelitian::class, 'id_dosen', 'id_dosen');
+        return $this->hasMany(Sertifikasi::class, 'id_dosen', 'id_dosen');
     }
 
-    public function pkm(): HasMany
+    public function kerjaSama(): HasMany
     {
-        return $this->hasMany(Pkm::class, 'id_dosen', 'id_dosen');
+        return $this->hasMany(KerjaSama::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function anggotaKegiatan(): HasMany
+    {
+        return $this->hasMany(AnggotaKegiatan::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function luaran(): HasMany
+    {
+        return $this->hasMany(Luaran::class, 'id_dosen', 'id_dosen');
+    }
+
+    // Backward-compatibility aliases for analytics & controllers
+    public function kegiatan(): HasMany
+    {
+        return $this->hasMany(AnggotaKegiatan::class, 'id_dosen', 'id_dosen');
     }
 
     public function publikasi(): HasMany
     {
-        return $this->hasMany(Publikasi::class, 'id_dosen', 'id_dosen');
+        return $this->hasMany(Luaran::class, 'id_dosen', 'id_dosen');
     }
 }

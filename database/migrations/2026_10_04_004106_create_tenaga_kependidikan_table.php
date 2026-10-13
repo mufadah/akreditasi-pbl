@@ -17,7 +17,10 @@ return new class extends Migration
             $table->string('nama_tendik');
             $table->string('jabatan_tendik');
             $table->string('nip');
+            $table->string('sertifikasi')->nullable();
             $table->timestamps();
+
+            $table->foreign('id_pendidikan')->references('id_pendidikan')->on('pendidikan')->restrictOnDelete();
         });
     }
 
