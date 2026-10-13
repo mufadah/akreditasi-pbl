@@ -11,15 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('anggota_penelitian', function (Blueprint $table) {
-            $table->increments('id_anggota');
-            $table->unsignedInteger('id_penelitian');
+        Schema::create('anggota_kegiatan', function (Blueprint $table) {
+            $table->increments('id_anggota_kegiatan');
+            $table->unsignedInteger('id_kegiatan');
             $table->unsignedInteger('id_dosen')->nullable();
-            $table->string('mahasiswa')->nullable();
-            $table->string('jenis_anggota');
+            $table->string('id_mahasiswa')->nullable(); // NIM mahasiswa (API K1)
+            $table->string('jenis_anggota'); // dosen / mahasiswa
+            $table->string('peran'); // ketua / anggota
             $table->timestamps();
 
-            $table->foreign('id_penelitian')->references('id_penelitian')->on('penelitian')->cascadeOnDelete();
+            $table->foreign('id_kegiatan')->references('id_kegiatan')->on('kegiatan')->cascadeOnDelete();
             $table->foreign('id_dosen')->references('id_dosen')->on('dosen')->nullOnDelete();
         });
     }
@@ -29,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('anggota_penelitian');
+        Schema::dropIfExists('anggota_kegiatan');
     }
 };
