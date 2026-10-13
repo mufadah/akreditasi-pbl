@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('bidang_keahlian_dosen', function (Blueprint $table) {
             $table->increments('id_bidang_keahlian_dosen');
-            $table->string('nama_bidang_keahlian_dosen');
+            $table->string('nama_bidang_keahlian_dosen')->nullable();
             $table->unsignedInteger('id_dosen');
             $table->unsignedInteger('id_bidang_keahlian');
             $table->timestamps();
 
-            $table->foreign('id_dosen')->references('id_dosen')->on('dosen')->restricOnDelete();
-            $table->foreign('id_bidang_keahlian')->references('id_bidang_keahlian')->on('bidang_keahlian')->restricOnDelete();
+            $table->foreign('id_dosen')->references('id_dosen')->on('dosen')->cascadeOnDelete();
+            $table->foreign('id_bidang_keahlian')->references('id_bidang_keahlian')->on('bidang_keahlian')->restrictOnDelete();
         });
     }
 

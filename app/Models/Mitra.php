@@ -11,11 +11,6 @@ class Mitra extends Model
     protected $primaryKey = 'id_mitra';
     protected $guarded = ['id_mitra'];
 
-    public function pkm(): HasMany
-    {
-        return $this->hasMany(Pkm::class, 'id_mitra', 'id_mitra');
-    }
-    
     public function kerjaSama(): HasMany
     {
         return $this->hasMany(KerjaSama::class, 'id_mitra', 'id_mitra');

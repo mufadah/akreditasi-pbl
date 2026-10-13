@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('mitra', function (Blueprint $table) {
             $table->increments('id_mitra');
-            $table->string('nama_instansi');
-            $table->string('alamat')->nullable();
+            $table->string('nama_mitra');
+            $table->string('jenis_mitra')->default('Instansi');
+            $table->text('alamat')->nullable();
             $table->string('email')->nullable();
             $table->string('telepon')->nullable();
             $table->timestamps();

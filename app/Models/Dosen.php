@@ -6,12 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Dosen extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'dosen';
+
     protected $primaryKey = 'id_dosen';
+
     protected $guarded = ['id_dosen'];
 
     public function jabatanAkademik(): BelongsTo
@@ -29,13 +33,44 @@ class Dosen extends Model
         return $this->belongsToMany(BidangKeahlian::class, 'bidang_keahlian_dosen', 'id_dosen', 'id_bidang_keahlian');
     }
 
-    public function penelitian(): HasMany
+    public function sertifikasi(): HasMany
     {
-        return $this->hasMany(Penelitian::class, 'id_dosen', 'id_dosen');
+        return $this->hasMany(Sertifikasi::class, 'id_dosen', 'id_dosen');
     }
 
-    public function pkm(): HasMany
+    public function kerjaSama(): HasMany
     {
-        return $this->hasMany(Pkm::class, 'id_dosen', 'id_dosen');
+        return $this->hasMany(KerjaSama::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function anggotaKegiatan(): HasMany
+    {
+        return $this->hasMany(AnggotaKegiatan::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function luaran(): HasMany
+    {
+        return $this->hasMany(Luaran::class, 'id_dosen', 'id_dosen');
+    }
+
+    // Backward-compatibility aliases for analytics & controllers
+    public function kegiatan(): HasMany
+    {
+        return $this->hasMany(AnggotaKegiatan::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function publikasi(): HasMany
+    {
+        return $this->hasMany(Luaran::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function buku(): HasMany
+    {
+        return $this->hasMany(Buku::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function hki(): HasMany
+    {
+        return $this->hasMany(Hki::class, 'id_dosen', 'id_dosen');
     }
 }

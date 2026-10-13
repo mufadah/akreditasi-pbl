@@ -15,17 +15,16 @@ return new class extends Migration
             $table->increments('id_dosen');
             $table->unsignedInteger('id_jabatan');
             $table->unsignedInteger('id_pendidikan');
-            $table->unsignedInteger('id_bidang_keahlian');
-            $table->string('nidn');
+            $table->string('nidn')->unique();
             $table->string('nama_dosen');
-            $table->string('email');
+            $table->string('email')->unique();
             $table->string('status_dosen')->default('DTPS');
             $table->string('sertifikasi')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
-            $table->foreign('id_jabatan')->references('id_jabatan')->on('jabatan_akademik')->restricOnDelete();
-            $table->foreign('id_pendidikan')->references('id_pendidikan')->on('pendidikan')->restricOnDelete();
-            $table->foreign('id_bidang_keahlian')->references('id_bidang_keahlian')->on('bidang_keahlian')->restricOnDelete();
+            $table->foreign('id_jabatan')->references('id_jabatan')->on('jabatan_akademik')->restrictOnDelete();
+            $table->foreign('id_pendidikan')->references('id_pendidikan')->on('pendidikan')->restrictOnDelete();
         });
     }
 
