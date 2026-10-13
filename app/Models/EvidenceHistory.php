@@ -7,17 +7,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EvidenceHistory extends Model
 {
-    protected $table = 'evidence_history';
-    protected $primaryKey = 'id_evidence_history';
+    protected $table = 'evidence_histories';
 
     protected $fillable = [
-        'id_evidence',
-        'old_url_drive',
-        'replaced_by',
+        'evidence_id',
+        'url_lama',
+        'url_baru',
+        'alasan_perubahan',
+        'diubah_oleh',
     ];
 
     public function evidence(): BelongsTo
     {
-        return $this->belongsTo(Evidence::class, 'id_evidence', 'id_evidence');
+        return $this->belongsTo(Evidence::class, 'evidence_id', 'id_evidence');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'diubah_oleh', 'id');
     }
 }
