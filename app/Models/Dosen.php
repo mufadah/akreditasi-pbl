@@ -57,4 +57,14 @@ class Dosen extends Model
     {
         return $this->hasMany(KerjaSama::class, 'id_dosen', 'id_dosen');
     }
+
+    public function anggotaKegiatan(): HasMany
+    {
+        return $this->hasMany(AnggotaKegiatan::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function luaran(): HasMany
+    {
+        return $this->hasMany(Luaran::class, 'id_dosen', 'id_dosen');
+    }
 }
