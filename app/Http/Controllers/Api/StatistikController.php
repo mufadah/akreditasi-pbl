@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use App\Models\JabatanAkademik;
+use App\Models\Kegiatan;
 use App\Models\KerjaSama;
-use App\Models\Penelitian;
-use App\Models\Pkm;
-use App\Models\Publikasi;
+use App\Models\Luaran;
 use App\Services\K1ApiService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -31,16 +30,13 @@ class StatistikController extends Controller
     // Statistik demografi, status, jabatan, dan jenjang pendidikan dosen
     public function dosenStatistik(): JsonResponse
     {
-        // Hitung total seluruh dosen dan dosen yang aktif
         $totalDosen = Dosen::count();
-        $totalAktif = Dosen::where('status_dosen', 'Aktif')->count();
+        $totalAktif = Dosen::where('status_dosen', 'DTPS')->count();
 
-        // Agregasi sebaran status kepegawaian
         $sebaranStatus = Dosen::select('status_dosen', DB::raw('count(*) as total'))
             ->groupBy('status_dosen')
             ->pluck('total', 'status_dosen');
 
-        // Agregasi sebaran jabatan akademik
         $sebaranJabatan = JabatanAkademik::withCount([
             'dosen' => fn ($q) => $q->whereNull('deleted_at'),
         ])
@@ -51,7 +47,6 @@ class StatistikController extends Controller
                 'total_dosen' => $j->dosen_count,
             ]);
 
-        // Agregasi sebaran jenjang pendidikan (S2, S3, dll.)
         $sebaranPendidikan = DB::table('dosen')
             ->join('pendidikan', 'dosen.id_pendidikan', '=', 'pendidikan.id_pendidikan')
             ->whereNull('dosen.deleted_at')
@@ -69,47 +64,39 @@ class StatistikController extends Controller
         ]);
     }
 
-    // Rekapitulasi kuantitas kegiatan Tridharma (penelitian, PKM, publikasi)
+    // Rekapitulasi kuantitas kegiatan Tridharma (penelitian, PKM, luaran)
     public function tridharmaSummary(Request $request): JsonResponse
     {
-        // Validasi parameter tahun jika dikirimkan
         $tahun = $request->query('tahun');
 
         if ($tahun && ! is_numeric($tahun)) {
             return $this->respond(false, 422, 'Parameter tahun harus berupa angka 4 digit.');
         }
 
-        // Query builder dasar untuk masing-masing bidang
-        $penelitianQuery = Penelitian::query();
-        $pkmQuery = Pkm::query();
-        $publikasiQuery = Publikasi::query();
+        $penelitianQuery = Kegiatan::whereHas('jenisKegiatan', fn ($q) => $q->where('nama_jenis_kegiatan', 'Penelitian'));
+        $pkmQuery = Kegiatan::whereHas('jenisKegiatan', fn ($q) => $q->where('nama_jenis_kegiatan', 'PkM'));
+        $luaranQuery = Luaran::query();
 
-        // Filter berdasarkan tahun jika ada
         if ($tahun) {
-            $penelitianQuery->where('tahun', $tahun);
-            $pkmQuery->where('tahun', $tahun);
-            $publikasiQuery->where('tahun', $tahun);
+            $penelitianQuery->where('tahun_kegiatan', $tahun);
+            $pkmQuery->where('tahun_kegiatan', $tahun);
+            $luaranQuery->whereYear('created_at', $tahun);
         }
 
-        // Hitung total dan sebaran status penelitian
         $totalPenelitian = (clone $penelitianQuery)->count();
         $penelitianByStatus = (clone $penelitianQuery)
-            ->select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
+            ->select('status_kegiatan', DB::raw('count(*) as total'))
+            ->groupBy('status_kegiatan')
+            ->pluck('total', 'status_kegiatan');
 
-        // Hitung total dan sebaran status PKM
         $totalPkm = (clone $pkmQuery)->count();
         $pkmByStatus = (clone $pkmQuery)
-            ->select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
+            ->select('status_kegiatan', DB::raw('count(*) as total'))
+            ->groupBy('status_kegiatan')
+            ->pluck('total', 'status_kegiatan');
 
-        // Hitung total publikasi ilmiah
-        $totalPublikasi = (clone $publikasiQuery)->count();
-
-        // Hitung total keseluruhan kegiatan Tridharma
-        $grandTotal = $totalPenelitian + $totalPkm + $totalPublikasi;
+        $totalLuaran = (clone $luaranQuery)->count();
+        $grandTotal = $totalPenelitian + $totalPkm + $totalLuaran;
 
         return $this->respond(true, 200, 'Ringkasan kegiatan Tridharma berhasil dihitung.', [
             'filter_tahun' => $tahun ? (int) $tahun : null,
@@ -129,8 +116,8 @@ class StatistikController extends Controller
                     'lainnya' => $pkmByStatus->except(['Berjalan', 'Selesai'])->sum(),
                 ],
             ],
-            'publikasi' => [
-                'total' => $totalPublikasi,
+            'luaran' => [
+                'total' => $totalLuaran,
             ],
             'grand_total' => $grandTotal,
         ]);
@@ -141,24 +128,23 @@ class StatistikController extends Controller
     {
         $today = Carbon::today()->toDateString();
 
-        // Query kerja sama aktif dengan relasi mitra
-        $query = KerjaSama::with('mitra')
-            ->where('tanggal_selesai', '>=', $today);
+        $query = KerjaSama::with(['mitra', 'jenisKerjaSama', 'dosen'])
+            ->where(function ($q) use ($today) {
+                $q->whereNull('tanggal_selesai')
+                  ->orWhere('tanggal_selesai', '>=', $today);
+            });
 
-        // Filter pencarian judul atau nama mitra
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('judul_kerja_sama', 'like', "%{$search}%")
+                $q->where('nomor_dokumen', 'like', "%{$search}%")
+                    ->orWhere('jenis_dokumen', 'like', "%{$search}%")
                     ->orWhereHas('mitra', function ($m) use ($search) {
-                        $m->where('nama_instansi', 'like', "%{$search}%");
+                        $m->where('nama_mitra', 'like', "%{$search}%");
                     });
             });
         }
 
-        // Hitung total data kerja sama aktif
         $totalAktif = (clone $query)->count();
-
-        // Paginasi data berdasarkan tanggal selesai terdekat
         $perPage = $request->integer('per_page', 10);
         $paginated = $query->orderBy('tanggal_selesai', 'asc')->paginate($perPage);
 
@@ -177,12 +163,10 @@ class StatistikController extends Controller
         $totalDtps = Dosen::where('status_dosen', 'DTPS')->whereNull('deleted_at')->count();
         $totalDosenAktif = Dosen::whereNull('deleted_at')->count();
 
-        // Ambil data mahasiswa dari API K1
         $dataK1 = $k1->getStatistikMahasiswa(['tahun' => $tahun, 'prodi' => $prodi]);
         $totalMahasiswa = $dataK1['total_mahasiswa'] ?? null;
 
         $rasio = null;
-        $statusPeringatan = null;
 
         if ($totalMahasiswa !== null && $totalDtps > 0) {
             $rasio = round($totalMahasiswa / $totalDtps, 2);
@@ -193,7 +177,6 @@ class StatistikController extends Controller
             $statusRasio = 'Peringatan: Data mahasiswa dari API K1 belum tersedia.';
         }
 
-        // Sebaran Jabatan Akademik
         $sebaranJabatan = JabatanAkademik::withCount(['dosen' => fn ($q) => $q->whereNull('deleted_at')])
             ->get()
             ->map(fn ($j) => [
@@ -221,39 +204,34 @@ class StatistikController extends Controller
         $dtpsQuery = Dosen::where('status_dosen', 'DTPS')->whereNull('deleted_at');
         $totalDtps = $dtpsQuery->count();
 
-        $penelitianQuery = Penelitian::query();
-        $pkmQuery = Pkm::query();
-        $publikasiQuery = Publikasi::query();
+        $penelitianQuery = Kegiatan::whereHas('jenisKegiatan', fn ($q) => $q->where('nama_jenis_kegiatan', 'Penelitian'));
+        $pkmQuery = Kegiatan::whereHas('jenisKegiatan', fn ($q) => $q->where('nama_jenis_kegiatan', 'PkM'));
+        $luaranQuery = Luaran::query();
 
         if ($tahun) {
-            $penelitianQuery->where('tahun', $tahun);
-            $pkmQuery->where('tahun', $tahun);
-            $publikasiQuery->where('tahun', $tahun);
+            $penelitianQuery->where('tahun_kegiatan', $tahun);
+            $pkmQuery->where('tahun_kegiatan', $tahun);
+            $luaranQuery->whereYear('created_at', $tahun);
         }
 
         $totalPenelitian = $penelitianQuery->count();
         $totalPkm = $pkmQuery->count();
-        $totalPublikasi = $publikasiQuery->count();
+        $totalLuaran = $luaranQuery->count();
 
-        // Hitung rata-rata per dosen DTPS
         $rataPenelitian = $totalDtps > 0 ? round($totalPenelitian / $totalDtps, 2) : 0;
         $rataPkm = $totalDtps > 0 ? round($totalPkm / $totalDtps, 2) : 0;
-        $rataPublikasi = $totalDtps > 0 ? round($totalPublikasi / $totalDtps, 2) : 0;
-        $skorTotal = round($rataPenelitian + $rataPkm + $rataPublikasi, 2);
+        $rataLuaran = $totalDtps > 0 ? round($totalLuaran / $totalDtps, 2) : 0;
+        $skorTotal = round($rataPenelitian + $rataPkm + $rataLuaran, 2);
 
-        // Rekapitulasi per individu dosen
         $dosenList = Dosen::where('status_dosen', 'DTPS')
             ->whereNull('deleted_at')
-            ->withCount(['penelitian', 'pkm', 'publikasi'])
+            ->withCount(['luaran'])
             ->get()
             ->map(fn ($d) => [
                 'id_dosen' => $d->id_dosen,
                 'nama_dosen' => $d->nama_dosen,
                 'nidn' => $d->nidn,
-                'jumlah_penelitian' => $d->penelitian_count,
-                'jumlah_pkm' => $d->pkm_count,
-                'jumlah_publikasi' => $d->publikasi_count,
-                'total_produktivitas' => $d->penelitian_count + $d->pkm_count + $d->publikasi_count,
+                'jumlah_luaran' => $d->luaran_count,
             ]);
 
         return $this->respond(true, 200, 'Kalkulasi produktivitas dosen berhasil dihitung.', [
@@ -261,7 +239,7 @@ class StatistikController extends Controller
             'total_dtps' => $totalDtps,
             'rata_penelitian_dtps' => $rataPenelitian,
             'rata_pkm_dtps' => $rataPkm,
-            'rata_publikasi_dtps' => $rataPublikasi,
+            'rata_luaran_dtps' => $rataLuaran,
             'skor_produktivitas_avg' => $skorTotal,
             'daftar_dosen' => $dosenList,
         ]);
@@ -270,7 +248,7 @@ class StatistikController extends Controller
     public function trenTriDharma(Request $request): JsonResponse
     {
         $ts = (int) $request->query('ts', date('Y'));
-        $n = (int) $request->query('rentang', 4); // default 4 tahun ke belakang (TS-4 s/d TS)
+        $n = (int) $request->query('rentang', 4);
 
         $tren = [];
 
@@ -278,11 +256,16 @@ class StatistikController extends Controller
             $tahunHitung = $ts - $i;
             $label = $i === 0 ? 'TS' : "TS-{$i}";
 
-            $penelitian = Penelitian::where('tahun', $tahunHitung)->count();
-            $pkm = Pkm::where('tahun', $tahunHitung)->count();
-            $publikasi = Publikasi::where('tahun', $tahunHitung)->count();
+            $penelitian = Kegiatan::whereHas('jenisKegiatan', fn ($q) => $q->where('nama_jenis_kegiatan', 'Penelitian'))
+                ->where('tahun_kegiatan', $tahunHitung)->count();
+            $pkm = Kegiatan::whereHas('jenisKegiatan', fn ($q) => $q->where('nama_jenis_kegiatan', 'PkM'))
+                ->where('tahun_kegiatan', $tahunHitung)->count();
+            $luaran = Luaran::whereYear('created_at', $tahunHitung)->count();
             $kerjaSama = KerjaSama::whereYear('tanggal_mulai', '<=', $tahunHitung)
-                ->whereYear('tanggal_selesai', '>=', $tahunHitung)
+                ->where(function ($q) use ($tahunHitung) {
+                    $q->whereNull('tanggal_selesai')
+                      ->orWhereYear('tanggal_selesai', '>=', $tahunHitung);
+                })
                 ->count();
 
             $tren[] = [
@@ -290,9 +273,9 @@ class StatistikController extends Controller
                 'tahun' => $tahunHitung,
                 'penelitian' => $penelitian,
                 'pkm' => $pkm,
-                'publikasi' => $publikasi,
+                'luaran' => $luaran,
                 'kerjasama' => $kerjaSama,
-                'total' => $penelitian + $pkm + $publikasi,
+                'total' => $penelitian + $pkm + $luaran,
             ];
         }
 

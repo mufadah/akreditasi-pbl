@@ -45,7 +45,8 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('penelitian', PenelitianController::class);
     Route::apiResource('pkm', PkmController::class);
     Route::apiResource('kerja-sama', KerjaSamaController::class);
-    Route::apiResource('publikasi', PublikasiController::class);
+    Route::apiResource('kegiatan', \App\Http\Controllers\Api\KegiatanController::class);
+    Route::apiResource('luaran', \App\Http\Controllers\Api\LuaranController::class);
     Route::post('/evidence/{id}/validasi', [EvidenceController::class, 'validasi']);
     Route::post('/evidence/{id}/ganti-link', [EvidenceController::class, 'gantiLink']);
     Route::apiResource('evidence', EvidenceController::class);
