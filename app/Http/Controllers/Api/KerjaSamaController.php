@@ -24,9 +24,9 @@ class KerjaSamaController extends Controller
     {
         return response()->json([
             'success' => $success,
-            'code'    => $code,
+            'code' => $code,
             'message' => $message,
-            'data'    => $data,
+            'data' => $data,
         ], $code);
     }
 
@@ -37,17 +37,18 @@ class KerjaSamaController extends Controller
 
         return [
             // Validasi mitra, judul, tingkat, bentuk kegiatan, dan tanggal
-            'id_mitra'            => [...$req, 'integer', Rule::exists('mitra', 'id_mitra')],
-            'id_jenis_kerjasama'  => ['nullable', 'integer', Rule::exists('jenis_kerja_sama', 'id_jenis_kerjasama')],
-            'id_dosen'            => ['nullable', 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
-            'judul_kerja_sama'    => [...$req, 'string', 'max:255'],
-            'tingkat'             => [...$req, 'string', 'max:100'],
-            'bentuk_kegiatan'     => [...$req, 'string', 'max:255'],
-            'tanggal_mulai'       => [...$req, 'date'],
-            'tanggal_selesai'     => [...$req, 'date', 'after_or_equal:tanggal_mulai'],
-            'bukti_dokumen'       => ['nullable', 'string', 'max:255'],
-            'nomor_dokumen'       => ['nullable', 'string', 'max:255'],
-            'jenis_dokumen'       => ['nullable', 'string', 'max:100'],
+            'id_mitra' => [...$req, 'integer', Rule::exists('mitra', 'id_mitra')],
+            'id_jenis_kerjasama' => ['nullable', 'integer', Rule::exists('jenis_kerja_sama', 'id_jenis_kerjasama')],
+            'id_dosen' => ['nullable', 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
+            'judul_kerja_sama' => [...$req, 'string', 'max:255'],
+            'tingkat' => [...$req, 'string', 'max:100'],
+            'bentuk_kegiatan' => [...$req, 'string', 'max:255'],
+            'tanggal_mulai' => [...$req, 'date'],
+            'tanggal_selesai' => [...$req, 'date', 'after_or_equal:tanggal_mulai'],
+            'bukti_dokumen' => ['nullable', 'string', 'max:255'],
+            'nomor_dokumen' => ['nullable', 'string', 'max:255'],
+            'jenis_dokumen' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'string', 'max:50'],
         ];
     }
 
@@ -61,12 +62,12 @@ class KerjaSamaController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('judul_kerja_sama', 'like', "%{$search}%")
-                  ->orWhere('nomor_dokumen', 'like', "%{$search}%");
+                    ->orWhere('nomor_dokumen', 'like', "%{$search}%");
             });
         }
 
-        // Filter berdasarkan mitra, tingkat, jenis kerja sama, dan dosen
-        foreach (['id_mitra', 'tingkat', 'id_jenis_kerjasama', 'id_dosen'] as $filter) {
+        // Filter berdasarkan mitra, tingkat, jenis kerja sama, dosen, dan status
+        foreach (['id_mitra', 'tingkat', 'id_jenis_kerjasama', 'id_dosen', 'status'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->query($filter));
             }
@@ -96,7 +97,7 @@ class KerjaSamaController extends Controller
                 return KerjaSama::create($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menyimpan data kerja sama: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal menyimpan data kerja sama: '.$e->getMessage());
         }
 
         return $this->respond(true, 201, 'Data kerja sama berhasil ditambahkan.', $kerjaSama->load($this->relations));
@@ -140,7 +141,7 @@ class KerjaSamaController extends Controller
                 $kerjaSama->update($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal memperbarui data kerja sama: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal memperbarui data kerja sama: '.$e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data kerja sama berhasil diperbarui.', $kerjaSama->fresh($this->relations));
@@ -160,7 +161,7 @@ class KerjaSamaController extends Controller
             // Hapus data dari database
             $kerjaSama->delete();
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menghapus data kerja sama: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal menghapus data kerja sama: '.$e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data kerja sama berhasil dihapus.');
