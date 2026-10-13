@@ -25,9 +25,9 @@ class PublikasiController extends Controller
     {
         return response()->json([
             'success' => $success,
-            'code'    => $code,
+            'code' => $code,
             'message' => $message,
-            'data'    => $data,
+            'data' => $data,
         ], $code);
     }
 
@@ -38,7 +38,7 @@ class PublikasiController extends Controller
 
         return [
             // Penulis dosen aktif dan jenis publikasi wajib valid
-            'id_dosen'           => [
+            'id_dosen' => [
                 ...$req,
                 'integer',
                 Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at'),
@@ -49,20 +49,21 @@ class PublikasiController extends Controller
                 Rule::exists('jenis_publikasi', 'id_jenis_publikasi'),
             ],
             // Relasi ke penelitian atau PKM bersifat opsional
-            'id_penelitian'      => [
+            'id_penelitian' => [
                 'nullable',
                 'integer',
                 Rule::exists('penelitian', 'id_penelitian'),
             ],
-            'id_pkm'             => [
+            'id_pkm' => [
                 'nullable',
                 'integer',
                 Rule::exists('pkm', 'id_pkm'),
             ],
-            'judul_publikasi'    => [...$req, 'string', 'max:255'],
-            'nama_jurnal'        => ['nullable', 'string', 'max:255'],
-            'tahun'              => [...$req, 'integer', 'digits:4'],
-            'tautan'             => ['nullable', 'string', 'max:255'],
+            'judul_publikasi' => [...$req, 'string', 'max:255'],
+            'nama_jurnal' => ['nullable', 'string', 'max:255'],
+            'tahun' => [...$req, 'integer', 'digits:4'],
+            'tautan' => ['nullable', 'string', 'max:255'],
+            'jumlah_sitasi' => ['nullable', 'integer', 'min:0'],
         ];
     }
 
@@ -76,7 +77,7 @@ class PublikasiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('judul_publikasi', 'like', "%{$search}%")
-                  ->orWhere('nama_jurnal', 'like', "%{$search}%");
+                    ->orWhere('nama_jurnal', 'like', "%{$search}%");
             });
         }
 
@@ -111,7 +112,7 @@ class PublikasiController extends Controller
                 return Publikasi::create($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menyimpan data publikasi: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal menyimpan data publikasi: '.$e->getMessage());
         }
 
         return $this->respond(true, 201, 'Data publikasi berhasil ditambahkan.', $publikasi->load($this->relations));
@@ -155,7 +156,7 @@ class PublikasiController extends Controller
                 $publikasi->update($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal memperbarui data publikasi: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal memperbarui data publikasi: '.$e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data publikasi berhasil diperbarui.', $publikasi->fresh($this->relations));
@@ -175,7 +176,7 @@ class PublikasiController extends Controller
             // Hapus data dari database
             $publikasi->delete();
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menghapus data publikasi: ' . $e->getMessage());
+            return $this->respond(false, 500, 'Gagal menghapus data publikasi: '.$e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data publikasi berhasil dihapus.');

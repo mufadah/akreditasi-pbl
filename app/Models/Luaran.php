@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Luaran extends Model
 {
     protected $table = 'luaran';
+
     protected $primaryKey = 'id_luaran';
 
     protected $fillable = [
@@ -14,7 +17,7 @@ class Luaran extends Model
         'id_dosen',
         'id_jenis_luaran',
 
-        // Buku
+        // Field Buku
         'judul_buku',
         'isbn',
         'penerbit_buku',
@@ -23,7 +26,7 @@ class Luaran extends Model
         'bidang_ilmu',
         'halaman_buku',
 
-        // Jurnal
+        // Field Jurnal
         'nama_jurnal',
         'issn',
         'volume',
@@ -33,7 +36,7 @@ class Luaran extends Model
         'halaman_jurnal',
         'indeksasi',
 
-        // Prosiding
+        // Field Prosiding
         'nama_seminar',
         'nama_prosiding',
         'isbn_prosiding',
@@ -43,7 +46,7 @@ class Luaran extends Model
         'halaman_prosiding',
         'doi_prosiding',
 
-        // HKI
+        // Field HKI
         'jenis_hki',
         'judul_hak_cipta',
         'nomor_pendaftaran_hki',
@@ -53,7 +56,7 @@ class Luaran extends Model
         'pemegang_hki',
         'status_hki',
 
-        // Produk
+        // Field Produk
         'nama_produk',
         'jenis_produk',
         'status_pengembangan',
@@ -63,22 +66,37 @@ class Luaran extends Model
         'tautan_produk',
     ];
 
-    public function kegiatan()
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'tahun_terbit' => 'integer',
+            'tanggal_terbit' => 'date',
+            'tanggal_seminar' => 'date',
+            'tanggal_pendaftaran_hki' => 'date',
+            'tanggal_terbit_sertifikat_hki' => 'date',
+            'tanggal_pembuatan' => 'date',
+        ];
+    }
+
+    public function kegiatan(): BelongsTo
     {
         return $this->belongsTo(Kegiatan::class, 'id_kegiatan', 'id_kegiatan');
     }
 
-    public function dosen()
+    public function dosen(): BelongsTo
     {
         return $this->belongsTo(Dosen::class, 'id_dosen', 'id_dosen');
     }
 
-    public function jenisLuaran()
+    public function jenisLuaran(): BelongsTo
     {
-        return $this->belongsTo(JenisLuaran::class, 'id_jenis_luaran', 'id_jenis_luaran');
+        return $this->belongsTo(JenisLuaran::class, 'id_jenis_luaran', 'id_jenis_publikasi');
     }
 
-    public function evidence()
+    public function evidence(): HasMany
     {
         return $this->hasMany(Evidence::class, 'id_luaran', 'id_luaran');
     }

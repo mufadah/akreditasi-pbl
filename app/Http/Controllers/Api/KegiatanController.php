@@ -4,80 +4,154 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Kegiatan;
-use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class KegiatanController extends Controller
 {
-    private array $relations = ['jenisKegiatan', 'pendanaan', 'anggota.dosen', 'luaran', 'evidence'];
+    /**
+     * Relasi yang selalu dimuat untuk mencegah N+1 query.
+     */
+    private array $relations = [
+        'jenisKegiatan',
+        'anggota.dosen',
+        'pendanaan',
+        'luaran',
+        'evidence',
+    ];
 
+    /**
+     * Helper format response JSON standar.
+     */
     private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
     {
         return response()->json([
             'success' => $success,
-            'code'    => $code,
+            'code' => $code,
             'message' => $message,
-            'data'    => $data,
+            'data' => $data,
         ], $code);
     }
 
+    /**
+     * Aturan validasi data kegiatan, anggota, dan pendanaan.
+     */
+    private function rules(bool $isUpdate = false): array
+    {
+        $req = $isUpdate ? ['sometimes', 'required'] : ['required'];
+
+        return [
+            // Data utama Kegiatan
+            'id_jenis_kegiatan' => [...$req, 'integer', Rule::exists('jenis_kegiatan', 'id_jenis_kegiatan')],
+            'judul_kegiatan' => [...$req, 'string', 'max:255'],
+            'lokasi_kegiatan' => ['nullable', 'string', 'max:255'],
+            'tahun_usulan' => ['nullable', 'integer', 'digits:4'],
+            'tahun_kegiatan' => ['nullable', 'integer', 'digits:4'],
+            'tahun_pelaksanaan' => ['nullable', 'integer', 'digits:4'],
+            'lama_kegiatan' => ['nullable', 'string', 'max:100'],
+            'status_kegiatan' => ['sometimes', 'string', 'max:50'],
+            'in_kind' => ['nullable', 'string', 'max:255'],
+
+            // Validasi anggota kegiatan (opsional/nested)
+            'anggota' => ['sometimes', 'array'],
+            'anggota.*.jenis_anggota' => ['required_with:anggota', 'string', 'in:dosen,mahasiswa,Dosen,Mahasiswa'],
+            'anggota.*.id_dosen' => [
+                'nullable',
+                Rule::requiredIf(fn () => strtolower(request()->input('anggota.*.jenis_anggota', '')) === 'dosen'),
+                'integer',
+                Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at'),
+            ],
+            'anggota.*.id_mahasiswa' => ['nullable', 'integer'],
+            'anggota.*.peran' => ['required_with:anggota', 'string', 'max:50'],
+
+            // Validasi pendanaan kegiatan (opsional/nested)
+            'pendanaan' => ['sometimes', 'array'],
+            'pendanaan.*.sumber_dana' => ['required_with:pendanaan', 'string', 'max:255'],
+            'pendanaan.*.jumlah_dana' => ['required_with:pendanaan', 'numeric', 'min:0'],
+            'pendanaan.*.tahun_pendanaan' => ['required_with:pendanaan', 'integer', 'digits:4'],
+            'pendanaan.*.jenis_pendanaan' => ['nullable', 'string', 'max:100'],
+            'pendanaan.*.keterangan' => ['nullable', 'string'],
+        ];
+    }
+
+    /**
+     * Ambil daftar kegiatan dengan filter pencarian dan paginasi.
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Kegiatan::with($this->relations);
 
+        // Filter pencarian judul atau lokasi kegiatan
         if ($search = $request->query('search')) {
-            $query->where('judul_kegiatan', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('judul_kegiatan', 'like', "%{$search}%")
+                    ->orWhere('lokasi_kegiatan', 'like', "%{$search}%");
+            });
         }
 
-        if ($jenis = $request->query('id_jenis_kegiatan')) {
-            $query->where('id_jenis_kegiatan', $jenis);
+        // Filter berdasarkan jenis kegiatan, tahun, dan status
+        foreach (['id_jenis_kegiatan', 'tahun_usulan', 'tahun_kegiatan', 'tahun_pelaksanaan', 'status_kegiatan'] as $filter) {
+            if ($request->filled($filter)) {
+                $query->where($filter, $request->query($filter));
+            }
         }
 
-        if ($tahun = $request->query('tahun_kegiatan')) {
-            $query->where('tahun_kegiatan', $tahun);
-        }
+        $kegiatan = $query->latest()->paginate($request->integer('per_page', 10));
 
-        if ($status = $request->query('status_kegiatan')) {
-            $query->where('status_kegiatan', $status);
-        }
-
-        $kegiatan = $query->latest('id_kegiatan')->paginate($request->integer('per_page', 10));
-
-        return $this->respond(true, 200, 'Daftar kegiatan (Penelitian & PkM) berhasil diambil.', $kegiatan);
+        return $this->respond(true, 200, 'Data kegiatan berhasil diambil.', $kegiatan);
     }
 
+    /**
+     * Tambah data kegiatan baru beserta nested anggota dan pendanaan.
+     */
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'id_jenis_kegiatan'   => 'required|integer|exists:jenis_kegiatan,id_jenis_kegiatan',
-            'judul_kegiatan'      => 'required|string|max:255',
-            'afiliasi'            => 'required|string|max:255',
-            'lokasi_kegiatan'     => 'nullable|string|max:255',
-            'litabmas_sebelumnya' => 'nullable|string|max:255',
-            'jenis_skim'          => 'nullable|string|max:100',
-            'tahun_usulan'        => 'required|integer',
-            'tahun_kegiatan'      => 'required|integer',
-            'tahun_pelaksanaan'   => 'nullable|integer',
-            'lama_kegiatan'       => 'required|integer',
-            'tahun_pelaksanaan_ke'=> 'required|integer',
-            'nomor_sk_penugasan'  => 'nullable|string|max:100',
-            'tanggal_sk_penugasan'=> 'nullable|date',
-            'in_kind'             => 'nullable|string',
-            'status_kegiatan'     => 'nullable|string|max:50',
-        ]);
+        $validator = Validator::make($request->all(), $this->rules());
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
         }
 
-        $kegiatan = Kegiatan::create($validator->validated());
-        AuditLogService::log('CREATE', 'Kegiatan', $kegiatan->id_kegiatan, null, $kegiatan->toArray());
+        $validated = $validator->validated();
 
-        return $this->respond(true, 201, 'Data kegiatan berhasil dibuat.', $kegiatan->load($this->relations));
+        try {
+            $kegiatan = DB::transaction(function () use ($validated) {
+                $kegiatan = Kegiatan::create(
+                    collect($validated)->except(['anggota', 'pendanaan'])->toArray()
+                );
+
+                if (! empty($validated['anggota'])) {
+                    // Normalisasi jenis_anggota ke lowercase
+                    $anggotaData = array_map(function ($item) {
+                        if (isset($item['jenis_anggota'])) {
+                            $item['jenis_anggota'] = strtolower($item['jenis_anggota']);
+                        }
+
+                        return $item;
+                    }, $validated['anggota']);
+
+                    $kegiatan->anggotaKegiatan()->createMany($anggotaData);
+                }
+
+                if (! empty($validated['pendanaan'])) {
+                    $kegiatan->pendanaanKegiatan()->createMany($validated['pendanaan']);
+                }
+
+                return $kegiatan;
+            });
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal menyimpan data kegiatan: '.$e->getMessage());
+        }
+
+        return $this->respond(true, 201, 'Data kegiatan berhasil ditambahkan.', $kegiatan->load($this->relations));
     }
 
+    /**
+     * Ambil detail satu kegiatan.
+     */
     public function show(int $id): JsonResponse
     {
         $kegiatan = Kegiatan::with($this->relations)->find($id);
@@ -89,6 +163,9 @@ class KegiatanController extends Controller
         return $this->respond(true, 200, 'Detail kegiatan berhasil diambil.', $kegiatan);
     }
 
+    /**
+     * Update data kegiatan beserta anggota dan pendanaan.
+     */
     public function update(Request $request, int $id): JsonResponse
     {
         $kegiatan = Kegiatan::find($id);
@@ -97,26 +174,52 @@ class KegiatanController extends Controller
             return $this->respond(false, 404, 'Data kegiatan tidak ditemukan.');
         }
 
-        $validator = Validator::make($request->all(), [
-            'id_jenis_kegiatan'   => 'sometimes|required|integer|exists:jenis_kegiatan,id_jenis_kegiatan',
-            'judul_kegiatan'      => 'sometimes|required|string|max:255',
-            'afiliasi'            => 'sometimes|required|string|max:255',
-            'tahun_kegiatan'      => 'sometimes|required|integer',
-            'lama_kegiatan'       => 'sometimes|required|integer',
-            'status_kegiatan'     => 'nullable|string|max:50',
-        ]);
+        $validator = Validator::make($request->all(), $this->rules(true));
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
         }
 
-        $oldValues = $kegiatan->toArray();
-        $kegiatan->update($validator->validated());
-        AuditLogService::log('UPDATE', 'Kegiatan', $id, $oldValues, $kegiatan->fresh()->toArray());
+        $validated = $validator->validated();
+
+        try {
+            DB::transaction(function () use ($kegiatan, $validated) {
+                $kegiatan->update(
+                    collect($validated)->except(['anggota', 'pendanaan'])->toArray()
+                );
+
+                if (array_key_exists('anggota', $validated)) {
+                    $kegiatan->anggotaKegiatan()->delete();
+                    $anggotaData = array_map(function ($item) {
+                        if (isset($item['jenis_anggota'])) {
+                            $item['jenis_anggota'] = strtolower($item['jenis_anggota']);
+                        }
+
+                        return $item;
+                    }, $validated['anggota'] ?? []);
+
+                    if (! empty($anggotaData)) {
+                        $kegiatan->anggotaKegiatan()->createMany($anggotaData);
+                    }
+                }
+
+                if (array_key_exists('pendanaan', $validated)) {
+                    $kegiatan->pendanaanKegiatan()->delete();
+                    if (! empty($validated['pendanaan'])) {
+                        $kegiatan->pendanaanKegiatan()->createMany($validated['pendanaan']);
+                    }
+                }
+            });
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal memperbarui data kegiatan: '.$e->getMessage());
+        }
 
         return $this->respond(true, 200, 'Data kegiatan berhasil diperbarui.', $kegiatan->fresh($this->relations));
     }
 
+    /**
+     * Hapus data kegiatan (anggota dan pendanaan cascade).
+     */
     public function destroy(int $id): JsonResponse
     {
         $kegiatan = Kegiatan::find($id);
@@ -125,8 +228,11 @@ class KegiatanController extends Controller
             return $this->respond(false, 404, 'Data kegiatan tidak ditemukan.');
         }
 
-        AuditLogService::log('DELETE', 'Kegiatan', $id, $kegiatan->toArray(), null);
-        $kegiatan->delete();
+        try {
+            $kegiatan->delete();
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal menghapus data kegiatan: '.$e->getMessage());
+        }
 
         return $this->respond(true, 200, 'Data kegiatan berhasil dihapus.');
     }
