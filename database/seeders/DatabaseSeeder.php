@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\JabatanAkademik;
-use App\Models\Pendidikan;
 use App\Models\JenisPenelitian;
 use App\Models\JenisPublikasi;
+use App\Models\Pendidikan;
 use App\Models\TahunAkademik;
+use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -75,6 +75,8 @@ class DatabaseSeeder extends Seeder
             JenisHkiSeeder::class,
             JenisPkmSeeder::class,
             JenisKerjaSamaSeeder::class,
+            JenisKegiatanSeeder::class,
+            JenisLuaranSeeder::class,
         ]);
     }
 }
