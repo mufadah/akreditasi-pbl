@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\JabatanAkademik;
-use App\Models\Pendidikan;
 use App\Models\BidangKeahlian;
-use App\Models\TahunAkademik;
-use App\Models\JenisKerjaSama;
+use App\Models\JabatanAkademik;
 use App\Models\JenisKegiatan;
+use App\Models\JenisKerjaSama;
 use App\Models\JenisLuaran;
+use App\Models\Pendidikan;
+use App\Models\TahunAkademik;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -114,5 +114,14 @@ class DatabaseSeeder extends Seeder
         // 7. Tahun Akademik
         TahunAkademik::firstOrCreate(['tahun_akademik' => 2025]);
         TahunAkademik::firstOrCreate(['tahun_akademik' => 2026]);
+
+        // 8. Master Data Baru & Seeder Idempotent (Revisi ERD)
+        $this->call([
+            JenisHkiSeeder::class,
+            JenisPkmSeeder::class,
+            JenisKerjaSamaSeeder::class,
+            JenisKegiatanSeeder::class,
+            JenisLuaranSeeder::class,
+        ]);
     }
 }
