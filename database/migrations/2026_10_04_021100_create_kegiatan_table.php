@@ -15,19 +15,19 @@ return new class extends Migration
             $table->increments('id_kegiatan');
             $table->unsignedInteger('id_jenis_kegiatan');
             $table->string('judul_kegiatan');
-            $table->string('afiliasi');
+            $table->string('afiliasi')->nullable();
             $table->string('lokasi_kegiatan')->nullable();
             $table->string('litabmas_sebelumnya')->nullable();
             $table->string('jenis_skim')->nullable();
-            $table->integer('tahun_usulan');
-            $table->integer('tahun_kegiatan');
+            $table->integer('tahun_usulan')->nullable();
+            $table->integer('tahun_kegiatan')->nullable();
             $table->integer('tahun_pelaksanaan')->nullable();
-            $table->integer('lama_kegiatan');
-            $table->integer('tahun_pelaksanaan_ke');
+            $table->string('lama_kegiatan')->nullable();
+            $table->integer('tahun_pelaksanaan_ke')->nullable();
             $table->string('nomor_sk_penugasan')->nullable();
             $table->date('tanggal_sk_penugasan')->nullable();
             $table->text('in_kind')->nullable();
-            $table->string('status_kegiatan')->default('Berjalan');
+            $table->string('status_kegiatan')->default('Usulan');
             $table->timestamps();
 
             $table->foreign('id_jenis_kegiatan')->references('id_jenis_kegiatan')->on('jenis_kegiatan')->restrictOnDelete();

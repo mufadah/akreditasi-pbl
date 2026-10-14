@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kerja_sama', function (Blueprint $table) {
-            $table->increments('id_kerjasama');
+            $table->increments('id_kerja_sama');
+            $table->unsignedInteger('id_kerjasama')->nullable();
             $table->unsignedInteger('id_mitra');
             $table->unsignedInteger('id_jenis_kerjasama');
             $table->unsignedInteger('id_dosen');

@@ -21,10 +21,10 @@ return new class extends Migration
             $table->string('judul_buku')->nullable();
             $table->string('isbn')->nullable();
             $table->string('penerbit_buku')->nullable();
-            $table->date('tahun_terbit')->nullable();
+            $table->integer('tahun_terbit')->nullable();
             $table->string('jenis_buku')->nullable();
             $table->string('bidang_ilmu')->nullable();
-            $table->integer('halaman_buku')->nullable();
+            $table->string('halaman_buku')->nullable();
 
             // 2. Jurnal
             $table->string('nama_jurnal')->nullable();
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->date('tanggal_terbit')->nullable();
             $table->string('doi')->nullable();
             $table->string('nomor_edisi')->nullable();
-            $table->integer('halaman_jurnal')->nullable();
+            $table->string('halaman_jurnal')->nullable();
             $table->string('indeksasi')->nullable();
 
             // 3. Prosiding / Seminar
@@ -43,7 +43,7 @@ return new class extends Migration
             $table->string('penyelenggara')->nullable();
             $table->date('tanggal_seminar')->nullable();
             $table->string('lokasi_seminar')->nullable();
-            $table->integer('halaman_prosiding')->nullable();
+            $table->string('halaman_prosiding')->nullable();
             $table->string('doi_prosiding')->nullable();
 
             // 4. HKI
@@ -60,7 +60,7 @@ return new class extends Migration
             $table->string('nama_produk')->nullable();
             $table->string('jenis_produk')->nullable();
             $table->string('status_pengembangan')->nullable();
-            $table->integer('tingkat_kesiapanterapan')->nullable(); // TKT 1-9
+            $table->string('tingkat_kesiapanterapan')->nullable();
             $table->date('tanggal_pembuatan')->nullable();
             $table->text('deskripsi_produk')->nullable();
             $table->string('tautan_produk')->nullable();
