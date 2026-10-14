@@ -54,6 +54,13 @@ class SyncSwaggerFromPostman extends Command
         $outputPath = storage_path('api-docs/api-docs.json');
 
         if (! file_exists($postmanPath)) {
+            if (file_exists($outputPath)) {
+                $this->warn("Berkas Postman Collection tidak ditemukan di: {$postmanPath}");
+                $this->info("Menggunakan berkas OpenAPI/Swagger yang sudah ada di: {$outputPath}");
+
+                return 0;
+            }
+
             $this->error("Berkas Postman Collection tidak ditemukan di: {$postmanPath}");
 
             return 1;

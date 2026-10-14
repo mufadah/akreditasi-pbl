@@ -36,13 +36,13 @@ class JwtAuthenticate
             ], 401);
         }
 
-        // Opsional: aktifkan jika sudah menggunakan token aktif
-        // if (isset($payload['exp']) && time() >= $payload['exp']) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Unauthorized: Token sudah kedaluwarsa.'
-        //     ], 401);
-        // }
+        if (isset($payload['exp']) && time() >= $payload['exp']) {
+            return response()->json([
+                'success' => false,
+                'code' => 401,
+                'message' => 'Unauthorized: Token sudah kedaluwarsa.',
+            ], 401);
+        }
 
         // Simpan sebagai array di merge dan simpan ke request attributes
         $userData = [
