@@ -99,7 +99,7 @@ class SyncSwaggerFromPostman extends Command
         $tags = [];
         $paths = [];
 
-        $this->parseItems($postman['item'] ?? [], 'General', $tags, $paths);
+        $this->parseItems($postman['item'] ?? [], null, $tags, $paths);
 
         $openapi['tags'] = array_map(fn ($t) => ['name' => $t], $tags);
         $openapi['paths'] = $paths;
@@ -120,16 +120,17 @@ class SyncSwaggerFromPostman extends Command
         return 0;
     }
 
-    private function parseItems(array $items, string $currentTag, array &$tags, array &$paths): void
+    private function parseItems(array $items, ?string $parentTag, array &$tags, array &$paths): void
     {
         foreach ($items as $item) {
             if (isset($item['item'])) {
-                $folderName = $item['name'];
-                if (! in_array($folderName, $tags)) {
-                    $tags[] = $folderName;
-                }
-                $this->parseItems($item['item'], $folderName, $tags, $paths);
+                $tagForChildren = $parentTag ?? $item['name'];
+                $this->parseItems($item['item'], $tagForChildren, $tags, $paths);
             } elseif (isset($item['request'])) {
+                $tag = $parentTag ?? 'General';
+                if (! in_array($tag, $tags)) {
+                    $tags[] = $tag;
+                }
                 $req = $item['request'];
                 $method = strtolower($req['method']);
 
@@ -163,7 +164,7 @@ class SyncSwaggerFromPostman extends Command
                 $openApiPath = '/'.implode('/', $newSegments);
 
                 $operation = [
-                    'tags' => [$currentTag],
+                    'tags' => [$tag],
                     'summary' => $item['name'],
                     'description' => "Endpoint untuk {$item['name']}.",
                     'responses' => [
@@ -267,7 +268,42 @@ class SyncSwaggerFromPostman extends Command
                 if (! isset($paths[$openApiPath])) {
                     $paths[$openApiPath] = [];
                 }
-                $paths[$openApiPath][$method] = $operation;
+
+                if (isset($paths[$openApiPath][$method])) {
+                    $existingOp = &$paths[$openApiPath][$method];
+                    if (isset($operation['requestBody']['content'])) {
+                        foreach ($operation['requestBody']['content'] as $contentType => $bodyConfig) {
+                            if (! isset($existingOp['requestBody']['content'][$contentType])) {
+                                $existingOp['requestBody']['content'][$contentType] = $bodyConfig;
+                            } else {
+                                $target = &$existingOp['requestBody']['content'][$contentType];
+                                if (! isset($target['examples'])) {
+                                    $firstVal = $target['example'] ?? null;
+                                    $target['examples'] = [];
+                                    if ($firstVal !== null) {
+                                        $target['examples'][$existingOp['summary']] = [
+                                            'summary' => $existingOp['summary'],
+                                            'value' => $firstVal,
+                                        ];
+                                    }
+                                    unset($target['example']);
+                                }
+                                $newVal = $bodyConfig['example'] ?? null;
+                                if ($newVal !== null) {
+                                    $target['examples'][$item['name']] = [
+                                        'summary' => $item['name'],
+                                        'value' => $newVal,
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                    $cleanSummary = preg_replace('/\s*-\s*.*$/', '', $existingOp['summary']);
+                    $existingOp['summary'] = $cleanSummary;
+                    $existingOp['description'] .= "\n- {$item['name']}";
+                } else {
+                    $paths[$openApiPath][$method] = $operation;
+                }
             }
         }
     }

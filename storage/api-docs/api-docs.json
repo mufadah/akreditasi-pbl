@@ -27,34 +27,7 @@
             "name": "1. Master Data"
         },
         {
-            "name": "1.1 Jabatan Akademik"
-        },
-        {
-            "name": "1.2 Pendidikan"
-        },
-        {
-            "name": "1.3 Bidang Keahlian"
-        },
-        {
-            "name": "1.4 Mitra"
-        },
-        {
-            "name": "1.5 Jenis Kegiatan"
-        },
-        {
-            "name": "1.6 Jenis Luaran"
-        },
-        {
-            "name": "1.7 Jenis Kerja Sama"
-        },
-        {
             "name": "2. Manajemen SDM"
-        },
-        {
-            "name": "2.1 Dosen"
-        },
-        {
-            "name": "2.2 Tenaga Kependidikan"
         },
         {
             "name": "3. Tridharma - Kegiatan"
@@ -63,19 +36,10 @@
             "name": "4. Tridharma - Luaran"
         },
         {
-            "name": "4.2 POST Tambah Luaran (Spesifikasi Jenis)"
-        },
-        {
             "name": "5. Kerja Sama & Kemitraan"
         },
         {
-            "name": "5.9 Aktivitas Kerja Sama Standalone"
-        },
-        {
             "name": "6. Repository & Validasi Evidence"
-        },
-        {
-            "name": "6.2 POST Upload Evidence"
         },
         {
             "name": "7. Interoperabilitas & Eksternal"
@@ -256,7 +220,7 @@
         "/jabatan-akademik": {
             "get": {
                 "tags": [
-                    "1.1 Jabatan Akademik"
+                    "1. Master Data"
                 ],
                 "summary": "1.1.1 GET Semua Jabatan Akademik",
                 "description": "Endpoint untuk 1.1.1 GET Semua Jabatan Akademik.",
@@ -283,7 +247,7 @@
             },
             "post": {
                 "tags": [
-                    "1.1 Jabatan Akademik"
+                    "1. Master Data"
                 ],
                 "summary": "1.1.2 POST Tambah Jabatan Akademik",
                 "description": "Endpoint untuk 1.1.2 POST Tambah Jabatan Akademik.",
@@ -332,7 +296,7 @@
         "/jabatan-akademik/{id}": {
             "get": {
                 "tags": [
-                    "1.1 Jabatan Akademik"
+                    "1. Master Data"
                 ],
                 "summary": "1.1.3 GET Detail Jabatan Akademik",
                 "description": "Endpoint untuk 1.1.3 GET Detail Jabatan Akademik.",
@@ -371,7 +335,7 @@
             },
             "put": {
                 "tags": [
-                    "1.1 Jabatan Akademik"
+                    "1. Master Data"
                 ],
                 "summary": "1.1.4 PUT Update Jabatan Akademik",
                 "description": "Endpoint untuk 1.1.4 PUT Update Jabatan Akademik.",
@@ -430,7 +394,7 @@
             },
             "delete": {
                 "tags": [
-                    "1.1 Jabatan Akademik"
+                    "1. Master Data"
                 ],
                 "summary": "1.1.5 DELETE Hapus Jabatan Akademik",
                 "description": "Endpoint untuk 1.1.5 DELETE Hapus Jabatan Akademik.",
@@ -471,7 +435,7 @@
         "/pendidikan": {
             "get": {
                 "tags": [
-                    "1.2 Pendidikan"
+                    "1. Master Data"
                 ],
                 "summary": "1.2.1 GET Semua Jenjang Pendidikan",
                 "description": "Endpoint untuk 1.2.1 GET Semua Jenjang Pendidikan.",
@@ -498,7 +462,7 @@
             },
             "post": {
                 "tags": [
-                    "1.2 Pendidikan"
+                    "1. Master Data"
                 ],
                 "summary": "1.2.2 POST Tambah Jenjang Pendidikan",
                 "description": "Endpoint untuk 1.2.2 POST Tambah Jenjang Pendidikan.",
@@ -547,7 +511,7 @@
         "/pendidikan/{id}": {
             "get": {
                 "tags": [
-                    "1.2 Pendidikan"
+                    "1. Master Data"
                 ],
                 "summary": "1.2.3 GET Detail Jenjang Pendidikan",
                 "description": "Endpoint untuk 1.2.3 GET Detail Jenjang Pendidikan.",
@@ -586,7 +550,7 @@
             },
             "put": {
                 "tags": [
-                    "1.2 Pendidikan"
+                    "1. Master Data"
                 ],
                 "summary": "1.2.4 PUT Update Jenjang Pendidikan",
                 "description": "Endpoint untuk 1.2.4 PUT Update Jenjang Pendidikan.",
@@ -645,7 +609,7 @@
             },
             "delete": {
                 "tags": [
-                    "1.2 Pendidikan"
+                    "1. Master Data"
                 ],
                 "summary": "1.2.5 DELETE Hapus Jenjang Pendidikan",
                 "description": "Endpoint untuk 1.2.5 DELETE Hapus Jenjang Pendidikan.",
@@ -686,7 +650,7 @@
         "/bidang-keahlian": {
             "get": {
                 "tags": [
-                    "1.3 Bidang Keahlian"
+                    "1. Master Data"
                 ],
                 "summary": "1.3.1 GET Semua Bidang Keahlian",
                 "description": "Endpoint untuk 1.3.1 GET Semua Bidang Keahlian.",
@@ -713,7 +677,7 @@
             },
             "post": {
                 "tags": [
-                    "1.3 Bidang Keahlian"
+                    "1. Master Data"
                 ],
                 "summary": "1.3.2 POST Tambah Bidang Keahlian",
                 "description": "Endpoint untuk 1.3.2 POST Tambah Bidang Keahlian.",
@@ -762,7 +726,7 @@
         "/bidang-keahlian/{id}": {
             "get": {
                 "tags": [
-                    "1.3 Bidang Keahlian"
+                    "1. Master Data"
                 ],
                 "summary": "1.3.3 GET Detail Bidang Keahlian",
                 "description": "Endpoint untuk 1.3.3 GET Detail Bidang Keahlian.",
@@ -801,7 +765,7 @@
             },
             "put": {
                 "tags": [
-                    "1.3 Bidang Keahlian"
+                    "1. Master Data"
                 ],
                 "summary": "1.3.4 PUT Update Bidang Keahlian",
                 "description": "Endpoint untuk 1.3.4 PUT Update Bidang Keahlian.",
@@ -860,7 +824,7 @@
             },
             "delete": {
                 "tags": [
-                    "1.3 Bidang Keahlian"
+                    "1. Master Data"
                 ],
                 "summary": "1.3.5 DELETE Hapus Bidang Keahlian",
                 "description": "Endpoint untuk 1.3.5 DELETE Hapus Bidang Keahlian.",
@@ -901,7 +865,7 @@
         "/mitra": {
             "get": {
                 "tags": [
-                    "1.4 Mitra"
+                    "1. Master Data"
                 ],
                 "summary": "1.4.1 GET Semua Mitra",
                 "description": "Endpoint untuk 1.4.1 GET Semua Mitra.",
@@ -940,7 +904,7 @@
             },
             "post": {
                 "tags": [
-                    "1.4 Mitra"
+                    "1. Master Data"
                 ],
                 "summary": "1.4.2 POST Tambah Mitra",
                 "description": "Endpoint untuk 1.4.2 POST Tambah Mitra.",
@@ -1004,7 +968,7 @@
         "/mitra/{id}": {
             "get": {
                 "tags": [
-                    "1.4 Mitra"
+                    "1. Master Data"
                 ],
                 "summary": "1.4.3 GET Detail Mitra",
                 "description": "Endpoint untuk 1.4.3 GET Detail Mitra.",
@@ -1043,7 +1007,7 @@
             },
             "put": {
                 "tags": [
-                    "1.4 Mitra"
+                    "1. Master Data"
                 ],
                 "summary": "1.4.4 PUT Update Mitra",
                 "description": "Endpoint untuk 1.4.4 PUT Update Mitra.",
@@ -1117,7 +1081,7 @@
             },
             "delete": {
                 "tags": [
-                    "1.4 Mitra"
+                    "1. Master Data"
                 ],
                 "summary": "1.4.5 DELETE Hapus Mitra",
                 "description": "Endpoint untuk 1.4.5 DELETE Hapus Mitra.",
@@ -1158,7 +1122,7 @@
         "/jenis-kegiatan": {
             "get": {
                 "tags": [
-                    "1.5 Jenis Kegiatan"
+                    "1. Master Data"
                 ],
                 "summary": "1.5.1 GET Semua Jenis Kegiatan",
                 "description": "Endpoint untuk 1.5.1 GET Semua Jenis Kegiatan.",
@@ -1185,7 +1149,7 @@
             },
             "post": {
                 "tags": [
-                    "1.5 Jenis Kegiatan"
+                    "1. Master Data"
                 ],
                 "summary": "1.5.2 POST Tambah Jenis Kegiatan",
                 "description": "Endpoint untuk 1.5.2 POST Tambah Jenis Kegiatan.",
@@ -1239,7 +1203,7 @@
         "/jenis-kegiatan/{id}": {
             "get": {
                 "tags": [
-                    "1.5 Jenis Kegiatan"
+                    "1. Master Data"
                 ],
                 "summary": "1.5.3 GET Detail Jenis Kegiatan",
                 "description": "Endpoint untuk 1.5.3 GET Detail Jenis Kegiatan.",
@@ -1278,7 +1242,7 @@
             },
             "put": {
                 "tags": [
-                    "1.5 Jenis Kegiatan"
+                    "1. Master Data"
                 ],
                 "summary": "1.5.4 PUT Update Jenis Kegiatan",
                 "description": "Endpoint untuk 1.5.4 PUT Update Jenis Kegiatan.",
@@ -1342,7 +1306,7 @@
             },
             "delete": {
                 "tags": [
-                    "1.5 Jenis Kegiatan"
+                    "1. Master Data"
                 ],
                 "summary": "1.5.5 DELETE Hapus Jenis Kegiatan",
                 "description": "Endpoint untuk 1.5.5 DELETE Hapus Jenis Kegiatan.",
@@ -1383,7 +1347,7 @@
         "/jenis-luaran": {
             "get": {
                 "tags": [
-                    "1.6 Jenis Luaran"
+                    "1. Master Data"
                 ],
                 "summary": "1.6.1 GET Semua Jenis Luaran",
                 "description": "Endpoint untuk 1.6.1 GET Semua Jenis Luaran.",
@@ -1410,7 +1374,7 @@
             },
             "post": {
                 "tags": [
-                    "1.6 Jenis Luaran"
+                    "1. Master Data"
                 ],
                 "summary": "1.6.2 POST Tambah Jenis Luaran",
                 "description": "Endpoint untuk 1.6.2 POST Tambah Jenis Luaran.",
@@ -1464,7 +1428,7 @@
         "/jenis-luaran/{id}": {
             "get": {
                 "tags": [
-                    "1.6 Jenis Luaran"
+                    "1. Master Data"
                 ],
                 "summary": "1.6.3 GET Detail Jenis Luaran",
                 "description": "Endpoint untuk 1.6.3 GET Detail Jenis Luaran.",
@@ -1503,7 +1467,7 @@
             },
             "put": {
                 "tags": [
-                    "1.6 Jenis Luaran"
+                    "1. Master Data"
                 ],
                 "summary": "1.6.4 PUT Update Jenis Luaran",
                 "description": "Endpoint untuk 1.6.4 PUT Update Jenis Luaran.",
@@ -1567,7 +1531,7 @@
             },
             "delete": {
                 "tags": [
-                    "1.6 Jenis Luaran"
+                    "1. Master Data"
                 ],
                 "summary": "1.6.5 DELETE Hapus Jenis Luaran",
                 "description": "Endpoint untuk 1.6.5 DELETE Hapus Jenis Luaran.",
@@ -1608,7 +1572,7 @@
         "/jenis-kerja-sama": {
             "get": {
                 "tags": [
-                    "1.7 Jenis Kerja Sama"
+                    "1. Master Data"
                 ],
                 "summary": "1.7.1 GET Semua Jenis Kerja Sama",
                 "description": "Endpoint untuk 1.7.1 GET Semua Jenis Kerja Sama.",
@@ -1635,7 +1599,7 @@
             },
             "post": {
                 "tags": [
-                    "1.7 Jenis Kerja Sama"
+                    "1. Master Data"
                 ],
                 "summary": "1.7.2 POST Tambah Jenis Kerja Sama",
                 "description": "Endpoint untuk 1.7.2 POST Tambah Jenis Kerja Sama.",
@@ -1684,7 +1648,7 @@
         "/jenis-kerja-sama/{id}": {
             "get": {
                 "tags": [
-                    "1.7 Jenis Kerja Sama"
+                    "1. Master Data"
                 ],
                 "summary": "1.7.3 GET Detail Jenis Kerja Sama",
                 "description": "Endpoint untuk 1.7.3 GET Detail Jenis Kerja Sama.",
@@ -1723,7 +1687,7 @@
             },
             "put": {
                 "tags": [
-                    "1.7 Jenis Kerja Sama"
+                    "1. Master Data"
                 ],
                 "summary": "1.7.4 PUT Update Jenis Kerja Sama",
                 "description": "Endpoint untuk 1.7.4 PUT Update Jenis Kerja Sama.",
@@ -1782,7 +1746,7 @@
             },
             "delete": {
                 "tags": [
-                    "1.7 Jenis Kerja Sama"
+                    "1. Master Data"
                 ],
                 "summary": "1.7.5 DELETE Hapus Jenis Kerja Sama",
                 "description": "Endpoint untuk 1.7.5 DELETE Hapus Jenis Kerja Sama.",
@@ -1823,7 +1787,7 @@
         "/dosen": {
             "get": {
                 "tags": [
-                    "2.1 Dosen"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.1.1 GET Semua Data Dosen",
                 "description": "Endpoint untuk 2.1.1 GET Semua Data Dosen.",
@@ -1882,7 +1846,7 @@
             },
             "post": {
                 "tags": [
-                    "2.1 Dosen"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.1.2 POST Tambah Data Dosen",
                 "description": "Endpoint untuk 2.1.2 POST Tambah Data Dosen.",
@@ -1973,7 +1937,7 @@
         "/dosen/{id}": {
             "get": {
                 "tags": [
-                    "2.1 Dosen"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.1.3 GET Detail Dosen",
                 "description": "Endpoint untuk 2.1.3 GET Detail Dosen.",
@@ -2012,7 +1976,7 @@
             },
             "put": {
                 "tags": [
-                    "2.1 Dosen"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.1.4 PUT Update Data Dosen",
                 "description": "Endpoint untuk 2.1.4 PUT Update Data Dosen.",
@@ -2114,7 +2078,7 @@
             },
             "delete": {
                 "tags": [
-                    "2.1 Dosen"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.1.5 DELETE Hapus Dosen",
                 "description": "Endpoint untuk 2.1.5 DELETE Hapus Dosen.",
@@ -2155,7 +2119,7 @@
         "/dosen/import": {
             "post": {
                 "tags": [
-                    "2.1 Dosen"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.1.6 POST Import Excel Dosen",
                 "description": "Endpoint untuk 2.1.6 POST Import Excel Dosen.",
@@ -2201,7 +2165,7 @@
         "/dosen/{id}/restore": {
             "post": {
                 "tags": [
-                    "2.1 Dosen"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.1.7 POST Restore Dosen",
                 "description": "Endpoint untuk 2.1.7 POST Restore Dosen.",
@@ -2242,7 +2206,7 @@
         "/tendik": {
             "get": {
                 "tags": [
-                    "2.2 Tenaga Kependidikan"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.2.1 GET Semua Tenaga Kependidikan",
                 "description": "Endpoint untuk 2.2.1 GET Semua Tenaga Kependidikan.",
@@ -2291,7 +2255,7 @@
             },
             "post": {
                 "tags": [
-                    "2.2 Tenaga Kependidikan"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.2.2 POST Tambah Tenaga Kependidikan",
                 "description": "Endpoint untuk 2.2.2 POST Tambah Tenaga Kependidikan.",
@@ -2355,7 +2319,7 @@
         "/tendik/{id}": {
             "get": {
                 "tags": [
-                    "2.2 Tenaga Kependidikan"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.2.3 GET Detail Tenaga Kependidikan",
                 "description": "Endpoint untuk 2.2.3 GET Detail Tenaga Kependidikan.",
@@ -2394,7 +2358,7 @@
             },
             "put": {
                 "tags": [
-                    "2.2 Tenaga Kependidikan"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.2.4 PUT Update Tenaga Kependidikan",
                 "description": "Endpoint untuk 2.2.4 PUT Update Tenaga Kependidikan.",
@@ -2468,7 +2432,7 @@
             },
             "delete": {
                 "tags": [
-                    "2.2 Tenaga Kependidikan"
+                    "2. Manajemen SDM"
                 ],
                 "summary": "2.2.5 DELETE Hapus Tenaga Kependidikan",
                 "description": "Endpoint untuk 2.2.5 DELETE Hapus Tenaga Kependidikan.",
@@ -3053,10 +3017,10 @@
             },
             "post": {
                 "tags": [
-                    "4.2 POST Tambah Luaran (Spesifikasi Jenis)"
+                    "4. Tridharma - Luaran"
                 ],
-                "summary": "4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi",
-                "description": "Endpoint untuk 4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi.",
+                "summary": "4.2.1 POST Tambah Luaran",
+                "description": "Endpoint untuk 4.2.1 POST Tambah Luaran - Jurnal Ilmiah.\n- 4.2.2 POST Tambah Luaran - Buku Ajar / Monograf\n- 4.2.3 POST Tambah Luaran - HKI / Hak Cipta\n- 4.2.4 POST Tambah Luaran - Prosiding Seminar\n- 4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi",
                 "responses": {
                     "201": {
                         "description": "Operasi berhasil diproses.",
@@ -3087,7 +3051,7 @@
                                 "properties": {
                                     "id_jenis_luaran": {
                                         "type": "integer",
-                                        "example": 6
+                                        "example": 1
                                     },
                                     "id_kegiatan": {
                                         "type": "integer",
@@ -3097,47 +3061,119 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "nama_produk": {
+                                    "nama_jurnal": {
                                         "type": "string",
-                                        "example": "NetShield Edge: Alat Appliance Inspeksi Paket Data Jaringan Kampus"
+                                        "example": "IEEE Transactions on Network and Service Management"
                                     },
-                                    "jenis_produk": {
+                                    "issn": {
                                         "type": "string",
-                                        "example": "Prototipe Hardware-Software Embedded"
+                                        "example": "1932-4537"
                                     },
-                                    "status_pengembangan": {
+                                    "volume": {
                                         "type": "string",
-                                        "example": "Tingkat Kesiapan Terapan 6 (Validasi Lapangan)"
+                                        "example": "22"
                                     },
-                                    "tingkat_kesiapanterapan": {
+                                    "nomor_edisi": {
                                         "type": "string",
-                                        "example": "TKT 6"
+                                        "example": "2"
                                     },
-                                    "tanggal_pembuatan": {
+                                    "halaman_jurnal": {
                                         "type": "string",
-                                        "example": "2025-08-30"
+                                        "example": "210-224"
                                     },
-                                    "deskripsi_produk": {
+                                    "tanggal_terbit": {
                                         "type": "string",
-                                        "example": "Perangkat edge firewall berbasis arsitektur ARM dengan modul akselerator AI onboard"
+                                        "example": "2025-06-18"
                                     },
-                                    "tautan_produk": {
+                                    "doi": {
                                         "type": "string",
-                                        "example": "https://gitlab.polines.ac.id/trpl/netshield-edge"
+                                        "example": "10.1109/TNSM.2025.3214567"
+                                    },
+                                    "indeksasi": {
+                                        "type": "string",
+                                        "example": "Scopus Q1 / SJR 1.25"
                                     }
                                 }
                             },
-                            "example": {
-                                "id_jenis_luaran": 6,
-                                "id_kegiatan": 1,
-                                "id_dosen": 1,
-                                "nama_produk": "NetShield Edge: Alat Appliance Inspeksi Paket Data Jaringan Kampus",
-                                "jenis_produk": "Prototipe Hardware-Software Embedded",
-                                "status_pengembangan": "Tingkat Kesiapan Terapan 6 (Validasi Lapangan)",
-                                "tingkat_kesiapanterapan": "TKT 6",
-                                "tanggal_pembuatan": "2025-08-30",
-                                "deskripsi_produk": "Perangkat edge firewall berbasis arsitektur ARM dengan modul akselerator AI onboard",
-                                "tautan_produk": "https://gitlab.polines.ac.id/trpl/netshield-edge"
+                            "examples": {
+                                "4.2.1 POST Tambah Luaran - Jurnal Ilmiah": {
+                                    "summary": "4.2.1 POST Tambah Luaran - Jurnal Ilmiah",
+                                    "value": {
+                                        "id_jenis_luaran": 1,
+                                        "id_kegiatan": 1,
+                                        "id_dosen": 1,
+                                        "nama_jurnal": "IEEE Transactions on Network and Service Management",
+                                        "issn": "1932-4537",
+                                        "volume": "22",
+                                        "nomor_edisi": "2",
+                                        "halaman_jurnal": "210-224",
+                                        "tanggal_terbit": "2025-06-18",
+                                        "doi": "10.1109/TNSM.2025.3214567",
+                                        "indeksasi": "Scopus Q1 / SJR 1.25"
+                                    }
+                                },
+                                "4.2.2 POST Tambah Luaran - Buku Ajar / Monograf": {
+                                    "summary": "4.2.2 POST Tambah Luaran - Buku Ajar / Monograf",
+                                    "value": {
+                                        "id_jenis_luaran": 5,
+                                        "id_kegiatan": 1,
+                                        "id_dosen": 1,
+                                        "judul_buku": "Arsitektur Keamanan Siber Industri 4.0: Teori dan Praktik Berbasis Lab",
+                                        "isbn": "978-623-1234-89-0",
+                                        "penerbit_buku": "Polines Press Publisher",
+                                        "tahun_terbit": 2025,
+                                        "jenis_buku": "Buku Ajar Perguruan Tinggi",
+                                        "bidang_ilmu": "Teknik Komputer & Jaringan",
+                                        "halaman_buku": "256 Halaman"
+                                    }
+                                },
+                                "4.2.3 POST Tambah Luaran - HKI / Hak Cipta": {
+                                    "summary": "4.2.3 POST Tambah Luaran - HKI / Hak Cipta",
+                                    "value": {
+                                        "id_jenis_luaran": 4,
+                                        "id_kegiatan": 1,
+                                        "id_dosen": 1,
+                                        "judul_hak_cipta": "Program Komputer: Algoritma Deteksi Dini Serangan DDoS Berbasis Ensemble ResNet",
+                                        "jenis_hki": "Hak Cipta Program Komputer",
+                                        "nomor_pendaftaran_hki": "EC00202534567",
+                                        "nomor_sertifikat_hki": "000234567",
+                                        "tanggal_pendaftaran_hki": "2025-04-12",
+                                        "tanggal_terbit_sertifikat_hki": "2025-05-02",
+                                        "pemegang_hki": "Politeknik Negeri Semarang & Tim Peneliti",
+                                        "status_hki": "Granted (Tersertifikasi)"
+                                    }
+                                },
+                                "4.2.4 POST Tambah Luaran - Prosiding Seminar": {
+                                    "summary": "4.2.4 POST Tambah Luaran - Prosiding Seminar",
+                                    "value": {
+                                        "id_jenis_luaran": 3,
+                                        "id_kegiatan": 1,
+                                        "id_dosen": 1,
+                                        "nama_seminar": "International Conference on Applied Science and Technology (iCAST 2025)",
+                                        "nama_prosiding": "IEEE Xplore Conference Proceedings",
+                                        "isbn_prosiding": "978-1-6654-9876-5",
+                                        "penyelenggara": "Politeknik Negeri Semarang",
+                                        "tanggal_seminar": "2025-10-22",
+                                        "lokasi_seminar": "Semarang, Indonesia (Hybrid)",
+                                        "halaman_prosiding": "78-83",
+                                        "doi_prosiding": "10.1109/iCAST52345.2025.10123456"
+                                    }
+                                },
+                                "4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi": {
+                                    "summary": "4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi",
+                                    "value": {
+                                        "id_jenis_luaran": 6,
+                                        "id_kegiatan": 1,
+                                        "id_dosen": 1,
+                                        "nama_produk": "NetShield Edge: Alat Appliance Inspeksi Paket Data Jaringan Kampus",
+                                        "jenis_produk": "Prototipe Hardware-Software Embedded",
+                                        "status_pengembangan": "Tingkat Kesiapan Terapan 6 (Validasi Lapangan)",
+                                        "tingkat_kesiapanterapan": "TKT 6",
+                                        "tanggal_pembuatan": "2025-08-30",
+                                        "deskripsi_produk": "Perangkat edge firewall berbasis arsitektur ARM dengan modul akselerator AI onboard",
+                                        "tautan_produk": "https://gitlab.polines.ac.id/trpl/netshield-edge"
+                                    }
+                                }
                             }
                         }
                     }
@@ -3874,7 +3910,7 @@
         "/aktivitas-kerja-sama": {
             "get": {
                 "tags": [
-                    "5.9 Aktivitas Kerja Sama Standalone"
+                    "5. Kerja Sama & Kemitraan"
                 ],
                 "summary": "5.9.1 GET Semua Aktivitas Kerja Sama",
                 "description": "Endpoint untuk 5.9.1 GET Semua Aktivitas Kerja Sama.",
@@ -3923,7 +3959,7 @@
             },
             "post": {
                 "tags": [
-                    "5.9 Aktivitas Kerja Sama Standalone"
+                    "5. Kerja Sama & Kemitraan"
                 ],
                 "summary": "5.9.2 POST Tambah Aktivitas Standalone",
                 "description": "Endpoint untuk 5.9.2 POST Tambah Aktivitas Standalone.",
@@ -3992,7 +4028,7 @@
         "/aktivitas-kerja-sama/{id}": {
             "get": {
                 "tags": [
-                    "5.9 Aktivitas Kerja Sama Standalone"
+                    "5. Kerja Sama & Kemitraan"
                 ],
                 "summary": "5.9.3 GET Detail Aktivitas Standalone",
                 "description": "Endpoint untuk 5.9.3 GET Detail Aktivitas Standalone.",
@@ -4031,7 +4067,7 @@
             },
             "put": {
                 "tags": [
-                    "5.9 Aktivitas Kerja Sama Standalone"
+                    "5. Kerja Sama & Kemitraan"
                 ],
                 "summary": "5.9.4 PUT Update Aktivitas Standalone",
                 "description": "Endpoint untuk 5.9.4 PUT Update Aktivitas Standalone.",
@@ -4100,7 +4136,7 @@
             },
             "delete": {
                 "tags": [
-                    "5.9 Aktivitas Kerja Sama Standalone"
+                    "5. Kerja Sama & Kemitraan"
                 ],
                 "summary": "5.9.5 DELETE Hapus Aktivitas Standalone",
                 "description": "Endpoint untuk 5.9.5 DELETE Hapus Aktivitas Standalone.",
@@ -4220,10 +4256,10 @@
             },
             "post": {
                 "tags": [
-                    "6.2 POST Upload Evidence"
+                    "6. Repository & Validasi Evidence"
                 ],
-                "summary": "6.2.2 POST Simpan Tautan Google Drive Evidence",
-                "description": "Endpoint untuk 6.2.2 POST Simpan Tautan Google Drive Evidence.",
+                "summary": "6.2.1 POST Upload Berkas Fisik Evidence",
+                "description": "Endpoint untuk 6.2.1 POST Upload Berkas Fisik Evidence.\n- 6.2.2 POST Simpan Tautan Google Drive Evidence",
                 "responses": {
                     "201": {
                         "description": "Operasi berhasil diproses.",
@@ -4246,8 +4282,39 @@
                 ],
                 "requestBody": {
                     "required": true,
-                    "description": "Data payload JSON",
                     "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "Berkas bukti dukung fisik PDF / Gambar (max 10MB)"
+                                    },
+                                    "jenis_dokumen": {
+                                        "type": "string",
+                                        "example": "Proposal Penelitian Terapan",
+                                        "description": ""
+                                    },
+                                    "id_kegiatan": {
+                                        "type": "string",
+                                        "example": "1",
+                                        "description": ""
+                                    },
+                                    "id_kerja_sama": {
+                                        "type": "string",
+                                        "example": "1",
+                                        "description": ""
+                                    },
+                                    "status_validasi": {
+                                        "type": "string",
+                                        "example": "Menunggu Validasi",
+                                        "description": ""
+                                    }
+                                }
+                            }
+                        },
                         "application/json": {
                             "schema": {
                                 "type": "object",
