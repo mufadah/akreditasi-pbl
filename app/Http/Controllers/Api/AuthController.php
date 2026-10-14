@@ -16,24 +16,41 @@ class AuthController extends Controller
             'password' => 'required'
         ]);
 
-        // Cek kecocokan email dan password admin
-        if ($request->email !== 'admin@pbl.com' || $request->password !== 'password123') {
+        // Cek pengguna di database terlebih dahulu
+        $user = \App\Models\User::where('email', $request->email)->first();
+        $userData = null;
+
+        if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            $userData = [
+                'id'    => $user->id,
+                'nama'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role ?? 'ADMINISTRATOR',
+            ];
+        } elseif ($request->email === 'admin@pbl.com' && $request->password === 'password123') {
+            $userData = [
+                'id'    => 3,
+                'nama'  => 'Administrator User',
+                'email' => 'admin@pbl.com',
+                'role'  => 'ADMINISTRATOR',
+            ];
+        } else {
             return response()->json([
                 'success' => false,
                 'code'    => 401,
                 'message' => 'Email atau password salah.',
-                'data'    => null
+                'data'    => null,
             ], 401);
         }
 
         // Siapkan data payload JWT (info user, role, dan permission)
         $payload = [
-            'iss'         => 'http://localhost:8000/api/auth/login',
+            'iss'         => url('/api/login'),
             'iat'         => time(),
-            'exp'         => time() + 3600,
+            'exp'         => time() + 86400, // 24 jam
             'nbf'         => time(),
-            'sub'         => "3",
-            'role'        => 'ADMINISTRATOR',
+            'sub'         => (string) $userData['id'],
+            'role'        => $userData['role'],
             'permissions' => [
                 "dosen.create", "dosen.read", "dosen.update", "dosen.delete",
                 "kriteria.create", "kriteria.read", "kriteria.update", "kriteria.delete",
@@ -57,16 +74,11 @@ class AuthController extends Controller
             'code'    => 200,
             'message' => 'Login berhasil',
             'data'    => [
-                'user' => [
-                    'id'    => 3,
-                    'nama'  => 'Administrator User',
-                    'email' => 'admin@pbl.com',
-                    'role'  => 'ADMINISTRATOR'
-                ],
+                'user' => $userData,
                 'authorization' => [
                     'access_token' => $jwt,
                     'token_type'   => 'Bearer',
-                    'expires_in'   => 3600
+                    'expires_in'   => 86400
                 ]
             ]
         ]);
