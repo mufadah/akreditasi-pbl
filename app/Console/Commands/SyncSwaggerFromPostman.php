@@ -41,7 +41,7 @@ class SyncSwaggerFromPostman extends Command
         'Kerja Sama' => 'Endpoint API Dokumen & Perpanjangan Kerja Sama Kemitraan',
         'Aktivitas Kerja Sama' => 'Endpoint API Pelaksanaan & Aktivitas Implementasi Kerja Sama',
         'Evidence' => 'Endpoint API Repository Dokumen, Berkas Fisik, Link Drive & Validasi Kaprodi',
-        'Interoperabilitas' => 'Endpoint API Validasi NIM Mahasiswa (Eksternal K1)',
+        'Validasi Mahasiswa' => 'Endpoint API Validasi Keabsahan NIM Mahasiswa (Integrasi Sistem K1)',
         'Statistik' => 'Endpoint API Statistik, Agregasi, Rasio Dosen-Mahasiswa & Dashboard LAM',
     ];
 
@@ -406,8 +406,8 @@ class SyncSwaggerFromPostman extends Command
             if (preg_match('/Evidence|Repository/i', $name)) {
                 return 'Evidence';
             }
-            if (preg_match('/Interoperabilitas|Eksternal/i', $name)) {
-                return 'Interoperabilitas';
+            if (preg_match('/Interoperabilitas|Eksternal|Validasi NIM|Mahasiswa/i', $name)) {
+                return 'Validasi Mahasiswa';
             }
             if (preg_match('/Statistik|Dashboard/i', $name)) {
                 return 'Statistik';

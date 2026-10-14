@@ -77,8 +77,8 @@
             "description": "Endpoint API Repository Dokumen, Berkas Fisik, Link Drive & Validasi Kaprodi"
         },
         {
-            "name": "Interoperabilitas",
-            "description": "Endpoint API Validasi NIM Mahasiswa (Eksternal K1)"
+            "name": "Validasi Mahasiswa",
+            "description": "Endpoint API Validasi Keabsahan NIM Mahasiswa (Integrasi Sistem K1)"
         },
         {
             "name": "Statistik",
@@ -5573,7 +5573,7 @@
         "/api/k1/validasi-nim": {
             "post": {
                 "tags": [
-                    "Interoperabilitas"
+                    "Validasi Mahasiswa"
                 ],
                 "summary": "Validasi NIM Mahasiswa K1",
                 "description": "Endpoint API untuk Validasi NIM Mahasiswa K1.",
