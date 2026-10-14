@@ -1,13 +1,15 @@
-name: Deploy API Tridharma
+name: Deploy Tridharma
 
 on:
   push:
     branches:
       - main
 
-# Mencegah tabrakan jika ada push berurutan secara cepat
+permissions:
+  contents: read
+
 concurrency:
-  group: production-deploy
+  group: deploy-tridharma-production
   cancel-in-progress: false
 
 jobs:
@@ -15,39 +17,39 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Deploy to Server
+      - name: Deploy application
+        shell: bash
         run: |
-          echo "🚀 Starting Deployment..."
+          set -Eeuo pipefail
+
           cd /var/www/api-tridharma
 
-          # 1. Pastikan repo bersih dari file temporer/konflik lokal lalu pull branch main
-          echo "📥 Pulling latest changes from Git..."
+          echo "Fetching latest code..."
           git fetch origin main
           git reset --hard origin/main
 
-          # 2. Update dependensi Composer (PHP)
-          echo "📦 Installing Composer dependencies..."
-          composer install --no-dev --optimize-autoloader --no-interaction
+          echo "Installing production dependencies..."
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --optimize-autoloader \
+            --no-interaction \
+            --no-scripts
 
-          # 3. Jalankan migrasi database
-          echo "🗄️ Running database migrations..."
+          echo "Refreshing Laravel package discovery..."
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          php artisan package:discover --ansi
+
+          echo "Running database migrations..."
           php artisan migrate --force
 
-          # 4. Compile frontend asset (jika menggunakan Vite)
-          if [ -f "package.json" ]; then
-            echo "🎨 Building frontend assets..."
-            npm ci --prefer-offline --no-audit
-            npm run build
-          fi
-
-          # 5. Clear & cache config, route, view untuk performa maksimal
-          echo "⚡ Optimizing Laravel caches..."
-          php artisan optimize:clear
-          php artisan optimize
+          echo "Rebuilding Laravel caches..."
+          php artisan config:clear
+          php artisan config:cache
+          php artisan route:cache
           php artisan view:cache
 
-          # 6. Set permission folder storage & bootstrap/cache
-          echo "🔒 Setting folder permissions..."
+          echo "Setting folder permissions..."
           chmod -R 775 storage bootstrap/cache
 
-          echo "✅ Deployment completed successfully!"
+          echo "Deployment completed successfully."
