@@ -50,7 +50,9 @@ class Evidence extends Model
 
     public function kerjaSama(): BelongsTo
     {
-        return $this->belongsTo(KerjaSama::class, 'id_kerja_sama', 'id_kerja_sama');
+        $fk = ! empty($this->id_kerjasama) ? 'id_kerjasama' : 'id_kerja_sama';
+
+        return $this->belongsTo(KerjaSama::class, $fk, 'id_kerjasama');
     }
 
     public function penelitian(): BelongsTo

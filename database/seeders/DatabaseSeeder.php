@@ -117,11 +117,17 @@ class DatabaseSeeder extends Seeder
 
         // 8. Master Data Baru & Seeder Idempotent (Revisi ERD)
         $this->call([
-            JenisHkiSeeder::class,
-            JenisPkmSeeder::class,
             JenisKerjaSamaSeeder::class,
             JenisKegiatanSeeder::class,
             JenisLuaranSeeder::class,
         ]);
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('jenis_hki')) {
+            $this->call(JenisHkiSeeder::class);
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('jenis_pkm')) {
+            $this->call(JenisPkmSeeder::class);
+        }
     }
 }

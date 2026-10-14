@@ -40,7 +40,7 @@ return new class extends Migration
                 if (! Schema::hasColumn('evidence', 'id_kerja_sama')) {
                     $table->unsignedInteger('id_kerja_sama')->nullable()->after('id_pkm');
                     if (Schema::hasTable('kerja_sama')) {
-                        $table->foreign('id_kerja_sama')->references('id_kerja_sama')->on('kerja_sama')->nullOnDelete();
+                        $table->foreign('id_kerja_sama')->references('id_kerjasama')->on('kerja_sama')->nullOnDelete();
                     }
                 }
                 if (Schema::hasColumn('evidence', 'url_drive')) {
