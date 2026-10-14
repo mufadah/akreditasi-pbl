@@ -1,64 +1,102 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "Sistem Informasi Akreditasi & Tridharma PBL API",
-        "description": "Dokumentasi API Interaktif (OpenAPI 3.0 / Swagger UI) untuk Sistem Informasi Akreditasi dan Manajemen Tridharma PBL Politeknik Negeri Semarang.\n\n### Panduan Otorisasi:\n1. Eksekusi endpoint **0.1 POST Login** pada folder **0. Autentikasi**.\n2. Salin token dari `data.authorization.access_token`.\n3. Klik tombol hijau **Authorize** di pojok kanan atas Swagger UI, lalu masukkan: `Bearer <token>`.\n4. Sekarang Anda dapat mencoba seluruh endpoint (**Try it out**) secara interaktif.",
+        "title": "API Tridharma & Akreditasi PBL",
+        "description": "Dokumentasi REST API Sistem Informasi Akreditasi & Manajemen Tridharma PBL.\n\n### Panduan Otorisasi:\n1. Buka kelompok endpoint **Auth**, lalu jalankan endpoint **Login**.\n2. Salin token dari `data.authorization.access_token`.\n3. Klik tombol hijau **Authorize** di pojok kanan atas Swagger UI, lalu tempel token JWT Anda.\n4. Sekarang Anda dapat mencoba seluruh endpoint (**Try it out**) secara interaktif.",
         "version": "1.0.0",
         "contact": {
-            "name": "Tim Pengembang Sistem Akreditasi PBL",
+            "name": "Tim Pengembang Akreditasi PBL",
             "email": "admin@polines.ac.id"
         }
     },
     "servers": [
         {
-            "url": "http://localhost:8000/api",
-            "description": "Current Environment Server"
-        },
-        {
-            "url": "http://localhost:8000/api",
-            "description": "Local Development Server"
+            "url": "/",
+            "description": "API Server"
         }
     ],
     "tags": [
         {
-            "name": "0. Autentikasi"
+            "name": "Auth",
+            "description": "Autentikasi Pengguna & Manajemen Token JWT"
         },
         {
-            "name": "1. Master Data"
+            "name": "Jabatan Akademik",
+            "description": "Endpoint API Master Jabatan Akademik Dosen"
         },
         {
-            "name": "2. Manajemen SDM"
+            "name": "Pendidikan",
+            "description": "Endpoint API Master Jenjang Pendidikan"
         },
         {
-            "name": "3. Tridharma - Kegiatan"
+            "name": "Bidang Keahlian",
+            "description": "Endpoint API Master Bidang Keahlian"
         },
         {
-            "name": "4. Tridharma - Luaran"
+            "name": "Mitra",
+            "description": "Endpoint API Master Data Mitra"
         },
         {
-            "name": "5. Kerja Sama & Kemitraan"
+            "name": "Jenis Kegiatan",
+            "description": "Endpoint API Master Jenis Kegiatan Tridharma"
         },
         {
-            "name": "6. Repository & Validasi Evidence"
+            "name": "Jenis Luaran",
+            "description": "Endpoint API Master Jenis Luaran Tridharma"
         },
         {
-            "name": "7. Interoperabilitas & Eksternal"
+            "name": "Jenis Kerja Sama",
+            "description": "Endpoint API Master Jenis Kerja Sama"
         },
         {
-            "name": "8. Statistik & Dashboard"
+            "name": "Dosen",
+            "description": "Endpoint API Manajemen SDM Dosen (CRUD, Import Excel & Restore)"
+        },
+        {
+            "name": "Tenaga Kependidikan",
+            "description": "Endpoint API Manajemen SDM Tenaga Kependidikan"
+        },
+        {
+            "name": "Kegiatan",
+            "description": "Endpoint API Tridharma Kegiatan (Penelitian, Pengabdian & Pengajaran)"
+        },
+        {
+            "name": "Luaran",
+            "description": "Endpoint API Tridharma Luaran (Publikasi Jurnal, Buku, HKI, Prosiding & Prototipe)"
+        },
+        {
+            "name": "Kerja Sama",
+            "description": "Endpoint API Dokumen & Perpanjangan Kerja Sama Kemitraan"
+        },
+        {
+            "name": "Aktivitas Kerja Sama",
+            "description": "Endpoint API Pelaksanaan & Aktivitas Implementasi Kerja Sama"
+        },
+        {
+            "name": "Evidence",
+            "description": "Endpoint API Repository Dokumen, Berkas Fisik, Link Drive & Validasi Kaprodi"
+        },
+        {
+            "name": "Validasi Mahasiswa",
+            "description": "Endpoint API Validasi Keabsahan NIM Mahasiswa (Integrasi Sistem K1)"
+        },
+        {
+            "name": "Statistik",
+            "description": "Endpoint API Statistik, Agregasi, Rasio Dosen-Mahasiswa & Dashboard LAM"
         }
     ],
     "paths": {
-        "/login": {
+        "/api/login": {
             "post": {
                 "tags": [
-                    "0. Autentikasi"
+                    "Auth"
                 ],
-                "summary": "0.1 POST Login",
-                "description": "Endpoint untuk 0.1 POST Login.",
+                "summary": "Login",
+                "description": "Endpoint API untuk Login.",
+                "operationId": "761e4be54db52e262ad32134a86954b1",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -67,8 +105,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [],
@@ -99,16 +153,17 @@
                 }
             }
         },
-        "/register": {
+        "/api/register": {
             "post": {
                 "tags": [
-                    "0. Autentikasi"
+                    "Auth"
                 ],
-                "summary": "0.2 POST Register",
-                "description": "Endpoint untuk 0.2 POST Register.",
+                "summary": "Register",
+                "description": "Endpoint API untuk Register.",
+                "operationId": "58117a9b041caf5fcbdaf9548041d752",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -117,8 +172,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [],
@@ -159,13 +230,14 @@
                 }
             }
         },
-        "/me": {
+        "/api/me": {
             "get": {
                 "tags": [
-                    "0. Autentikasi"
+                    "Auth"
                 ],
-                "summary": "0.3 GET Current User Profile",
-                "description": "Endpoint untuk 0.3 GET Current User Profile.",
+                "summary": "Current User Profile",
+                "description": "Endpoint API untuk Current User Profile.",
+                "operationId": "94c2ae9e9cc9975c0405367b71f508f0",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -177,8 +249,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -188,16 +266,17 @@
                 ]
             }
         },
-        "/logout": {
+        "/api/logout": {
             "post": {
                 "tags": [
-                    "0. Autentikasi"
+                    "Auth"
                 ],
-                "summary": "0.4 POST Logout",
-                "description": "Endpoint untuk 0.4 POST Logout.",
+                "summary": "Logout",
+                "description": "Endpoint API untuk Logout.",
+                "operationId": "bdcbd2a916dcd20824653d3c11b75ec3",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -206,8 +285,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -217,13 +312,14 @@
                 ]
             }
         },
-        "/jabatan-akademik": {
+        "/api/jabatan-akademik": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jabatan Akademik"
                 ],
-                "summary": "1.1.1 GET Semua Jabatan Akademik",
-                "description": "Endpoint untuk 1.1.1 GET Semua Jabatan Akademik.",
+                "summary": "Semua Jabatan Akademik",
+                "description": "Endpoint API untuk Semua Jabatan Akademik.",
+                "operationId": "718e65c7192d4252b867ddfb8ba4a1af",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -235,8 +331,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -247,13 +349,14 @@
             },
             "post": {
                 "tags": [
-                    "1. Master Data"
+                    "Jabatan Akademik"
                 ],
-                "summary": "1.1.2 POST Tambah Jabatan Akademik",
-                "description": "Endpoint untuk 1.1.2 POST Tambah Jabatan Akademik.",
+                "summary": "Tambah Jabatan Akademik",
+                "description": "Endpoint API untuk Tambah Jabatan Akademik.",
+                "operationId": "1784af6e9bc3136847f71d5fdfc4a05d",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -262,8 +365,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -293,13 +412,14 @@
                 }
             }
         },
-        "/jabatan-akademik/{id}": {
+        "/api/jabatan-akademik/{id}": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jabatan Akademik"
                 ],
-                "summary": "1.1.3 GET Detail Jabatan Akademik",
-                "description": "Endpoint untuk 1.1.3 GET Detail Jabatan Akademik.",
+                "summary": "Detail Jabatan Akademik",
+                "description": "Endpoint API untuk Detail Jabatan Akademik.",
+                "operationId": "af9c1af8912934b2abff028fced85c6b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -311,8 +431,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -335,10 +461,11 @@
             },
             "put": {
                 "tags": [
-                    "1. Master Data"
+                    "Jabatan Akademik"
                 ],
-                "summary": "1.1.4 PUT Update Jabatan Akademik",
-                "description": "Endpoint untuk 1.1.4 PUT Update Jabatan Akademik.",
+                "summary": "Update Jabatan Akademik",
+                "description": "Endpoint API untuk Update Jabatan Akademik.",
+                "operationId": "5794d0255de3e111bd0264654e2295f8",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -350,8 +477,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -394,10 +537,11 @@
             },
             "delete": {
                 "tags": [
-                    "1. Master Data"
+                    "Jabatan Akademik"
                 ],
-                "summary": "1.1.5 DELETE Hapus Jabatan Akademik",
-                "description": "Endpoint untuk 1.1.5 DELETE Hapus Jabatan Akademik.",
+                "summary": "Hapus Jabatan Akademik",
+                "description": "Endpoint API untuk Hapus Jabatan Akademik.",
+                "operationId": "8a9a6fad87702820d7eb3d7cd6427997",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -409,8 +553,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -432,13 +582,14 @@
                 ]
             }
         },
-        "/pendidikan": {
+        "/api/pendidikan": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Pendidikan"
                 ],
-                "summary": "1.2.1 GET Semua Jenjang Pendidikan",
-                "description": "Endpoint untuk 1.2.1 GET Semua Jenjang Pendidikan.",
+                "summary": "Semua Jenjang Pendidikan",
+                "description": "Endpoint API untuk Semua Jenjang Pendidikan.",
+                "operationId": "8f0b7f8f0e93136599d4395c99bec3bf",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -450,8 +601,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -462,13 +619,14 @@
             },
             "post": {
                 "tags": [
-                    "1. Master Data"
+                    "Pendidikan"
                 ],
-                "summary": "1.2.2 POST Tambah Jenjang Pendidikan",
-                "description": "Endpoint untuk 1.2.2 POST Tambah Jenjang Pendidikan.",
+                "summary": "Tambah Jenjang Pendidikan",
+                "description": "Endpoint API untuk Tambah Jenjang Pendidikan.",
+                "operationId": "5d41ff037458b332ff9eefd791826f9b",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -477,8 +635,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -508,13 +682,14 @@
                 }
             }
         },
-        "/pendidikan/{id}": {
+        "/api/pendidikan/{id}": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Pendidikan"
                 ],
-                "summary": "1.2.3 GET Detail Jenjang Pendidikan",
-                "description": "Endpoint untuk 1.2.3 GET Detail Jenjang Pendidikan.",
+                "summary": "Detail Jenjang Pendidikan",
+                "description": "Endpoint API untuk Detail Jenjang Pendidikan.",
+                "operationId": "06266c00fa377eecc5e5d23ab7685d94",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -526,8 +701,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -550,10 +731,11 @@
             },
             "put": {
                 "tags": [
-                    "1. Master Data"
+                    "Pendidikan"
                 ],
-                "summary": "1.2.4 PUT Update Jenjang Pendidikan",
-                "description": "Endpoint untuk 1.2.4 PUT Update Jenjang Pendidikan.",
+                "summary": "Update Jenjang Pendidikan",
+                "description": "Endpoint API untuk Update Jenjang Pendidikan.",
+                "operationId": "86b6f93c574f9c935e1c0f859a18053d",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -565,8 +747,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -609,10 +807,11 @@
             },
             "delete": {
                 "tags": [
-                    "1. Master Data"
+                    "Pendidikan"
                 ],
-                "summary": "1.2.5 DELETE Hapus Jenjang Pendidikan",
-                "description": "Endpoint untuk 1.2.5 DELETE Hapus Jenjang Pendidikan.",
+                "summary": "Hapus Jenjang Pendidikan",
+                "description": "Endpoint API untuk Hapus Jenjang Pendidikan.",
+                "operationId": "b1a605d47e4ec9a1ed7bc20d0fc788f0",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -624,8 +823,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -647,13 +852,14 @@
                 ]
             }
         },
-        "/bidang-keahlian": {
+        "/api/bidang-keahlian": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Bidang Keahlian"
                 ],
-                "summary": "1.3.1 GET Semua Bidang Keahlian",
-                "description": "Endpoint untuk 1.3.1 GET Semua Bidang Keahlian.",
+                "summary": "Semua Bidang Keahlian",
+                "description": "Endpoint API untuk Semua Bidang Keahlian.",
+                "operationId": "612a96d601d7ad4f41f3f0b52187bb06",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -665,8 +871,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -677,13 +889,14 @@
             },
             "post": {
                 "tags": [
-                    "1. Master Data"
+                    "Bidang Keahlian"
                 ],
-                "summary": "1.3.2 POST Tambah Bidang Keahlian",
-                "description": "Endpoint untuk 1.3.2 POST Tambah Bidang Keahlian.",
+                "summary": "Tambah Bidang Keahlian",
+                "description": "Endpoint API untuk Tambah Bidang Keahlian.",
+                "operationId": "13ad25241b11953eb081ea193620e26b",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -692,8 +905,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -723,13 +952,14 @@
                 }
             }
         },
-        "/bidang-keahlian/{id}": {
+        "/api/bidang-keahlian/{id}": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Bidang Keahlian"
                 ],
-                "summary": "1.3.3 GET Detail Bidang Keahlian",
-                "description": "Endpoint untuk 1.3.3 GET Detail Bidang Keahlian.",
+                "summary": "Detail Bidang Keahlian",
+                "description": "Endpoint API untuk Detail Bidang Keahlian.",
+                "operationId": "33e762486a611eddbec61c370675cfb9",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -741,8 +971,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -765,10 +1001,11 @@
             },
             "put": {
                 "tags": [
-                    "1. Master Data"
+                    "Bidang Keahlian"
                 ],
-                "summary": "1.3.4 PUT Update Bidang Keahlian",
-                "description": "Endpoint untuk 1.3.4 PUT Update Bidang Keahlian.",
+                "summary": "Update Bidang Keahlian",
+                "description": "Endpoint API untuk Update Bidang Keahlian.",
+                "operationId": "30a3bd0e293fa8a9b8425ee821ad0957",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -780,8 +1017,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -824,10 +1077,11 @@
             },
             "delete": {
                 "tags": [
-                    "1. Master Data"
+                    "Bidang Keahlian"
                 ],
-                "summary": "1.3.5 DELETE Hapus Bidang Keahlian",
-                "description": "Endpoint untuk 1.3.5 DELETE Hapus Bidang Keahlian.",
+                "summary": "Hapus Bidang Keahlian",
+                "description": "Endpoint API untuk Hapus Bidang Keahlian.",
+                "operationId": "5955aaf83647e1f01e9eea40bf44b4cd",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -839,8 +1093,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -862,13 +1122,14 @@
                 ]
             }
         },
-        "/mitra": {
+        "/api/mitra": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Mitra"
                 ],
-                "summary": "1.4.1 GET Semua Mitra",
-                "description": "Endpoint untuk 1.4.1 GET Semua Mitra.",
+                "summary": "Semua Mitra",
+                "description": "Endpoint API untuk Semua Mitra.",
+                "operationId": "f4f0ea7023cad5ba29ae7d21061f8f7b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -880,8 +1141,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -904,13 +1171,14 @@
             },
             "post": {
                 "tags": [
-                    "1. Master Data"
+                    "Mitra"
                 ],
-                "summary": "1.4.2 POST Tambah Mitra",
-                "description": "Endpoint untuk 1.4.2 POST Tambah Mitra.",
+                "summary": "Tambah Mitra",
+                "description": "Endpoint API untuk Tambah Mitra.",
+                "operationId": "5c9a02518f2c9fb859ebc90a39299235",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -919,8 +1187,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -965,13 +1249,14 @@
                 }
             }
         },
-        "/mitra/{id}": {
+        "/api/mitra/{id}": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Mitra"
                 ],
-                "summary": "1.4.3 GET Detail Mitra",
-                "description": "Endpoint untuk 1.4.3 GET Detail Mitra.",
+                "summary": "Detail Mitra",
+                "description": "Endpoint API untuk Detail Mitra.",
+                "operationId": "56d51712850900eda9507c122a7cb7e9",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -983,8 +1268,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1007,10 +1298,11 @@
             },
             "put": {
                 "tags": [
-                    "1. Master Data"
+                    "Mitra"
                 ],
-                "summary": "1.4.4 PUT Update Mitra",
-                "description": "Endpoint untuk 1.4.4 PUT Update Mitra.",
+                "summary": "Update Mitra",
+                "description": "Endpoint API untuk Update Mitra.",
+                "operationId": "6e702e10fb5b47ad17a00c2aac1d557b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1022,8 +1314,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1081,10 +1389,11 @@
             },
             "delete": {
                 "tags": [
-                    "1. Master Data"
+                    "Mitra"
                 ],
-                "summary": "1.4.5 DELETE Hapus Mitra",
-                "description": "Endpoint untuk 1.4.5 DELETE Hapus Mitra.",
+                "summary": "Hapus Mitra",
+                "description": "Endpoint API untuk Hapus Mitra.",
+                "operationId": "a100b5871edc1326530d915a4f2afdb0",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1096,8 +1405,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1119,13 +1434,14 @@
                 ]
             }
         },
-        "/jenis-kegiatan": {
+        "/api/jenis-kegiatan": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kegiatan"
                 ],
-                "summary": "1.5.1 GET Semua Jenis Kegiatan",
-                "description": "Endpoint untuk 1.5.1 GET Semua Jenis Kegiatan.",
+                "summary": "Semua Jenis Kegiatan",
+                "description": "Endpoint API untuk Semua Jenis Kegiatan.",
+                "operationId": "227fee29e6cc1df0d5ea2e56d4a05c5f",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1137,8 +1453,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1149,13 +1471,14 @@
             },
             "post": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kegiatan"
                 ],
-                "summary": "1.5.2 POST Tambah Jenis Kegiatan",
-                "description": "Endpoint untuk 1.5.2 POST Tambah Jenis Kegiatan.",
+                "summary": "Tambah Jenis Kegiatan",
+                "description": "Endpoint API untuk Tambah Jenis Kegiatan.",
+                "operationId": "3e98875aac59092a8419838b7cce8ae8",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1164,8 +1487,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1200,13 +1539,14 @@
                 }
             }
         },
-        "/jenis-kegiatan/{id}": {
+        "/api/jenis-kegiatan/{id}": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kegiatan"
                 ],
-                "summary": "1.5.3 GET Detail Jenis Kegiatan",
-                "description": "Endpoint untuk 1.5.3 GET Detail Jenis Kegiatan.",
+                "summary": "Detail Jenis Kegiatan",
+                "description": "Endpoint API untuk Detail Jenis Kegiatan.",
+                "operationId": "146df1fa94ddaa0b75ec4493d39b7a61",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1218,8 +1558,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1242,10 +1588,11 @@
             },
             "put": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kegiatan"
                 ],
-                "summary": "1.5.4 PUT Update Jenis Kegiatan",
-                "description": "Endpoint untuk 1.5.4 PUT Update Jenis Kegiatan.",
+                "summary": "Update Jenis Kegiatan",
+                "description": "Endpoint API untuk Update Jenis Kegiatan.",
+                "operationId": "7c883d7f1463744fb25ca4b7eec88ce2",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1257,8 +1604,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1306,10 +1669,11 @@
             },
             "delete": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kegiatan"
                 ],
-                "summary": "1.5.5 DELETE Hapus Jenis Kegiatan",
-                "description": "Endpoint untuk 1.5.5 DELETE Hapus Jenis Kegiatan.",
+                "summary": "Hapus Jenis Kegiatan",
+                "description": "Endpoint API untuk Hapus Jenis Kegiatan.",
+                "operationId": "5aa89d4d40409a66a2d69cd93be3a2d1",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1321,8 +1685,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1344,13 +1714,14 @@
                 ]
             }
         },
-        "/jenis-luaran": {
+        "/api/jenis-luaran": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Luaran"
                 ],
-                "summary": "1.6.1 GET Semua Jenis Luaran",
-                "description": "Endpoint untuk 1.6.1 GET Semua Jenis Luaran.",
+                "summary": "Semua Jenis Luaran",
+                "description": "Endpoint API untuk Semua Jenis Luaran.",
+                "operationId": "317a785133bcc9ed086a3df47de9f1f9",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1362,8 +1733,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1374,13 +1751,14 @@
             },
             "post": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Luaran"
                 ],
-                "summary": "1.6.2 POST Tambah Jenis Luaran",
-                "description": "Endpoint untuk 1.6.2 POST Tambah Jenis Luaran.",
+                "summary": "Tambah Jenis Luaran",
+                "description": "Endpoint API untuk Tambah Jenis Luaran.",
+                "operationId": "71ea57614f08cf2f4becf46b57794d34",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1389,8 +1767,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1425,13 +1819,14 @@
                 }
             }
         },
-        "/jenis-luaran/{id}": {
+        "/api/jenis-luaran/{id}": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Luaran"
                 ],
-                "summary": "1.6.3 GET Detail Jenis Luaran",
-                "description": "Endpoint untuk 1.6.3 GET Detail Jenis Luaran.",
+                "summary": "Detail Jenis Luaran",
+                "description": "Endpoint API untuk Detail Jenis Luaran.",
+                "operationId": "9b154254bd46a60b38e66a545eae4d35",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1443,8 +1838,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1467,10 +1868,11 @@
             },
             "put": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Luaran"
                 ],
-                "summary": "1.6.4 PUT Update Jenis Luaran",
-                "description": "Endpoint untuk 1.6.4 PUT Update Jenis Luaran.",
+                "summary": "Update Jenis Luaran",
+                "description": "Endpoint API untuk Update Jenis Luaran.",
+                "operationId": "9d4d3baf9a23381eaff32c7fd79abdd3",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1482,8 +1884,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1531,10 +1949,11 @@
             },
             "delete": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Luaran"
                 ],
-                "summary": "1.6.5 DELETE Hapus Jenis Luaran",
-                "description": "Endpoint untuk 1.6.5 DELETE Hapus Jenis Luaran.",
+                "summary": "Hapus Jenis Luaran",
+                "description": "Endpoint API untuk Hapus Jenis Luaran.",
+                "operationId": "1e3c9a77c4579973e0cf80a1619cda59",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1546,8 +1965,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1569,13 +1994,14 @@
                 ]
             }
         },
-        "/jenis-kerja-sama": {
+        "/api/jenis-kerja-sama": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kerja Sama"
                 ],
-                "summary": "1.7.1 GET Semua Jenis Kerja Sama",
-                "description": "Endpoint untuk 1.7.1 GET Semua Jenis Kerja Sama.",
+                "summary": "Semua Jenis Kerja Sama",
+                "description": "Endpoint API untuk Semua Jenis Kerja Sama.",
+                "operationId": "460501efbd5673a4f3c6bed2870bc7b7",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1587,8 +2013,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1599,13 +2031,14 @@
             },
             "post": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kerja Sama"
                 ],
-                "summary": "1.7.2 POST Tambah Jenis Kerja Sama",
-                "description": "Endpoint untuk 1.7.2 POST Tambah Jenis Kerja Sama.",
+                "summary": "Tambah Jenis Kerja Sama",
+                "description": "Endpoint API untuk Tambah Jenis Kerja Sama.",
+                "operationId": "94e195b1e1c58bbb96128b3b497fb90f",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1614,8 +2047,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1645,13 +2094,14 @@
                 }
             }
         },
-        "/jenis-kerja-sama/{id}": {
+        "/api/jenis-kerja-sama/{id}": {
             "get": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kerja Sama"
                 ],
-                "summary": "1.7.3 GET Detail Jenis Kerja Sama",
-                "description": "Endpoint untuk 1.7.3 GET Detail Jenis Kerja Sama.",
+                "summary": "Detail Jenis Kerja Sama",
+                "description": "Endpoint API untuk Detail Jenis Kerja Sama.",
+                "operationId": "167a9fb464985f6132c2643b9f1942cf",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1663,8 +2113,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1687,10 +2143,11 @@
             },
             "put": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kerja Sama"
                 ],
-                "summary": "1.7.4 PUT Update Jenis Kerja Sama",
-                "description": "Endpoint untuk 1.7.4 PUT Update Jenis Kerja Sama.",
+                "summary": "Update Jenis Kerja Sama",
+                "description": "Endpoint API untuk Update Jenis Kerja Sama.",
+                "operationId": "3ce148f9be14d283e23a5adab0deab4a",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1702,8 +2159,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1746,10 +2219,11 @@
             },
             "delete": {
                 "tags": [
-                    "1. Master Data"
+                    "Jenis Kerja Sama"
                 ],
-                "summary": "1.7.5 DELETE Hapus Jenis Kerja Sama",
-                "description": "Endpoint untuk 1.7.5 DELETE Hapus Jenis Kerja Sama.",
+                "summary": "Hapus Jenis Kerja Sama",
+                "description": "Endpoint API untuk Hapus Jenis Kerja Sama.",
+                "operationId": "2f83a26c5fb5ecf360540a1c39ab80f8",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1761,8 +2235,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1784,13 +2264,14 @@
                 ]
             }
         },
-        "/dosen": {
+        "/api/dosen": {
             "get": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Dosen"
                 ],
-                "summary": "2.1.1 GET Semua Data Dosen",
-                "description": "Endpoint untuk 2.1.1 GET Semua Data Dosen.",
+                "summary": "Semua Data Dosen",
+                "description": "Endpoint API untuk Semua Data Dosen.",
+                "operationId": "09d2175c9fa6e509e8ccfee8af24581f",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1802,8 +2283,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1846,13 +2333,14 @@
             },
             "post": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Dosen"
                 ],
-                "summary": "2.1.2 POST Tambah Data Dosen",
-                "description": "Endpoint untuk 2.1.2 POST Tambah Data Dosen.",
+                "summary": "Tambah Data Dosen",
+                "description": "Endpoint API untuk Tambah Data Dosen.",
+                "operationId": "924f90a1de85e1da6dddb337ce3b4c5c",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1861,8 +2349,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1934,13 +2438,14 @@
                 }
             }
         },
-        "/dosen/{id}": {
+        "/api/dosen/{id}": {
             "get": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Dosen"
                 ],
-                "summary": "2.1.3 GET Detail Dosen",
-                "description": "Endpoint untuk 2.1.3 GET Detail Dosen.",
+                "summary": "Detail Dosen",
+                "description": "Endpoint API untuk Detail Dosen.",
+                "operationId": "fe09da0f0580737a220c3a97509ef97b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1952,8 +2457,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -1976,10 +2487,11 @@
             },
             "put": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Dosen"
                 ],
-                "summary": "2.1.4 PUT Update Data Dosen",
-                "description": "Endpoint untuk 2.1.4 PUT Update Data Dosen.",
+                "summary": "Update Data Dosen",
+                "description": "Endpoint API untuk Update Data Dosen.",
+                "operationId": "0591d7824d74df746f3a09da7fd154ad",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -1991,8 +2503,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2078,10 +2606,11 @@
             },
             "delete": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Dosen"
                 ],
-                "summary": "2.1.5 DELETE Hapus Dosen",
-                "description": "Endpoint untuk 2.1.5 DELETE Hapus Dosen.",
+                "summary": "Hapus Dosen",
+                "description": "Endpoint API untuk Hapus Dosen.",
+                "operationId": "f61e807ac185962a25bea5be55b85d1b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2093,8 +2622,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -2116,16 +2651,17 @@
                 ]
             }
         },
-        "/dosen/import": {
+        "/api/dosen/import": {
             "post": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Dosen"
                 ],
-                "summary": "2.1.6 POST Import Excel Dosen",
-                "description": "Endpoint untuk 2.1.6 POST Import Excel Dosen.",
+                "summary": "Import Excel Dosen",
+                "description": "Endpoint API untuk Import Excel Dosen.",
+                "operationId": "57da21494042db165beee281abbe40ff",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2134,8 +2670,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2162,16 +2714,17 @@
                 }
             }
         },
-        "/dosen/{id}/restore": {
+        "/api/dosen/{id}/restore": {
             "post": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Dosen"
                 ],
-                "summary": "2.1.7 POST Restore Dosen",
-                "description": "Endpoint untuk 2.1.7 POST Restore Dosen.",
+                "summary": "Restore Dosen",
+                "description": "Endpoint API untuk Restore Dosen.",
+                "operationId": "952c0384c90677e610cfed81983820ef",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2180,8 +2733,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2203,13 +2772,14 @@
                 ]
             }
         },
-        "/tendik": {
+        "/api/tendik": {
             "get": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Tenaga Kependidikan"
                 ],
-                "summary": "2.2.1 GET Semua Tenaga Kependidikan",
-                "description": "Endpoint untuk 2.2.1 GET Semua Tenaga Kependidikan.",
+                "summary": "Semua Tenaga Kependidikan",
+                "description": "Endpoint API untuk Semua Tenaga Kependidikan.",
+                "operationId": "16dbab2daaaea67d41e68ad0a2849181",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2221,8 +2791,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -2255,13 +2831,14 @@
             },
             "post": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Tenaga Kependidikan"
                 ],
-                "summary": "2.2.2 POST Tambah Tenaga Kependidikan",
-                "description": "Endpoint untuk 2.2.2 POST Tambah Tenaga Kependidikan.",
+                "summary": "Tambah Tenaga Kependidikan",
+                "description": "Endpoint API untuk Tambah Tenaga Kependidikan.",
+                "operationId": "3f586e39b0a0fbf4c9722beae46af8a0",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2270,8 +2847,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2316,13 +2909,14 @@
                 }
             }
         },
-        "/tendik/{id}": {
+        "/api/tendik/{id}": {
             "get": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Tenaga Kependidikan"
                 ],
-                "summary": "2.2.3 GET Detail Tenaga Kependidikan",
-                "description": "Endpoint untuk 2.2.3 GET Detail Tenaga Kependidikan.",
+                "summary": "Detail Tenaga Kependidikan",
+                "description": "Endpoint API untuk Detail Tenaga Kependidikan.",
+                "operationId": "699bdf18ae896cf8d730c1a4bb88f400",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2334,8 +2928,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -2358,10 +2958,11 @@
             },
             "put": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Tenaga Kependidikan"
                 ],
-                "summary": "2.2.4 PUT Update Tenaga Kependidikan",
-                "description": "Endpoint untuk 2.2.4 PUT Update Tenaga Kependidikan.",
+                "summary": "Update Tenaga Kependidikan",
+                "description": "Endpoint API untuk Update Tenaga Kependidikan.",
+                "operationId": "daa3788bd625ecb360f2bc59bf5c018e",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2373,8 +2974,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2432,10 +3049,11 @@
             },
             "delete": {
                 "tags": [
-                    "2. Manajemen SDM"
+                    "Tenaga Kependidikan"
                 ],
-                "summary": "2.2.5 DELETE Hapus Tenaga Kependidikan",
-                "description": "Endpoint untuk 2.2.5 DELETE Hapus Tenaga Kependidikan.",
+                "summary": "Hapus Tenaga Kependidikan",
+                "description": "Endpoint API untuk Hapus Tenaga Kependidikan.",
+                "operationId": "c1b13b8ed7a2b39941f60af29e53616b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2447,8 +3065,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -2470,13 +3094,14 @@
                 ]
             }
         },
-        "/kegiatan": {
+        "/api/kegiatan": {
             "get": {
                 "tags": [
-                    "3. Tridharma - Kegiatan"
+                    "Kegiatan"
                 ],
-                "summary": "3.1 GET Semua Kegiatan",
-                "description": "Endpoint untuk 3.1 GET Semua Kegiatan.",
+                "summary": "Semua Kegiatan",
+                "description": "Endpoint API untuk Semua Kegiatan.",
+                "operationId": "ee10ba01785db15d8fd14a71a0ff31b3",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2488,8 +3113,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -2552,13 +3183,14 @@
             },
             "post": {
                 "tags": [
-                    "3. Tridharma - Kegiatan"
+                    "Kegiatan"
                 ],
-                "summary": "3.2 POST Tambah Kegiatan",
-                "description": "Endpoint untuk 3.2 POST Tambah Kegiatan.",
+                "summary": "Tambah Kegiatan",
+                "description": "Endpoint API untuk Tambah Kegiatan.",
+                "operationId": "7eef6e75c838088be2ecae625a957430",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2567,8 +3199,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2707,13 +3355,14 @@
                 }
             }
         },
-        "/kegiatan/{id}": {
+        "/api/kegiatan/{id}": {
             "get": {
                 "tags": [
-                    "3. Tridharma - Kegiatan"
+                    "Kegiatan"
                 ],
-                "summary": "3.3 GET Detail Kegiatan",
-                "description": "Endpoint untuk 3.3 GET Detail Kegiatan.",
+                "summary": "Detail Kegiatan",
+                "description": "Endpoint API untuk Detail Kegiatan.",
+                "operationId": "fc8f37cb7f815cc1e27e1de496b2070f",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2725,8 +3374,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -2749,10 +3404,11 @@
             },
             "put": {
                 "tags": [
-                    "3. Tridharma - Kegiatan"
+                    "Kegiatan"
                 ],
-                "summary": "3.4 PUT Update Kegiatan",
-                "description": "Endpoint untuk 3.4 PUT Update Kegiatan.",
+                "summary": "Update Kegiatan",
+                "description": "Endpoint API untuk Update Kegiatan.",
+                "operationId": "2f156cb9a5b91a39aeb39e052cfe498e",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2764,8 +3420,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2907,10 +3579,11 @@
             },
             "delete": {
                 "tags": [
-                    "3. Tridharma - Kegiatan"
+                    "Kegiatan"
                 ],
-                "summary": "3.5 DELETE Kegiatan",
-                "description": "Endpoint untuk 3.5 DELETE Kegiatan.",
+                "summary": "Kegiatan",
+                "description": "Endpoint API untuk Kegiatan.",
+                "operationId": "df5d7c767972b9b4980a2b432cb2f637",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2922,8 +3595,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -2945,13 +3624,14 @@
                 ]
             }
         },
-        "/luaran": {
+        "/api/luaran": {
             "get": {
                 "tags": [
-                    "4. Tridharma - Luaran"
+                    "Luaran"
                 ],
-                "summary": "4.1 GET Semua Luaran",
-                "description": "Endpoint untuk 4.1 GET Semua Luaran.",
+                "summary": "Semua Luaran",
+                "description": "Endpoint API untuk Semua Luaran.",
+                "operationId": "71a2a2b53061c83fd691e8831314ac42",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -2963,8 +3643,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3017,13 +3703,14 @@
             },
             "post": {
                 "tags": [
-                    "4. Tridharma - Luaran"
+                    "Luaran"
                 ],
-                "summary": "4.2.1 POST Tambah Luaran",
-                "description": "Endpoint untuk 4.2.1 POST Tambah Luaran - Jurnal Ilmiah.\n- 4.2.2 POST Tambah Luaran - Buku Ajar / Monograf\n- 4.2.3 POST Tambah Luaran - HKI / Hak Cipta\n- 4.2.4 POST Tambah Luaran - Prosiding Seminar\n- 4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi",
+                "summary": "Tambah Luaran",
+                "description": "Endpoint API untuk Tambah Luaran - Jurnal Ilmiah.\n- Tambah Luaran - Buku Ajar / Monograf\n- Tambah Luaran - HKI / Hak Cipta\n- Tambah Luaran - Prosiding Seminar\n- Tambah Luaran - Produk / Prototipe Teknologi",
+                "operationId": "cab856b7bc206db636d1b83598d5dff5",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3032,8 +3719,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3096,8 +3799,8 @@
                                 }
                             },
                             "examples": {
-                                "4.2.1 POST Tambah Luaran - Jurnal Ilmiah": {
-                                    "summary": "4.2.1 POST Tambah Luaran - Jurnal Ilmiah",
+                                "Tambah Luaran - Jurnal Ilmiah": {
+                                    "summary": "Tambah Luaran - Jurnal Ilmiah",
                                     "value": {
                                         "id_jenis_luaran": 1,
                                         "id_kegiatan": 1,
@@ -3112,8 +3815,8 @@
                                         "indeksasi": "Scopus Q1 / SJR 1.25"
                                     }
                                 },
-                                "4.2.2 POST Tambah Luaran - Buku Ajar / Monograf": {
-                                    "summary": "4.2.2 POST Tambah Luaran - Buku Ajar / Monograf",
+                                "Tambah Luaran - Buku Ajar / Monograf": {
+                                    "summary": "Tambah Luaran - Buku Ajar / Monograf",
                                     "value": {
                                         "id_jenis_luaran": 5,
                                         "id_kegiatan": 1,
@@ -3127,8 +3830,8 @@
                                         "halaman_buku": "256 Halaman"
                                     }
                                 },
-                                "4.2.3 POST Tambah Luaran - HKI / Hak Cipta": {
-                                    "summary": "4.2.3 POST Tambah Luaran - HKI / Hak Cipta",
+                                "Tambah Luaran - HKI / Hak Cipta": {
+                                    "summary": "Tambah Luaran - HKI / Hak Cipta",
                                     "value": {
                                         "id_jenis_luaran": 4,
                                         "id_kegiatan": 1,
@@ -3143,8 +3846,8 @@
                                         "status_hki": "Granted (Tersertifikasi)"
                                     }
                                 },
-                                "4.2.4 POST Tambah Luaran - Prosiding Seminar": {
-                                    "summary": "4.2.4 POST Tambah Luaran - Prosiding Seminar",
+                                "Tambah Luaran - Prosiding Seminar": {
+                                    "summary": "Tambah Luaran - Prosiding Seminar",
                                     "value": {
                                         "id_jenis_luaran": 3,
                                         "id_kegiatan": 1,
@@ -3159,8 +3862,8 @@
                                         "doi_prosiding": "10.1109/iCAST52345.2025.10123456"
                                     }
                                 },
-                                "4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi": {
-                                    "summary": "4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi",
+                                "Tambah Luaran - Produk / Prototipe Teknologi": {
+                                    "summary": "Tambah Luaran - Produk / Prototipe Teknologi",
                                     "value": {
                                         "id_jenis_luaran": 6,
                                         "id_kegiatan": 1,
@@ -3180,13 +3883,14 @@
                 }
             }
         },
-        "/luaran/{id}": {
+        "/api/luaran/{id}": {
             "get": {
                 "tags": [
-                    "4. Tridharma - Luaran"
+                    "Luaran"
                 ],
-                "summary": "4.3 GET Detail Luaran",
-                "description": "Endpoint untuk 4.3 GET Detail Luaran.",
+                "summary": "Detail Luaran",
+                "description": "Endpoint API untuk Detail Luaran.",
+                "operationId": "390d623281de1a4e70441bc834c80790",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3198,8 +3902,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3222,10 +3932,11 @@
             },
             "put": {
                 "tags": [
-                    "4. Tridharma - Luaran"
+                    "Luaran"
                 ],
-                "summary": "4.4 PUT Update Luaran",
-                "description": "Endpoint untuk 4.4 PUT Update Luaran.",
+                "summary": "Update Luaran",
+                "description": "Endpoint API untuk Update Luaran.",
+                "operationId": "4baa0db46863fd4dcb02d2df420e3bb8",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3237,8 +3948,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3331,10 +4058,11 @@
             },
             "delete": {
                 "tags": [
-                    "4. Tridharma - Luaran"
+                    "Luaran"
                 ],
-                "summary": "4.5 DELETE Luaran",
-                "description": "Endpoint untuk 4.5 DELETE Luaran.",
+                "summary": "Luaran",
+                "description": "Endpoint API untuk Luaran.",
+                "operationId": "ead9534eb701c6f909a0aad9f281a88b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3346,8 +4074,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3369,13 +4103,14 @@
                 ]
             }
         },
-        "/kerja-sama": {
+        "/api/kerja-sama": {
             "get": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.1 GET Semua Kerja Sama",
-                "description": "Endpoint untuk 5.1 GET Semua Kerja Sama.",
+                "summary": "Semua Kerja Sama",
+                "description": "Endpoint API untuk Semua Kerja Sama.",
+                "operationId": "60d901ce6cb0a298401e1e6371819056",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3387,8 +4122,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3441,13 +4182,14 @@
             },
             "post": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.2 POST Tambah Dokumen Kerja Sama",
-                "description": "Endpoint untuk 5.2 POST Tambah Dokumen Kerja Sama.",
+                "summary": "Tambah Dokumen Kerja Sama",
+                "description": "Endpoint API untuk Tambah Dokumen Kerja Sama.",
+                "operationId": "819b16b092f2d67216b55fa99be44a24",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3456,8 +4198,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3542,13 +4300,14 @@
                 }
             }
         },
-        "/kerja-sama/{id}": {
+        "/api/kerja-sama/{id}": {
             "get": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.3 GET Detail Kerja Sama",
-                "description": "Endpoint untuk 5.3 GET Detail Kerja Sama.",
+                "summary": "Detail Kerja Sama",
+                "description": "Endpoint API untuk Detail Kerja Sama.",
+                "operationId": "45edf5effe42fee95458e6ab29c2f066",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3560,8 +4319,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3584,10 +4349,11 @@
             },
             "put": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.4 PUT Update Kerja Sama",
-                "description": "Endpoint untuk 5.4 PUT Update Kerja Sama.",
+                "summary": "Update Kerja Sama",
+                "description": "Endpoint API untuk Update Kerja Sama.",
+                "operationId": "b746d63f29e019dd11971fb970b97d74",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3599,8 +4365,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3688,10 +4470,11 @@
             },
             "delete": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.5 DELETE Kerja Sama",
-                "description": "Endpoint untuk 5.5 DELETE Kerja Sama.",
+                "summary": "Kerja Sama",
+                "description": "Endpoint API untuk Kerja Sama.",
+                "operationId": "c82fc592c493c54629f923da67ce0018",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3703,8 +4486,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3726,16 +4515,17 @@
                 ]
             }
         },
-        "/kerja-sama/{id}/perpanjang": {
+        "/api/kerja-sama/{id}/perpanjang": {
             "post": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.6 POST Perpanjang Kerja Sama",
-                "description": "Endpoint untuk 5.6 POST Perpanjang Kerja Sama.",
+                "summary": "Perpanjang Kerja Sama",
+                "description": "Endpoint API untuk Perpanjang Kerja Sama.",
+                "operationId": "467198239fcdcc33220856f94dd69ff2",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3744,8 +4534,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3792,13 +4598,14 @@
                 }
             }
         },
-        "/kerja-sama/{id}/aktivitas": {
+        "/api/kerja-sama/{id}/aktivitas": {
             "get": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.7 GET Aktivitas Kerja Sama",
-                "description": "Endpoint untuk 5.7 GET Aktivitas Kerja Sama.",
+                "summary": "Aktivitas Kerja Sama",
+                "description": "Endpoint API untuk Aktivitas Kerja Sama.",
+                "operationId": "ea3f60c226ad687d78e8a7150fe75f9d",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3810,8 +4617,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3834,13 +4647,14 @@
             },
             "post": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Kerja Sama"
                 ],
-                "summary": "5.8 POST Tambah Aktivitas Kerja Sama",
-                "description": "Endpoint untuk 5.8 POST Tambah Aktivitas Kerja Sama.",
+                "summary": "Tambah Aktivitas Kerja Sama",
+                "description": "Endpoint API untuk Tambah Aktivitas Kerja Sama.",
+                "operationId": "0d0bb2e85bb4e90e18ce7a4e656d7846",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3849,8 +4663,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3907,13 +4737,14 @@
                 }
             }
         },
-        "/aktivitas-kerja-sama": {
+        "/api/aktivitas-kerja-sama": {
             "get": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Aktivitas Kerja Sama"
                 ],
-                "summary": "5.9.1 GET Semua Aktivitas Kerja Sama",
-                "description": "Endpoint untuk 5.9.1 GET Semua Aktivitas Kerja Sama.",
+                "summary": "Semua Aktivitas Kerja Sama",
+                "description": "Endpoint API untuk Semua Aktivitas Kerja Sama.",
+                "operationId": "d33a0d9bbbf443d95de8db5a701599e1",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -3925,8 +4756,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -3959,13 +4796,14 @@
             },
             "post": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Aktivitas Kerja Sama"
                 ],
-                "summary": "5.9.2 POST Tambah Aktivitas Standalone",
-                "description": "Endpoint untuk 5.9.2 POST Tambah Aktivitas Standalone.",
+                "summary": "Tambah Aktivitas Standalone",
+                "description": "Endpoint API untuk Tambah Aktivitas Standalone.",
+                "operationId": "137b7f22527efcd54973c185e7b33da0",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3974,8 +4812,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4025,13 +4879,14 @@
                 }
             }
         },
-        "/aktivitas-kerja-sama/{id}": {
+        "/api/aktivitas-kerja-sama/{id}": {
             "get": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Aktivitas Kerja Sama"
                 ],
-                "summary": "5.9.3 GET Detail Aktivitas Standalone",
-                "description": "Endpoint untuk 5.9.3 GET Detail Aktivitas Standalone.",
+                "summary": "Detail Aktivitas Standalone",
+                "description": "Endpoint API untuk Detail Aktivitas Standalone.",
+                "operationId": "e7624f2c88c868cafe7892451086592b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4043,8 +4898,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4067,10 +4928,11 @@
             },
             "put": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Aktivitas Kerja Sama"
                 ],
-                "summary": "5.9.4 PUT Update Aktivitas Standalone",
-                "description": "Endpoint untuk 5.9.4 PUT Update Aktivitas Standalone.",
+                "summary": "Update Aktivitas Standalone",
+                "description": "Endpoint API untuk Update Aktivitas Standalone.",
+                "operationId": "0e4664c8c1dcb31ba99346463fa3a750",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4082,8 +4944,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4136,10 +5014,11 @@
             },
             "delete": {
                 "tags": [
-                    "5. Kerja Sama & Kemitraan"
+                    "Aktivitas Kerja Sama"
                 ],
-                "summary": "5.9.5 DELETE Hapus Aktivitas Standalone",
-                "description": "Endpoint untuk 5.9.5 DELETE Hapus Aktivitas Standalone.",
+                "summary": "Hapus Aktivitas Standalone",
+                "description": "Endpoint API untuk Hapus Aktivitas Standalone.",
+                "operationId": "1acd085acd11bf0122d9727f7eaf4c4b",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4151,8 +5030,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4174,13 +5059,14 @@
                 ]
             }
         },
-        "/evidence": {
+        "/api/evidence": {
             "get": {
                 "tags": [
-                    "6. Repository & Validasi Evidence"
+                    "Evidence"
                 ],
-                "summary": "6.1 GET Semua Evidence",
-                "description": "Endpoint untuk 6.1 GET Semua Evidence.",
+                "summary": "Semua Evidence",
+                "description": "Endpoint API untuk Semua Evidence.",
+                "operationId": "8dfc783f21d9244a3f6ff04ab00a2db8",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4192,8 +5078,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4256,13 +5148,14 @@
             },
             "post": {
                 "tags": [
-                    "6. Repository & Validasi Evidence"
+                    "Evidence"
                 ],
-                "summary": "6.2.1 POST Upload Berkas Fisik Evidence",
-                "description": "Endpoint untuk 6.2.1 POST Upload Berkas Fisik Evidence.\n- 6.2.2 POST Simpan Tautan Google Drive Evidence",
+                "summary": "Upload Berkas Fisik Evidence",
+                "description": "Endpoint API untuk Upload Berkas Fisik Evidence.\n- Simpan Tautan Google Drive Evidence",
+                "operationId": "47000f6b3a2aa41649cce17893792733",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4271,8 +5164,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4353,13 +5262,14 @@
                 }
             }
         },
-        "/evidence/{id}": {
+        "/api/evidence/{id}": {
             "get": {
                 "tags": [
-                    "6. Repository & Validasi Evidence"
+                    "Evidence"
                 ],
-                "summary": "6.3 GET Detail Evidence",
-                "description": "Endpoint untuk 6.3 GET Detail Evidence.",
+                "summary": "Detail Evidence",
+                "description": "Endpoint API untuk Detail Evidence.",
+                "operationId": "b3a1f3bc5cc98c42cb6da72041abca75",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4371,8 +5281,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4395,10 +5311,11 @@
             },
             "delete": {
                 "tags": [
-                    "6. Repository & Validasi Evidence"
+                    "Evidence"
                 ],
-                "summary": "6.7 DELETE Evidence",
-                "description": "Endpoint untuk 6.7 DELETE Evidence.",
+                "summary": "Evidence",
+                "description": "Endpoint API untuk Evidence.",
+                "operationId": "3efbccc7e1f4334ad1b86218725ad51a",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4410,8 +5327,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4433,13 +5356,14 @@
                 ]
             }
         },
-        "/evidence/{id}/download": {
+        "/api/evidence/{id}/download": {
             "get": {
                 "tags": [
-                    "6. Repository & Validasi Evidence"
+                    "Evidence"
                 ],
-                "summary": "6.4 GET Unduh Berkas Fisik",
-                "description": "Endpoint untuk 6.4 GET Unduh Berkas Fisik.",
+                "summary": "Unduh Berkas Fisik",
+                "description": "Endpoint API untuk Unduh Berkas Fisik.",
+                "operationId": "a5e19c82e028f134823dbbaf95fa799d",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4451,8 +5375,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4474,16 +5404,17 @@
                 ]
             }
         },
-        "/evidence/{id}/validasi": {
+        "/api/evidence/{id}/validasi": {
             "post": {
                 "tags": [
-                    "6. Repository & Validasi Evidence"
+                    "Evidence"
                 ],
-                "summary": "6.5 POST Review Validasi Kaprodi",
-                "description": "Endpoint untuk 6.5 POST Review Validasi Kaprodi.",
+                "summary": "Review Validasi Kaprodi",
+                "description": "Endpoint API untuk Review Validasi Kaprodi.",
+                "operationId": "e05ccb9141acd1c8c7b7e6a698662e4d",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4492,8 +5423,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4540,16 +5487,17 @@
                 }
             }
         },
-        "/evidence/{id}/ganti-link": {
+        "/api/evidence/{id}/ganti-link": {
             "post": {
                 "tags": [
-                    "6. Repository & Validasi Evidence"
+                    "Evidence"
                 ],
-                "summary": "6.6 POST Ganti Link Drive",
-                "description": "Endpoint untuk 6.6 POST Ganti Link Drive.",
+                "summary": "Ganti Link Drive",
+                "description": "Endpoint API untuk Ganti Link Drive.",
+                "operationId": "c0af2357284ce4e8fb56287d680deda1",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4558,8 +5506,24 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4606,16 +5570,17 @@
                 }
             }
         },
-        "/k1/validasi-nim": {
+        "/api/k1/validasi-nim": {
             "post": {
                 "tags": [
-                    "7. Interoperabilitas & Eksternal"
+                    "Validasi Mahasiswa"
                 ],
-                "summary": "7.1 POST Validasi NIM Mahasiswa K1",
-                "description": "Endpoint untuk 7.1 POST Validasi NIM Mahasiswa K1.",
+                "summary": "Validasi NIM Mahasiswa K1",
+                "description": "Endpoint API untuk Validasi NIM Mahasiswa K1.",
+                "operationId": "f93d0f9e84c89a317aaf44289c967d6b",
                 "responses": {
                     "201": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data berhasil dibuat / diproses.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4624,15 +5589,27 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    },
+                    "422": {
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ],
+                "security": [],
                 "requestBody": {
                     "required": true,
                     "description": "Data payload JSON",
@@ -4655,13 +5632,14 @@
                 }
             }
         },
-        "/v1/dashboard": {
+        "/api/v1/dashboard": {
             "get": {
                 "tags": [
-                    "8. Statistik & Dashboard"
+                    "Statistik"
                 ],
-                "summary": "8.1 GET Dashboard Analitik",
-                "description": "Endpoint untuk 8.1 GET Dashboard Analitik.",
+                "summary": "Dashboard Analitik",
+                "description": "Endpoint API untuk Dashboard Analitik.",
+                "operationId": "174cdc607a647b23fca180c084040add",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4673,8 +5651,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4696,13 +5680,14 @@
                 ]
             }
         },
-        "/v1/dosen/statistik": {
+        "/api/v1/dosen/statistik": {
             "get": {
                 "tags": [
-                    "8. Statistik & Dashboard"
+                    "Statistik"
                 ],
-                "summary": "8.2 GET Statistik Dosen",
-                "description": "Endpoint untuk 8.2 GET Statistik Dosen.",
+                "summary": "Statistik Dosen",
+                "description": "Endpoint API untuk Statistik Dosen.",
+                "operationId": "45b869e7a366d5461dd0816ed712f1e9",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4714,8 +5699,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4725,13 +5716,14 @@
                 ]
             }
         },
-        "/v1/dosen/rasio": {
+        "/api/v1/dosen/rasio": {
             "get": {
                 "tags": [
-                    "8. Statistik & Dashboard"
+                    "Statistik"
                 ],
-                "summary": "8.3 GET Rasio Dosen : Mahasiswa",
-                "description": "Endpoint untuk 8.3 GET Rasio Dosen : Mahasiswa.",
+                "summary": "Rasio Dosen : Mahasiswa",
+                "description": "Endpoint API untuk Rasio Dosen : Mahasiswa.",
+                "operationId": "82e297838493428736608d8594335963",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4743,8 +5735,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4776,13 +5774,14 @@
                 ]
             }
         },
-        "/v1/dosen/produktivitas": {
+        "/api/v1/dosen/produktivitas": {
             "get": {
                 "tags": [
-                    "8. Statistik & Dashboard"
+                    "Statistik"
                 ],
-                "summary": "8.4 GET Produktivitas Dosen",
-                "description": "Endpoint untuk 8.4 GET Produktivitas Dosen.",
+                "summary": "Produktivitas Dosen",
+                "description": "Endpoint API untuk Produktivitas Dosen.",
+                "operationId": "68c64ddc30ae964e8f833695592fa84d",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4794,8 +5793,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4817,13 +5822,14 @@
                 ]
             }
         },
-        "/v1/tridharma/summary": {
+        "/api/v1/tridharma/summary": {
             "get": {
                 "tags": [
-                    "8. Statistik & Dashboard"
+                    "Statistik"
                 ],
-                "summary": "8.5 GET Summary Tridharma",
-                "description": "Endpoint untuk 8.5 GET Summary Tridharma.",
+                "summary": "Summary Tridharma",
+                "description": "Endpoint API untuk Summary Tridharma.",
+                "operationId": "e1ee21f199e1da34ea51202ce976b3ef",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4835,8 +5841,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4858,13 +5870,14 @@
                 ]
             }
         },
-        "/v1/tridharma/tren": {
+        "/api/v1/tridharma/tren": {
             "get": {
                 "tags": [
-                    "8. Statistik & Dashboard"
+                    "Statistik"
                 ],
-                "summary": "8.6 GET Tren Tri Dharma",
-                "description": "Endpoint untuk 8.6 GET Tren Tri Dharma.",
+                "summary": "Tren Tri Dharma",
+                "description": "Endpoint API untuk Tren Tri Dharma.",
+                "operationId": "54389c769417d8db1314b0ec7cb58336",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4876,8 +5889,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4909,13 +5928,14 @@
                 ]
             }
         },
-        "/v1/kerjasama/aktif": {
+        "/api/v1/kerjasama/aktif": {
             "get": {
                 "tags": [
-                    "8. Statistik & Dashboard"
+                    "Statistik"
                 ],
-                "summary": "8.7 GET Kerja Sama Aktif",
-                "description": "Endpoint untuk 8.7 GET Kerja Sama Aktif.",
+                "summary": "Kerja Sama Aktif",
+                "description": "Endpoint API untuk Kerja Sama Aktif.",
+                "operationId": "02556e22497eb1fa314dcafe2e8b38c9",
                 "responses": {
                     "200": {
                         "description": "Operasi berhasil diproses.",
@@ -4927,8 +5947,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
                     "401": {
-                        "description": "Unauthorized: Token Bearer tidak valid atau sesi berakhir."
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
                     }
                 },
                 "security": [
@@ -4964,10 +5990,10 @@
     "components": {
         "securitySchemes": {
             "bearerAuth": {
-                "type": "apiKey",
-                "name": "Authorization",
-                "in": "header",
-                "description": "Masukkan token JWT dalam format: `Bearer <token>`"
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Masukkan token JWT Anda yang diperoleh setelah login."
             }
         },
         "schemas": {

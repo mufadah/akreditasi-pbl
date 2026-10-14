@@ -14,11 +14,36 @@ class SyncSwaggerFromPostman extends Command
     protected $signature = 'swagger:sync {--postman= : Path ke berkas Postman Collection JSON}';
 
     /**
-     * The console command description.
+     * The command description.
      *
      * @var string
      */
-    protected $description = 'Konversi Postman Collection ke OpenAPI 3.0 / Swagger UI di /api/documentation';
+    protected $description = 'Konversi Postman Collection ke OpenAPI 3.0 / Swagger UI sesuai standar referensi';
+
+    /**
+     * Deskripsi untuk setiap tag Swagger UI.
+     *
+     * @var array<string, string>
+     */
+    private array $tagDescriptions = [
+        'Auth' => 'Autentikasi Pengguna & Manajemen Token JWT',
+        'Jabatan Akademik' => 'Endpoint API Master Jabatan Akademik Dosen',
+        'Pendidikan' => 'Endpoint API Master Jenjang Pendidikan',
+        'Bidang Keahlian' => 'Endpoint API Master Bidang Keahlian',
+        'Mitra' => 'Endpoint API Master Data Mitra',
+        'Jenis Kegiatan' => 'Endpoint API Master Jenis Kegiatan Tridharma',
+        'Jenis Luaran' => 'Endpoint API Master Jenis Luaran Tridharma',
+        'Jenis Kerja Sama' => 'Endpoint API Master Jenis Kerja Sama',
+        'Dosen' => 'Endpoint API Manajemen SDM Dosen (CRUD, Import Excel & Restore)',
+        'Tenaga Kependidikan' => 'Endpoint API Manajemen SDM Tenaga Kependidikan',
+        'Kegiatan' => 'Endpoint API Tridharma Kegiatan (Penelitian, Pengabdian & Pengajaran)',
+        'Luaran' => 'Endpoint API Tridharma Luaran (Publikasi Jurnal, Buku, HKI, Prosiding & Prototipe)',
+        'Kerja Sama' => 'Endpoint API Dokumen & Perpanjangan Kerja Sama Kemitraan',
+        'Aktivitas Kerja Sama' => 'Endpoint API Pelaksanaan & Aktivitas Implementasi Kerja Sama',
+        'Evidence' => 'Endpoint API Repository Dokumen, Berkas Fisik, Link Drive & Validasi Kaprodi',
+        'Validasi Mahasiswa' => 'Endpoint API Validasi Keabsahan NIM Mahasiswa (Integrasi Sistem K1)',
+        'Statistik' => 'Endpoint API Statistik, Agregasi, Rasio Dosen-Mahasiswa & Dashboard LAM',
+    ];
 
     /**
      * Execute the console command.
@@ -44,22 +69,18 @@ class SyncSwaggerFromPostman extends Command
         $openapi = [
             'openapi' => '3.0.0',
             'info' => [
-                'title' => 'Sistem Informasi Akreditasi & Tridharma PBL API',
-                'description' => "Dokumentasi API Interaktif (OpenAPI 3.0 / Swagger UI) untuk Sistem Informasi Akreditasi dan Manajemen Tridharma PBL Politeknik Negeri Semarang.\n\n### Panduan Otorisasi:\n1. Eksekusi endpoint **0.1 POST Login** pada folder **0. Autentikasi**.\n2. Salin token dari `data.authorization.access_token`.\n3. Klik tombol hijau **Authorize** di pojok kanan atas Swagger UI, lalu masukkan: `Bearer <token>`.\n4. Sekarang Anda dapat mencoba seluruh endpoint (**Try it out**) secara interaktif.",
+                'title' => 'API Tridharma & Akreditasi PBL',
+                'description' => "Dokumentasi REST API Sistem Informasi Akreditasi & Manajemen Tridharma PBL.\n\n### Panduan Otorisasi:\n1. Buka kelompok endpoint **Auth**, lalu jalankan endpoint **Login**.\n2. Salin token dari `data.authorization.access_token`.\n3. Klik tombol hijau **Authorize** di pojok kanan atas Swagger UI, lalu tempel token JWT Anda.\n4. Sekarang Anda dapat mencoba seluruh endpoint (**Try it out**) secara interaktif.",
                 'version' => '1.0.0',
                 'contact' => [
-                    'name' => 'Tim Pengembang Sistem Akreditasi PBL',
+                    'name' => 'Tim Pengembang Akreditasi PBL',
                     'email' => 'admin@polines.ac.id',
                 ],
             ],
             'servers' => [
                 [
-                    'url' => url('/api'),
-                    'description' => 'Current Environment Server',
-                ],
-                [
-                    'url' => 'http://localhost:8000/api',
-                    'description' => 'Local Development Server',
+                    'url' => '/',
+                    'description' => 'API Server',
                 ],
             ],
             'tags' => [],
@@ -67,10 +88,10 @@ class SyncSwaggerFromPostman extends Command
             'components' => [
                 'securitySchemes' => [
                     'bearerAuth' => [
-                        'type' => 'apiKey',
-                        'name' => 'Authorization',
-                        'in' => 'header',
-                        'description' => 'Masukkan token JWT dalam format: `Bearer <token>`',
+                        'type' => 'http',
+                        'scheme' => 'bearer',
+                        'bearerFormat' => 'JWT',
+                        'description' => 'Masukkan token JWT Anda yang diperoleh setelah login.',
                     ],
                 ],
                 'schemas' => [
@@ -99,9 +120,15 @@ class SyncSwaggerFromPostman extends Command
         $tags = [];
         $paths = [];
 
-        $this->parseItems($postman['item'] ?? [], null, $tags, $paths);
+        $this->parseItems($postman['item'] ?? [], [], $tags, $paths);
 
-        $openapi['tags'] = array_map(fn ($t) => ['name' => $t], $tags);
+        $openapi['tags'] = array_map(function ($t) {
+            return [
+                'name' => $t,
+                'description' => $this->tagDescriptions[$t] ?? "Endpoint API {$t}",
+            ];
+        }, $tags);
+
         $openapi['paths'] = $paths;
 
         if (! is_dir(dirname($outputPath))) {
@@ -120,14 +147,13 @@ class SyncSwaggerFromPostman extends Command
         return 0;
     }
 
-    private function parseItems(array $items, ?string $parentTag, array &$tags, array &$paths): void
+    private function parseItems(array $items, array $folders, array &$tags, array &$paths): void
     {
         foreach ($items as $item) {
             if (isset($item['item'])) {
-                $tagForChildren = $parentTag ?? $item['name'];
-                $this->parseItems($item['item'], $tagForChildren, $tags, $paths);
+                $this->parseItems($item['item'], array_merge($folders, [$item['name']]), $tags, $paths);
             } elseif (isset($item['request'])) {
-                $tag = $parentTag ?? 'General';
+                $tag = $this->resolveCleanTag($folders);
                 if (! in_array($tag, $tags)) {
                     $tags[] = $tag;
                 }
@@ -138,6 +164,9 @@ class SyncSwaggerFromPostman extends Command
                 $pathStr = preg_replace('/^\{\{base_url\}\}/', '', $urlRaw);
                 $pathStr = explode('?', $pathStr)[0];
                 $pathStr = '/'.ltrim($pathStr, '/');
+                if (! str_starts_with($pathStr, '/api/')) {
+                    $pathStr = '/api'.$pathStr;
+                }
 
                 $segments = explode('/', trim($pathStr, '/'));
                 $newSegments = [];
@@ -163,13 +192,17 @@ class SyncSwaggerFromPostman extends Command
 
                 $openApiPath = '/'.implode('/', $newSegments);
 
+                $cleanSummary = preg_replace('/^\d+(\.\d+)*\s*(GET|POST|PUT|DELETE|PATCH)?\s*/i', '', $item['name']);
+                $cleanSummary = trim($cleanSummary);
+
                 $operation = [
                     'tags' => [$tag],
-                    'summary' => $item['name'],
-                    'description' => "Endpoint untuk {$item['name']}.",
+                    'summary' => $cleanSummary,
+                    'description' => "Endpoint API untuk {$cleanSummary}.",
+                    'operationId' => md5($method.'_'.$openApiPath),
                     'responses' => [
                         ($method === 'post' ? '201' : '200') => [
-                            'description' => 'Operasi berhasil diproses.',
+                            'description' => ($method === 'post' ? 'Data berhasil dibuat / diproses.' : 'Operasi berhasil diproses.'),
                             'content' => [
                                 'application/json' => [
                                     'schema' => [
@@ -178,13 +211,32 @@ class SyncSwaggerFromPostman extends Command
                                 ],
                             ],
                         ],
+                        '400' => [
+                            'description' => 'Permintaan tidak valid / Bad Request.',
+                        ],
                         '401' => [
-                            'description' => 'Unauthorized: Token Bearer tidak valid atau sesi berakhir.',
+                            'description' => 'Unauthenticated: Token JWT tidak valid atau sesi berakhir.',
+                        ],
+                        '404' => [
+                            'description' => 'Data tidak ditemukan.',
                         ],
                     ],
                 ];
 
-                if (in_array($openApiPath, ['/login', '/register', '/test-auth'])) {
+                if (in_array($method, ['post', 'put', 'patch'])) {
+                    $operation['responses']['422'] = [
+                        'description' => 'Validasi gagal: format data input tidak sesuai ketentuan.',
+                        'content' => [
+                            'application/json' => [
+                                'schema' => [
+                                    '$ref' => '#/components/schemas/ValidationErrorResponse',
+                                ],
+                            ],
+                        ],
+                    ];
+                }
+
+                if (in_array($openApiPath, ['/api/login', '/api/register', '/api/k1/validasi-nim', '/api/test-auth'])) {
                     $operation['security'] = [];
                 } else {
                     $operation['security'] = [
@@ -290,22 +342,82 @@ class SyncSwaggerFromPostman extends Command
                                 }
                                 $newVal = $bodyConfig['example'] ?? null;
                                 if ($newVal !== null) {
-                                    $target['examples'][$item['name']] = [
-                                        'summary' => $item['name'],
+                                    $target['examples'][$cleanSummary] = [
+                                        'summary' => $cleanSummary,
                                         'value' => $newVal,
                                     ];
                                 }
                             }
                         }
                     }
-                    $cleanSummary = preg_replace('/\s*-\s*.*$/', '', $existingOp['summary']);
-                    $existingOp['summary'] = $cleanSummary;
-                    $existingOp['description'] .= "\n- {$item['name']}";
+                    $cleanSummaryNoSuffix = preg_replace('/\s*-\s*.*$/', '', $existingOp['summary']);
+                    $existingOp['summary'] = $cleanSummaryNoSuffix;
+                    $existingOp['description'] .= "\n- {$cleanSummary}";
                 } else {
                     $paths[$openApiPath][$method] = $operation;
                 }
             }
         }
+    }
+
+    private function resolveCleanTag(array $folders): string
+    {
+        $reversed = array_reverse($folders);
+        foreach ($reversed as $name) {
+            if (preg_match('/Aktivitas Kerja Sama/i', $name)) {
+                return 'Aktivitas Kerja Sama';
+            }
+            if (preg_match('/Tenaga Kependidikan|Tendik/i', $name)) {
+                return 'Tenaga Kependidikan';
+            }
+            if (preg_match('/Pendidikan/i', $name)) {
+                return 'Pendidikan';
+            }
+            if (preg_match('/Jabatan Akademik/i', $name)) {
+                return 'Jabatan Akademik';
+            }
+            if (preg_match('/Bidang Keahlian/i', $name)) {
+                return 'Bidang Keahlian';
+            }
+            if (preg_match('/Jenis Kerja Sama|Jenis Kerjasama/i', $name)) {
+                return 'Jenis Kerja Sama';
+            }
+            if (preg_match('/Kerja Sama|Kemitraan/i', $name)) {
+                return 'Kerja Sama';
+            }
+            if (preg_match('/Mitra/i', $name)) {
+                return 'Mitra';
+            }
+            if (preg_match('/Jenis Kegiatan/i', $name)) {
+                return 'Jenis Kegiatan';
+            }
+            if (preg_match('/Jenis Luaran/i', $name)) {
+                return 'Jenis Luaran';
+            }
+            if (preg_match('/Dosen/i', $name) && ! preg_match('/Rasio|Produktivitas|Statistik/i', $name)) {
+                return 'Dosen';
+            }
+            if (preg_match('/Luaran/i', $name)) {
+                return 'Luaran';
+            }
+            if (preg_match('/Kegiatan/i', $name)) {
+                return 'Kegiatan';
+            }
+            if (preg_match('/Evidence|Repository/i', $name)) {
+                return 'Evidence';
+            }
+            if (preg_match('/Interoperabilitas|Eksternal|Validasi NIM|Mahasiswa/i', $name)) {
+                return 'Validasi Mahasiswa';
+            }
+            if (preg_match('/Statistik|Dashboard/i', $name)) {
+                return 'Statistik';
+            }
+            if (preg_match('/Autentikasi|Auth/i', $name)) {
+                return 'Auth';
+            }
+        }
+
+        return 'General';
     }
 
     private function toSchema(mixed $val): array
@@ -331,11 +443,17 @@ class SyncSwaggerFromPostman extends Command
                 'type' => 'array',
                 'items' => $this->toSchema($val[0]),
             ];
-        } elseif (is_int($val)) {
+        }
+
+        if (is_int($val)) {
             return ['type' => 'integer', 'example' => $val];
-        } elseif (is_float($val)) {
+        }
+
+        if (is_float($val)) {
             return ['type' => 'number', 'example' => $val];
-        } elseif (is_bool($val)) {
+        }
+
+        if (is_bool($val)) {
             return ['type' => 'boolean', 'example' => $val];
         }
 
