@@ -40,9 +40,6 @@ jobs:
           rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
           php artisan package:discover --ansi
 
-          echo "Running database migrations..."
-          php artisan migrate --force
-
           echo "Rebuilding Laravel caches..."
           php artisan config:clear
           php artisan config:cache
