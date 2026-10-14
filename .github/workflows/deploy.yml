@@ -1,4 +1,4 @@
-name: Deploy Akademik
+name: Deploy API Tridharma
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
       - name: Deploy to Server
         run: |
           echo "🚀 Starting Deployment..."
-          cd /var/www/akademik
+          cd /var/www/api-tridharma
 
           # 1. Pastikan repo bersih dari file temporer/konflik lokal lalu pull branch main
           echo "📥 Pulling latest changes from Git..."
