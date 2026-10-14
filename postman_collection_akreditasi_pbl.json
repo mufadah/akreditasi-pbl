@@ -1,0 +1,3166 @@
+{
+    "info": {
+        "_postman_id": "a9876543-210b-4cde-8f01-23456789abcd",
+        "name": "Sistem Informasi Akreditasi & Tridharma PBL",
+        "description": "Postman Collection (Schema v2.1.0) untuk Sistem Informasi Akreditasi dan Manajemen Tridharma PBL.\n\nMencakup:\n0. Autentikasi JWT (Login, Register, Me, Logout)\n1. Master Data (Jabatan Akademik, Pendidikan, Bidang Keahlian, Mitra, Jenis Kegiatan, Jenis Luaran, Jenis Kerja Sama)\n2. Manajemen SDM (Dosen, Tendik, Import Excel, Restore)\n3. Tridharma - Kegiatan (CRUD + Nested Anggota & Pendanaan)\n4. Tridharma - Luaran (CRUD + Format Jurnal, Buku, HKI, Prosiding, Produk)\n5. Kerja Sama & Kemitraan (CRUD Dokumen, Perpanjang, Aktivitas Implementasi)\n6. Repository & Validasi Evidence (Upload Berkas Fisik, Link Drive, Download, Validasi Kaprodi, Ganti Link)\n7. Interoperabilitas & Eksternal (Validasi NIM Mahasiswa K1)\n8. Statistik & Dashboard LAM (Dashboard 4 Tab, Rasio Dosen-Mahasiswa, Produktivitas Dosen, Tren Tri Dharma, Summary)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000/api",
+            "type": "string",
+            "description": "URL dasar endpoint REST API Laravel"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string",
+            "description": "Token JWT hasil autentikasi login (otomatis terisi saat login berhasil)"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "0. Autentikasi",
+            "item": [
+                {
+                    "name": "0.1 POST Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@polines.ac.id\",\n    \"password\": \"password123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData && jsonData.data && jsonData.data.authorization && jsonData.data.authorization.access_token) {",
+                                    "    pm.collectionVariables.set('token', jsonData.data.authorization.access_token);",
+                                    "    console.log('Token JWT otomatis diperbarui di variable collection [token]');",
+                                    "}",
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "0.2 POST Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "register"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Dosen Peneliti Baru\",\n    \"email\": \"dosen.baru@polines.ac.id\",\n    \"password\": \"password123\",\n    \"role\": \"DOSEN\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "0.3 GET Current User Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "me"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "0.4 POST Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "logout"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "1. Master Data",
+            "item": [
+                {
+                    "name": "1.1 Jabatan Akademik",
+                    "item": [
+                        {
+                            "name": "1.1.1 GET Semua Jabatan Akademik",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jabatan-akademik",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jabatan-akademik"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.1.2 POST Tambah Jabatan Akademik",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jabatan-akademik",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jabatan-akademik"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jabatan\": \"Profesor Kehormatan\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.1.3 GET Detail Jabatan Akademik",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jabatan-akademik/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jabatan-akademik",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.1.4 PUT Update Jabatan Akademik",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jabatan-akademik/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jabatan-akademik",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jabatan\": \"Guru Besar / Profesor Terhormat\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.1.5 DELETE Hapus Jabatan Akademik",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jabatan-akademik/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jabatan-akademik",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "1.2 Pendidikan",
+                    "item": [
+                        {
+                            "name": "1.2.1 GET Semua Jenjang Pendidikan",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/pendidikan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "pendidikan"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.2.2 POST Tambah Jenjang Pendidikan",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/pendidikan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "pendidikan"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"jenjang\": \"Spesialis 1 (Sp-1)\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.2.3 GET Detail Jenjang Pendidikan",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/pendidikan/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "pendidikan",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.2.4 PUT Update Jenjang Pendidikan",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/pendidikan/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "pendidikan",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"jenjang\": \"Doktor Terapan (S3 Terapan)\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.2.5 DELETE Hapus Jenjang Pendidikan",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/pendidikan/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "pendidikan",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "1.3 Bidang Keahlian",
+                    "item": [
+                        {
+                            "name": "1.3.1 GET Semua Bidang Keahlian",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/bidang-keahlian",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "bidang-keahlian"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.3.2 POST Tambah Bidang Keahlian",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/bidang-keahlian",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "bidang-keahlian"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_bidang\": \"DevOps & Site Reliability Engineering\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.3.3 GET Detail Bidang Keahlian",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/bidang-keahlian/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "bidang-keahlian",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.3.4 PUT Update Bidang Keahlian",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/bidang-keahlian/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "bidang-keahlian",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_bidang\": \"Cloud Computing & Distributed Systems\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.3.5 DELETE Hapus Bidang Keahlian",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/bidang-keahlian/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "bidang-keahlian",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "1.4 Mitra",
+                    "item": [
+                        {
+                            "name": "1.4.1 GET Semua Mitra",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/mitra?search=Telkom",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "mitra"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "search",
+                                            "value": "Telkom",
+                                            "disabled": false
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.4.2 POST Tambah Mitra",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/mitra",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "mitra"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_instansi\": \"PT Telekomunikasi Selular (Telkomsel)\",\n    \"alamat\": \"Telkom Landmark Tower, Jl. Jend. Gatot Subroto Kav. 52 Jakarta\",\n    \"email\": \"partnership@telkomsel.co.id\",\n    \"telepon\": \"021-5240811\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.4.3 GET Detail Mitra",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/mitra/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "mitra",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.4.4 PUT Update Mitra",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/mitra/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "mitra",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_instansi\": \"PT Telkomsel Indonesia Tbk\",\n    \"alamat\": \"The Telkom Hub, Jl. Gatot Subroto No. 52 Jakarta Selatan\",\n    \"email\": \"academic-relation@telkomsel.co.id\",\n    \"telepon\": \"021-5240812\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.4.5 DELETE Hapus Mitra",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/mitra/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "mitra",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "1.5 Jenis Kegiatan",
+                    "item": [
+                        {
+                            "name": "1.5.1 GET Semua Jenis Kegiatan",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kegiatan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kegiatan"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.5.2 POST Tambah Jenis Kegiatan",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kegiatan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kegiatan"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jenis_kegiatan\": \"Penelitian Terapan Industri\",\n    \"deskripsi\": \"Riset terapan berorientasi produk industri dan komersialisasi\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.5.3 GET Detail Jenis Kegiatan",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kegiatan/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kegiatan",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.5.4 PUT Update Jenis Kegiatan",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kegiatan/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kegiatan",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jenis_kegiatan\": \"Penelitian Fundamental & Keilmuan\",\n    \"deskripsi\": \"Pengembangan konsep teori dan metodologi baru\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.5.5 DELETE Hapus Jenis Kegiatan",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kegiatan/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kegiatan",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "1.6 Jenis Luaran",
+                    "item": [
+                        {
+                            "name": "1.6.1 GET Semua Jenis Luaran",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-luaran",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-luaran"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.6.2 POST Tambah Jenis Luaran",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-luaran",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-luaran"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jenis_luaran\": \"Jurnal\",\n    \"indeks\": \"Scopus Q1\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.6.3 GET Detail Jenis Luaran",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-luaran/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-luaran",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.6.4 PUT Update Jenis Luaran",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-luaran/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-luaran",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jenis_luaran\": \"Jurnal\",\n    \"indeks\": \"Sinta 1\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.6.5 DELETE Hapus Jenis Luaran",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-luaran/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-luaran",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "1.7 Jenis Kerja Sama",
+                    "item": [
+                        {
+                            "name": "1.7.1 GET Semua Jenis Kerja Sama",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kerja-sama",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kerja-sama"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.7.2 POST Tambah Jenis Kerja Sama",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kerja-sama",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kerja-sama"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jenis_kerjasama\": \"Letter of Intent (LoI)\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.7.3 GET Detail Jenis Kerja Sama",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kerja-sama/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kerja-sama",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.7.4 PUT Update Jenis Kerja Sama",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kerja-sama/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kerja-sama",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_jenis_kerjasama\": \"MoU (Memorandum of Understanding) Multilateral\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "1.7.5 DELETE Hapus Jenis Kerja Sama",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/jenis-kerja-sama/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "jenis-kerja-sama",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "2. Manajemen SDM",
+            "item": [
+                {
+                    "name": "2.1 Dosen",
+                    "item": [
+                        {
+                            "name": "2.1.1 GET Semua Data Dosen",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen?search=Ahmad&status=DTPS&per_page=10",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "search",
+                                            "value": "Ahmad",
+                                            "disabled": false
+                                        },
+                                        {
+                                            "key": "status",
+                                            "value": "DTPS",
+                                            "disabled": false
+                                        },
+                                        {
+                                            "key": "per_page",
+                                            "value": "10",
+                                            "disabled": false
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.1.2 POST Tambah Data Dosen",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_jabatan\": 1,\n    \"id_pendidikan\": 1,\n    \"nidn\": \"0015088501\",\n    \"nama_dosen\": \"Dr. Ir. Ahmad Dahlan, M.T.\",\n    \"email\": \"ahmad.dahlan@polines.ac.id\",\n    \"status_dosen\": \"DTPS\",\n    \"sertifikasi\": \"Pendidik Profesional (Kemenristekdikti)\",\n    \"bidang_keahlian_ids\": [\n        1,\n        2,\n        4\n    ]\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.1.3 GET Detail Dosen",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.1.4 PUT Update Data Dosen",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_jabatan\": 2,\n    \"id_pendidikan\": 3,\n    \"nidn\": \"0015088501\",\n    \"nama_dosen\": \"Prof. Dr. Ir. Ahmad Dahlan, M.T., IPU\",\n    \"email\": \"ahmad.dahlan@polines.ac.id\",\n    \"status_dosen\": \"DTPS\",\n    \"sertifikasi\": \"Sertifikasi Asesor Kompetensi BNSP & Pendidik\",\n    \"bidang_keahlian_ids\": [\n        1,\n        2,\n        3,\n        4\n    ]\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.1.5 DELETE Hapus Dosen",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.1.6 POST Import Excel Dosen",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen/import",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen",
+                                        "import"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "file",
+                                            "type": "file",
+                                            "src": [],
+                                            "description": "Berkas Excel (.xlsx / .xls) data impor dosen"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.1.7 POST Restore Dosen",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen/1/restore",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen",
+                                        "1",
+                                        "restore"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "2.2 Tenaga Kependidikan",
+                    "item": [
+                        {
+                            "name": "2.2.1 GET Semua Tenaga Kependidikan",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/tendik?search=Santoso&per_page=10",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "tendik"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "search",
+                                            "value": "Santoso",
+                                            "disabled": false
+                                        },
+                                        {
+                                            "key": "per_page",
+                                            "value": "10",
+                                            "disabled": false
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.2.2 POST Tambah Tenaga Kependidikan",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/tendik",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "tendik"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_pendidikan\": 4,\n    \"nama_tendik\": \"Budi Santoso, S.Kom.\",\n    \"jabatan_tendik\": \"Pranata Laboratorium Pendidikan (PLP)\",\n    \"nip\": \"199208152018031002\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.2.3 GET Detail Tenaga Kependidikan",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/tendik/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "tendik",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.2.4 PUT Update Tenaga Kependidikan",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/tendik/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "tendik",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_pendidikan\": 1,\n    \"nama_tendik\": \"Budi Santoso, M.Kom.\",\n    \"jabatan_tendik\": \"Kepala Laboratorium Rekayasa Perangkat Lunak\",\n    \"nip\": \"199208152018031002\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.2.5 DELETE Hapus Tenaga Kependidikan",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/tendik/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "tendik",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "3. Tridharma - Kegiatan",
+            "item": [
+                {
+                    "name": "3.1 GET Semua Kegiatan",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kegiatan?search=Deteksi+Intrusi&id_jenis_kegiatan=1&tahun_kegiatan=2025&status_kegiatan=Berjalan&per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kegiatan"
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "Deteksi Intrusi",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "id_jenis_kegiatan",
+                                    "value": "1",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "tahun_kegiatan",
+                                    "value": "2025",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "status_kegiatan",
+                                    "value": "Berjalan",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "3.2 POST Tambah Kegiatan",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kegiatan",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kegiatan"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"id_jenis_kegiatan\": 1,\n    \"judul_kegiatan\": \"Pengembangan Sistem Deteksi Intrusi Jaringan Berbasis Deep Learning pada Infrastruktur IoT Kampus\",\n    \"lokasi_kegiatan\": \"Laboratorium Jaringan Politeknik Negeri Semarang\",\n    \"tahun_usulan\": 2024,\n    \"tahun_kegiatan\": 2025,\n    \"tahun_pelaksanaan\": 2025,\n    \"lama_kegiatan\": \"12 Bulan\",\n    \"status_kegiatan\": \"Berjalan\",\n    \"in_kind\": \"Penggunaan Fasilitas Server GPU & Cluster HPC Laboratorium TRPL\",\n    \"anggota\": [\n        {\n            \"jenis_anggota\": \"Dosen\",\n            \"id_dosen\": 1,\n            \"peran\": \"Ketua Peneliti\"\n        },\n        {\n            \"jenis_anggota\": \"Mahasiswa\",\n            \"id_mahasiswa\": 101,\n            \"peran\": \"Anggota Pengumpul Data\"\n        }\n    ],\n    \"pendanaan\": [\n        {\n            \"sumber_dana\": \"DIPA PNBP Politeknik Negeri Semarang\",\n            \"jumlah_dana\": 35000000,\n            \"tahun_pendanaan\": 2025,\n            \"jenis_pendanaan\": \"In Cash\",\n            \"keterangan\": \"SK Penetapan Pemenang Hibah Penelitian Terapan No. 452/PL4.6.1/PT/2025\"\n        }\n    ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "3.3 GET Detail Kegiatan",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kegiatan/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kegiatan",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "3.4 PUT Update Kegiatan",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kegiatan/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kegiatan",
+                                "1"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"id_jenis_kegiatan\": 1,\n    \"judul_kegiatan\": \"Pengembangan dan Implementasi Model Deep Learning untuk Proteksi Jaringan Kampus\",\n    \"lokasi_kegiatan\": \"Data Center Politeknik Negeri Semarang\",\n    \"tahun_kegiatan\": 2025,\n    \"tahun_pelaksanaan\": 2025,\n    \"lama_kegiatan\": \"12 Bulan\",\n    \"status_kegiatan\": \"Selesai\",\n    \"in_kind\": \"Lisensi Dataset Trafik & Akses Cloud Storage\",\n    \"anggota\": [\n        {\n            \"jenis_anggota\": \"Dosen\",\n            \"id_dosen\": 1,\n            \"peran\": \"Ketua Peneliti\"\n        }\n    ],\n    \"pendanaan\": [\n        {\n            \"sumber_dana\": \"DIPA PNBP Polines Tahap II\",\n            \"jumlah_dana\": 40000000,\n            \"tahun_pendanaan\": 2025,\n            \"jenis_pendanaan\": \"In Cash\",\n            \"keterangan\": \"Laporan Akhir Penelitian & Realisasi 100%\"\n        }\n    ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "3.5 DELETE Kegiatan",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kegiatan/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kegiatan",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "4. Tridharma - Luaran",
+            "item": [
+                {
+                    "name": "4.1 GET Semua Luaran",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/luaran?search=Deep+Learning&id_jenis_luaran=1&tahun_terbit=2025&per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "luaran"
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "Deep Learning",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "id_jenis_luaran",
+                                    "value": "1",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "tahun_terbit",
+                                    "value": "2025",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "4.2 POST Tambah Luaran (Spesifikasi Jenis)",
+                    "item": [
+                        {
+                            "name": "4.2.1 POST Tambah Luaran - Jurnal Ilmiah",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/luaran",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "luaran"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_jenis_luaran\": 1,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_jurnal\": \"IEEE Transactions on Network and Service Management\",\n    \"issn\": \"1932-4537\",\n    \"volume\": \"22\",\n    \"nomor_edisi\": \"2\",\n    \"halaman_jurnal\": \"210-224\",\n    \"tanggal_terbit\": \"2025-06-18\",\n    \"doi\": \"10.1109/TNSM.2025.3214567\",\n    \"indeksasi\": \"Scopus Q1 / SJR 1.25\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "4.2.2 POST Tambah Luaran - Buku Ajar / Monograf",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/luaran",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "luaran"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_jenis_luaran\": 5,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"judul_buku\": \"Arsitektur Keamanan Siber Industri 4.0: Teori dan Praktik Berbasis Lab\",\n    \"isbn\": \"978-623-1234-89-0\",\n    \"penerbit_buku\": \"Polines Press Publisher\",\n    \"tahun_terbit\": 2025,\n    \"jenis_buku\": \"Buku Ajar Perguruan Tinggi\",\n    \"bidang_ilmu\": \"Teknik Komputer & Jaringan\",\n    \"halaman_buku\": \"256 Halaman\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "4.2.3 POST Tambah Luaran - HKI / Hak Cipta",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/luaran",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "luaran"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_jenis_luaran\": 4,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"judul_hak_cipta\": \"Program Komputer: Algoritma Deteksi Dini Serangan DDoS Berbasis Ensemble ResNet\",\n    \"jenis_hki\": \"Hak Cipta Program Komputer\",\n    \"nomor_pendaftaran_hki\": \"EC00202534567\",\n    \"nomor_sertifikat_hki\": \"000234567\",\n    \"tanggal_pendaftaran_hki\": \"2025-04-12\",\n    \"tanggal_terbit_sertifikat_hki\": \"2025-05-02\",\n    \"pemegang_hki\": \"Politeknik Negeri Semarang & Tim Peneliti\",\n    \"status_hki\": \"Granted (Tersertifikasi)\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "4.2.4 POST Tambah Luaran - Prosiding Seminar",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/luaran",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "luaran"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_jenis_luaran\": 3,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_seminar\": \"International Conference on Applied Science and Technology (iCAST 2025)\",\n    \"nama_prosiding\": \"IEEE Xplore Conference Proceedings\",\n    \"isbn_prosiding\": \"978-1-6654-9876-5\",\n    \"penyelenggara\": \"Politeknik Negeri Semarang\",\n    \"tanggal_seminar\": \"2025-10-22\",\n    \"lokasi_seminar\": \"Semarang, Indonesia (Hybrid)\",\n    \"halaman_prosiding\": \"78-83\",\n    \"doi_prosiding\": \"10.1109/iCAST52345.2025.10123456\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "4.2.5 POST Tambah Luaran - Produk / Prototipe Teknologi",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/luaran",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "luaran"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_jenis_luaran\": 6,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_produk\": \"NetShield Edge: Alat Appliance Inspeksi Paket Data Jaringan Kampus\",\n    \"jenis_produk\": \"Prototipe Hardware-Software Embedded\",\n    \"status_pengembangan\": \"Tingkat Kesiapan Terapan 6 (Validasi Lapangan)\",\n    \"tingkat_kesiapanterapan\": \"TKT 6\",\n    \"tanggal_pembuatan\": \"2025-08-30\",\n    \"deskripsi_produk\": \"Perangkat edge firewall berbasis arsitektur ARM dengan modul akselerator AI onboard\",\n    \"tautan_produk\": \"https://gitlab.polines.ac.id/trpl/netshield-edge\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "4.3 GET Detail Luaran",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/luaran/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "luaran",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "4.4 PUT Update Luaran",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/luaran/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "luaran",
+                                "1"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"id_jenis_luaran\": 1,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_jurnal\": \"IEEE Transactions on Network and Service Management (Final Published)\",\n    \"issn\": \"1932-4537\",\n    \"volume\": \"22\",\n    \"nomor_edisi\": \"3\",\n    \"halaman_jurnal\": \"301-315\",\n    \"tanggal_terbit\": \"2025-09-01\",\n    \"doi\": \"10.1109/TNSM.2025.3214999\",\n    \"indeksasi\": \"Scopus Q1\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "4.5 DELETE Luaran",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/luaran/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "luaran",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "5. Kerja Sama & Kemitraan",
+            "item": [
+                {
+                    "name": "5.1 GET Semua Kerja Sama",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama?search=Telkom&status=Aktif&tingkat=Nasional&per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama"
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "Telkom",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "Aktif",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "tingkat",
+                                    "value": "Nasional",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.2 POST Tambah Dokumen Kerja Sama",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"id_mitra\": 1,\n    \"id_jenis_kerjasama\": 1,\n    \"id_dosen\": 1,\n    \"judul_kerja_sama\": \"Kerja Sama Penyelenggaraan Kelas Industri dan Riset Terapan Smart City dengan PT Telkomsel\",\n    \"tingkat\": \"Nasional\",\n    \"bentuk_kegiatan\": \"Penyusunan Kurikulum Bersama, Dosen Praktisi Industri, dan Sertifikasi Kompetensi\",\n    \"tanggal_mulai\": \"2025-01-01\",\n    \"tanggal_selesai\": \"2027-12-31\",\n    \"bukti_dokumen\": \"https://drive.google.com/file/d/1MoU-Telkomsel-2025/view\",\n    \"nomor_dokumen\": \"045/KS/POLINES-TELKOMSEL/I/2025\",\n    \"jenis_dokumen\": \"MoU (Memorandum of Understanding)\",\n    \"status\": \"Aktif\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.3 GET Detail Kerja Sama",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.4 PUT Update Kerja Sama",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama",
+                                "1"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"id_mitra\": 1,\n    \"id_jenis_kerjasama\": 1,\n    \"id_dosen\": 1,\n    \"judul_kerja_sama\": \"Kerja Sama Kelas Industri, Riset Terapan Smart City, dan Magang Bersertifikat Industri PT Telkomsel\",\n    \"tingkat\": \"Nasional\",\n    \"bentuk_kegiatan\": \"Penyusunan Kurikulum, Magang Kampus Merdeka, dan Riset Bersama\",\n    \"tanggal_mulai\": \"2025-01-01\",\n    \"tanggal_selesai\": \"2028-12-31\",\n    \"nomor_dokumen\": \"045/KS/POLINES-TELKOMSEL/I/2025-Rev1\",\n    \"status\": \"Aktif\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.5 DELETE Kerja Sama",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.6 POST Perpanjang Kerja Sama",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama/1/perpanjang",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama",
+                                "1",
+                                "perpanjang"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tanggal_selesai_baru\": \"2030-12-31\",\n    \"keterangan\": \"Perpanjangan Adendum Periode II berdasarkan hasil evaluasi kepuasan mitra industri\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.7 GET Aktivitas Kerja Sama",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama/1/aktivitas",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama",
+                                "1",
+                                "aktivitas"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.8 POST Tambah Aktivitas Kerja Sama",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/kerja-sama/1/aktivitas",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "kerja-sama",
+                                "1",
+                                "aktivitas"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"judul_aktivitas\": \"Workshop Dosen Praktisi Industri: Cloud Native Architecture & Microservices\",\n    \"tanggal_pelaksanaan\": \"2025-04-20\",\n    \"deskripsi\": \"Pelatihan intensif 3 hari bersama Principal Architect Telkomsel untuk 25 dosen jurusan Teknik Komputer\",\n    \"bukti_dokumen\": \"https://drive.google.com/file/d/1Bukti-Workshop-Telkomsel/view\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "5.9 Aktivitas Kerja Sama Standalone",
+                    "item": [
+                        {
+                            "name": "5.9.1 GET Semua Aktivitas Kerja Sama",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/aktivitas-kerja-sama?search=Workshop&id_kerja_sama=1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "aktivitas-kerja-sama"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "search",
+                                            "value": "Workshop",
+                                            "disabled": false
+                                        },
+                                        {
+                                            "key": "id_kerja_sama",
+                                            "value": "1",
+                                            "disabled": false
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "5.9.2 POST Tambah Aktivitas Standalone",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/aktivitas-kerja-sama",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "aktivitas-kerja-sama"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_kerja_sama\": 1,\n    \"judul_aktivitas\": \"Kuliah Umum Kemitraan: Peluang Karir Network Engineer 5G\",\n    \"tanggal_pelaksanaan\": \"2025-05-15\",\n    \"deskripsi\": \"Kuliah umum dihadiri oleh 150 mahasiswa tingkat akhir TRPL dan Teknik Komputer\",\n    \"bukti_dokumen\": \"https://drive.google.com/file/d/1Absensi-Foto-KuliahUmum/view\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "5.9.3 GET Detail Aktivitas Standalone",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/aktivitas-kerja-sama/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "aktivitas-kerja-sama",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "5.9.4 PUT Update Aktivitas Standalone",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/aktivitas-kerja-sama/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "aktivitas-kerja-sama",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"judul_aktivitas\": \"Kuliah Umum Kemitraan: Peluang Karir Network & DevOps Engineer 5G\",\n    \"tanggal_pelaksanaan\": \"2025-05-15\",\n    \"deskripsi\": \"Kuliah umum sukses dilaksanakan dengan sertifikat kehadiran berstandar industri\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "5.9.5 DELETE Hapus Aktivitas Standalone",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/aktivitas-kerja-sama/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "aktivitas-kerja-sama",
+                                        "1"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "6. Repository & Validasi Evidence",
+            "item": [
+                {
+                    "name": "6.1 GET Semua Evidence",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/evidence?search=Proposal&jenis_dokumen=Proposal+Penelitian&status_validasi=Menunggu+Validasi&id_kegiatan=1&per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "evidence"
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "Proposal",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "jenis_dokumen",
+                                    "value": "Proposal Penelitian",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "status_validasi",
+                                    "value": "Menunggu Validasi",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "id_kegiatan",
+                                    "value": "1",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "6.2 POST Upload Evidence",
+                    "item": [
+                        {
+                            "name": "6.2.1 POST Upload Berkas Fisik Evidence",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/evidence",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "evidence"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "file",
+                                            "type": "file",
+                                            "src": [],
+                                            "description": "Berkas bukti dukung fisik PDF / Gambar (max 10MB)"
+                                        },
+                                        {
+                                            "key": "jenis_dokumen",
+                                            "value": "Proposal Penelitian Terapan",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "id_kegiatan",
+                                            "value": "1",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "id_kerja_sama",
+                                            "value": "1",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "status_validasi",
+                                            "value": "Menunggu Validasi",
+                                            "type": "text"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "6.2.2 POST Simpan Tautan Google Drive Evidence",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/evidence",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "evidence"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_file\": \"https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing\",\n    \"jenis_dokumen\": \"Laporan Kemajuan Penelitian & Logbook 70%\",\n    \"id_kegiatan\": 1,\n    \"status_validasi\": \"Menunggu Validasi\",\n    \"konfirmasi_lanjut\": true\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "6.3 GET Detail Evidence",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/evidence/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "evidence",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "6.4 GET Unduh Berkas Fisik",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/evidence/1/download",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "evidence",
+                                "1",
+                                "download"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "6.5 POST Review Validasi Kaprodi",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/evidence/1/validasi",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "evidence",
+                                "1",
+                                "validasi"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status_validasi\": \"Valid\",\n    \"catatan_validasi\": \"Dokumen proposal lengkap, tanda tangan mitra dan ketua peneliti sah, memenuhi syarat instrumen akreditasi LAM.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "6.6 POST Ganti Link Drive",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/evidence/1/ganti-link",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "evidence",
+                                "1",
+                                "ganti-link"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"url_drive_baru\": \"https://drive.google.com/file/d/1NewLinkUpdatedRevisi2025/view?usp=sharing\",\n    \"alasan_perubahan\": \"Pembaruan berkas perbaikan stempel basah kemitraan dan lembar pengesahan\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "6.7 DELETE Evidence",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/evidence/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "evidence",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "7. Interoperabilitas & Eksternal",
+            "item": [
+                {
+                    "name": "7.1 POST Validasi NIM Mahasiswa K1",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/k1/validasi-nim",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "k1",
+                                "validasi-nim"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"nim\": \"3.34.21.0.01\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "8. Statistik & Dashboard",
+            "item": [
+                {
+                    "name": "8.1 GET Dashboard Analitik",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/dashboard?tab=ringkasan",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "dashboard"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tab",
+                                    "value": "ringkasan",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "8.2 GET Statistik Dosen",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/dosen/statistik",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "dosen",
+                                "statistik"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "8.3 GET Rasio Dosen : Mahasiswa",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/dosen/rasio?tahun=2025&prodi=Teknologi+Rekayasa+Komputer",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "dosen",
+                                "rasio"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tahun",
+                                    "value": "2025",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "prodi",
+                                    "value": "Teknologi Rekayasa Komputer",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "8.4 GET Produktivitas Dosen",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/dosen/produktivitas?tahun=2025",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "dosen",
+                                "produktivitas"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tahun",
+                                    "value": "2025",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "8.5 GET Summary Tridharma",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/tridharma/summary?tahun=2025",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "tridharma",
+                                "summary"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tahun",
+                                    "value": "2025",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "8.6 GET Tren Tri Dharma",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/tridharma/tren?ts=2025&rentang=4",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "tridharma",
+                                "tren"
+                            ],
+                            "query": [
+                                {
+                                    "key": "ts",
+                                    "value": "2025",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "rentang",
+                                    "value": "4",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "8.7 GET Kerja Sama Aktif",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/v1/kerjasama/aktif?per_page=10&search=Telkom",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "kerjasama",
+                                "aktif"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "Telkom",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

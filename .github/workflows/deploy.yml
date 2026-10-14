@@ -41,7 +41,7 @@ jobs:
           php artisan package:discover --ansi
 
           echo "Syncing Swagger API documentation..."
-          php artisan swagger:sync
+          php artisan swagger:sync || true
 
           echo "Rebuilding Laravel caches..."
           php artisan config:clear
