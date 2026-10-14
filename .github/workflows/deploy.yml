@@ -1,0 +1,53 @@
+name: Deploy Akademik
+
+on:
+  push:
+    branches:
+      - main
+
+# Mencegah tabrakan jika ada push berurutan secara cepat
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Deploy to Server
+        run: |
+          echo "🚀 Starting Deployment..."
+          cd /var/www/akademik
+
+          # 1. Pastikan repo bersih dari file temporer/konflik lokal lalu pull branch main
+          echo "📥 Pulling latest changes from Git..."
+          git fetch origin main
+          git reset --hard origin/main
+
+          # 2. Update dependensi Composer (PHP)
+          echo "📦 Installing Composer dependencies..."
+          composer install --no-dev --optimize-autoloader --no-interaction
+
+          # 3. Jalankan migrasi database
+          echo "🗄️ Running database migrations..."
+          php artisan migrate --force
+
+          # 4. Compile frontend asset (jika menggunakan Vite)
+          if [ -f "package.json" ]; then
+            echo "🎨 Building frontend assets..."
+            npm ci --prefer-offline --no-audit
+            npm run build
+          fi
+
+          # 5. Clear & cache config, route, view untuk performa maksimal
+          echo "⚡ Optimizing Laravel caches..."
+          php artisan optimize:clear
+          php artisan optimize
+          php artisan view:cache
+
+          # 6. Set permission folder storage & bootstrap/cache
+          echo "🔒 Setting folder permissions..."
+          chmod -R 775 storage bootstrap/cache
+
+          echo "✅ Deployment completed successfully!"
