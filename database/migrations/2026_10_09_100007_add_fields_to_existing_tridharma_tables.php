@@ -25,7 +25,7 @@ return new class extends Migration
         if (Schema::hasTable('kerja_sama')) {
             Schema::table('kerja_sama', function (Blueprint $table) {
                 if (! Schema::hasColumn('kerja_sama', 'id_jenis_kerjasama')) {
-                    $table->unsignedBigInteger('id_jenis_kerjasama')->nullable();
+                    $table->unsignedInteger('id_jenis_kerjasama')->nullable();
                     if (Schema::hasTable('jenis_kerja_sama') && DB::getDriverName() !== 'sqlite') {
                         $table->foreign('id_jenis_kerjasama')
                             ->references('id_jenis_kerjasama')

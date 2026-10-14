@@ -37,7 +37,7 @@ return new class extends Migration
                         $table->foreign('id_pkm')->references('id_pkm')->on('pkm')->nullOnDelete();
                     }
                 }
-                if (! Schema::hasColumn('evidence', 'id_kerja_sama')) {
+                if (! Schema::hasColumn('evidence', 'id_kerja_sama') && ! Schema::hasColumn('evidence', 'id_kerjasama')) {
                     $table->unsignedInteger('id_kerja_sama')->nullable()->after('id_pkm');
                     if (Schema::hasTable('kerja_sama')) {
                         $table->foreign('id_kerja_sama')->references('id_kerja_sama')->on('kerja_sama')->nullOnDelete();
@@ -67,15 +67,24 @@ return new class extends Migration
         if (Schema::hasTable('evidence')) {
             Schema::table('evidence', function (Blueprint $table) {
                 if (Schema::hasColumn('evidence', 'id_kerja_sama')) {
-                    $table->dropForeign(['id_kerja_sama']);
+                    try {
+                        $table->dropForeign(['id_kerja_sama']);
+                    } catch (Throwable $e) {
+                    }
                     $table->dropColumn('id_kerja_sama');
                 }
                 if (Schema::hasColumn('evidence', 'id_pkm')) {
-                    $table->dropForeign(['id_pkm']);
+                    try {
+                        $table->dropForeign(['id_pkm']);
+                    } catch (Throwable $e) {
+                    }
                     $table->dropColumn('id_pkm');
                 }
                 if (Schema::hasColumn('evidence', 'id_penelitian')) {
-                    $table->dropForeign(['id_penelitian']);
+                    try {
+                        $table->dropForeign(['id_penelitian']);
+                    } catch (Throwable $e) {
+                    }
                     $table->dropColumn('id_penelitian');
                 }
                 if (Schema::hasColumn('evidence', 'status_validasi')) {

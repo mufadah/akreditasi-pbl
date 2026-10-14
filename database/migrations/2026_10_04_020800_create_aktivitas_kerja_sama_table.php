@@ -13,14 +13,15 @@ return new class extends Migration
     {
         Schema::create('aktivitas_kerja_sama', function (Blueprint $table) {
             $table->increments('id_aktivitas');
-            $table->unsignedInteger('id_kerjasama');
+            $table->unsignedInteger('id_kerja_sama');
+            $table->unsignedInteger('id_kerjasama')->nullable();
             $table->string('judul_aktivitas')->nullable();
             $table->date('tanggal_pelaksanaan')->nullable();
             $table->text('deskripsi')->nullable();
             $table->string('bukti_dokumen')->nullable();
             $table->timestamps();
 
-            $table->foreign('id_kerjasama')->references('id_kerjasama')->on('kerja_sama')->cascadeOnDelete();
+            $table->foreign('id_kerja_sama')->references('id_kerja_sama')->on('kerja_sama')->cascadeOnDelete();
         });
     }
 

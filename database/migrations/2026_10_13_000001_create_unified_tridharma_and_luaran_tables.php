@@ -24,7 +24,7 @@ return new class extends Migration
         // 2. Master Jenis Luaran (Unified: Buku, Jurnal, Prosiding, HKI, Produk)
         if (! Schema::hasTable('jenis_luaran')) {
             Schema::create('jenis_luaran', function (Blueprint $table) {
-                $table->increments('id_jenis_publikasi');
+                $table->increments('id_jenis_luaran');
                 $table->string('nama_jenis_luaran');
                 $table->string('indeks')->nullable();
                 $table->timestamps();
@@ -168,7 +168,7 @@ return new class extends Migration
                 }
 
                 $table->foreign('id_jenis_luaran')
-                    ->references('id_jenis_publikasi')
+                    ->references('id_jenis_luaran')
                     ->on('jenis_luaran')
                     ->restrictOnDelete();
             });
