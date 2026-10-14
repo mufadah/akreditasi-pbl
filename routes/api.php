@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EvidenceController;
 use App\Http\Controllers\Api\HkiController;
 use App\Http\Controllers\Api\JabatanAkademikController;
 use App\Http\Controllers\Api\JenisKegiatanController;
+use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
 use App\Http\Controllers\Api\JenisPenelitianController;
 use App\Http\Controllers\Api\JenisPublikasiController;
@@ -35,6 +36,12 @@ Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
 });
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+
+Route::middleware(['auth.jwt'])->group(function () {
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
 
 Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::get('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'getAktivitas']);
@@ -52,6 +59,8 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('jenis-publikasi', JenisPublikasiController::class);
     Route::apiResource('jenis-kegiatan', JenisKegiatanController::class);
     Route::apiResource('jenis-luaran', JenisLuaranController::class);
+    Route::apiResource('jenis-kerja-sama', JenisKerjaSamaController::class);
+    Route::apiResource('jenis-kerjasama', JenisKerjaSamaController::class);
     Route::apiResource('mitra', MitraController::class);
     Route::apiResource('kegiatan', KegiatanController::class);
     Route::apiResource('luaran', LuaranController::class);
@@ -80,6 +89,10 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
         Route::get('/rasio-dosen-mahasiswa', [StatistikController::class, 'rasioDosenMahasiswa']);
         Route::get('/produktivitas-dosen', [StatistikController::class, 'produktivitasDosen']);
         Route::get('/tren-tridharma', [StatistikController::class, 'trenTriDharma']);
+        // Alias Endpoint Statistik Postman
+        Route::get('/dosen/rasio', [StatistikController::class, 'rasioDosenMahasiswa']);
+        Route::get('/dosen/produktivitas', [StatistikController::class, 'produktivitasDosen']);
+        Route::get('/tridharma/tren', [StatistikController::class, 'trenTriDharma']);
     });
 });
 
