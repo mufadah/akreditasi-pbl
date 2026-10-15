@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -18,26 +16,16 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $k1Presets = [
+            'kaprodi@example.com' => ['name' => 'Kaprodi User', 'role' => 'KAPRODI', 'id' => 1],
+            'dosen@example.com' => ['name' => 'Dosen User', 'role' => 'DOSEN', 'id' => 2],
+            'administrator@example.com' => ['name' => 'Administrator User', 'role' => 'ADMINISTRATOR', 'id' => 3],
+            'operator@example.com' => ['name' => 'Operator User', 'role' => 'OPERATOR', 'id' => 4],
+            'reviewer@example.com' => ['name' => 'Reviewer User', 'role' => 'REVIEWER', 'id' => 5],
+            'pimpinan@example.com' => ['name' => 'Pimpinan User', 'role' => 'PIMPINAN', 'id' => 6],
+        ];
 
-        $isValid = false;
-        $userId = 1;
-        $userName = 'Administrator User';
-        $userRole = 'ADMINISTRATOR';
-
-        if ($user && Hash::check($request->password, $user->password)) {
-            $isValid = true;
-            $userId = $user->id;
-            $userName = $user->name;
-            $userRole = $user->role ?? 'ADMINISTRATOR';
-        } elseif (($request->email === 'admin@pbl.com' || $request->email === 'admin@polines.ac.id') && $request->password === 'password123') {
-            $isValid = true;
-            $userId = 1;
-            $userName = 'Administrator User';
-            $userRole = 'ADMINISTRATOR';
-        }
-
-        if (! $isValid) {
+        if (! isset($k1Presets[$request->email]) || $request->password !== 'password') {
             return response()->json([
                 'success' => false,
                 'code' => 401,
@@ -46,6 +34,11 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $preset = $k1Presets[$request->email];
+        $userId = $preset['id'];
+        $userName = $preset['name'];
+        $userRole = $preset['role'];
+
         // Siapkan data payload JWT
         $payload = [
             'iss' => url('/api/login'),
@@ -53,6 +46,9 @@ class AuthController extends Controller
             'exp' => time() + 86400,
             'nbf' => time(),
             'sub' => (string) $userId,
+            'id' => (int) $userId,
+            'email' => $request->email,
+            'nama' => $userName,
             'role' => $userRole,
             'permissions' => [
                 'dosen.create', 'dosen.read', 'dosen.update', 'dosen.delete',
@@ -88,47 +84,36 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
-            'role' => 'nullable|string|in:ADMINISTRATOR,KAPRODI,DOSEN',
-        ]);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => $validated['role'] ?? 'DOSEN',
-        ]);
-
         return response()->json([
-            'success' => true,
-            'code' => 201,
-            'message' => 'Registrasi user berhasil.',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-            ],
-        ], 201);
+            'success' => false,
+            'code' => 403,
+            'message' => 'Registrasi mandiri dinonaktifkan. Pengelolaan akun pengguna dikelola secara terpusat melalui portal SSO K1.',
+            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/login'),
+        ], 403);
     }
 
     public function me(Request $request)
     {
-        $authUser = $request->input('auth_user');
-        $userId = is_array($authUser) ? ($authUser['id'] ?? null) : ($authUser->id ?? null);
+        $user = $request->user() ?: auth()->user();
+        $authUser = $request->attributes->get('auth_user') ?? $request->input('auth_user');
+        $jwtPayload = $request->attributes->get('jwt_payload');
 
-        $user = $userId ? User::find($userId) : null;
+        $profileData = [
+            'id' => $user?->id ?? (is_array($authUser) ? ($authUser['id'] ?? null) : null),
+            'nama' => $user?->nama ?? $user?->name ?? (is_array($authUser) ? ($authUser['nama'] ?? null) : null),
+            'email' => $user?->email ?? (is_array($authUser) ? ($authUser['email'] ?? null) : null),
+            'role' => $user?->role ?? (is_array($authUser) ? ($authUser['role'] ?? null) : null),
+        ];
 
         return response()->json([
             'success' => true,
             'code' => 200,
             'message' => 'Profil pengguna berhasil diambil.',
             'data' => [
-                'user' => $user ?? $authUser,
+                'user' => $profileData,
+                'role' => $profileData['role'],
                 'auth_info' => $authUser,
+                'token_payload' => $jwtPayload,
             ],
         ]);
     }

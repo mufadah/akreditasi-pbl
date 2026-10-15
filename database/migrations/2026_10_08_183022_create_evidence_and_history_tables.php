@@ -33,7 +33,6 @@ return new class extends Migration
             $table->foreign('id_sertifikasi')->references('id_sertifikasi')->on('sertifikasi')->cascadeOnDelete();
             $table->foreign('id_kegiatan')->references('id_kegiatan')->on('kegiatan')->cascadeOnDelete();
             $table->foreign('id_luaran')->references('id_luaran')->on('luaran')->cascadeOnDelete();
-            $table->foreign('divalidasi_oleh')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('evidence_histories', function (Blueprint $table) {
@@ -46,7 +45,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('evidence_id')->references('id_evidence')->on('evidence')->cascadeOnDelete();
-            $table->foreign('diubah_oleh')->references('id')->on('users')->nullOnDelete();
         });
     }
 

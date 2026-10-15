@@ -43,10 +43,8 @@ Route::middleware(['auth.jwt'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
-    Route::get('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'getAktivitas']);
-    Route::post('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'storeAktivitas']);
-    Route::post('/kerja-sama/{id}/perpanjang', [KerjaSamaController::class, 'perpanjang']);
+// 1. Menu Master Data (Khusus Administrator)
+Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
     Route::post('/dosen/import', [DosenController::class, 'importExcel']);
     Route::post('/dosen/{id}/restore', [DosenController::class, 'restore']);
     Route::apiResource('dosen', DosenController::class);
@@ -62,29 +60,44 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('jenis-kerja-sama', JenisKerjaSamaController::class);
     Route::apiResource('jenis-kerjasama', JenisKerjaSamaController::class);
     Route::apiResource('mitra', MitraController::class);
+});
+
+// 2. Menu Validasi Evidence (Hanya Administrator, Kaprodi, dan Asesor - Dosen Ditolak 403)
+Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(function () {
+    Route::post('/evidence/{id}/validasi', [EvidenceController::class, 'validasi']);
+});
+
+// 3. Menu Tridharma, Repository Evidence, & Interaksi (Admin, Kaprodi, Dosen, Asesor)
+Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->group(function () {
+    // Kerja Sama
+    Route::get('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'getAktivitas']);
+    Route::post('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'storeAktivitas']);
+    Route::post('/kerja-sama/{id}/perpanjang', [KerjaSamaController::class, 'perpanjang']);
+    Route::apiResource('kerja-sama', KerjaSamaController::class);
+    Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
+
+    // Kegiatan & Luaran
     Route::apiResource('kegiatan', KegiatanController::class);
     Route::apiResource('luaran', LuaranController::class);
+
+    // Penelitian, PkM, Publikasi, Buku, HKI
     Route::apiResource('penelitian', PenelitianController::class);
     Route::apiResource('pkm', PkmController::class);
-    Route::apiResource('kerja-sama', KerjaSamaController::class);
     Route::apiResource('publikasi', PublikasiController::class);
     Route::apiResource('buku', BukuController::class);
     Route::apiResource('hki', HkiController::class);
 
-    // Evidence & Validasi Workflow
-    Route::post('/evidence/{id}/validasi', [EvidenceController::class, 'validasi']);
+    // Repository Evidence
     Route::post('/evidence/{id}/ganti-link', [EvidenceController::class, 'gantiLink']);
     Route::get('/evidence/{id}/download', [EvidenceController::class, 'download']);
     Route::apiResource('evidence', EvidenceController::class);
 
-    Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
-
-    // API V1: Endpoint Statistik & Agregasi Data
-    Route::prefix('v1')->middleware('jwt.role:ADMINISTRATOR')->group(function () {
+    // API V1: Endpoint Statistik & Agregasi Data Dashboard
+    Route::prefix('v1')->group(function () {
         Route::get('/dosen/statistik', [StatistikController::class, 'dosenStatistik']);
         Route::get('/tridharma/summary', [StatistikController::class, 'tridharmaSummary']);
         Route::get('/kerjasama/aktif', [StatistikController::class, 'kerjasamaAktif']);
-        // Rute Dashboard & 4 Tab Analitik (Tugas 7, 8, 10)
+        // Rute Dashboard & 4 Tab Analitik
         Route::get('/dashboard', [StatistikController::class, 'dashboard']);
         Route::get('/rasio-dosen-mahasiswa', [StatistikController::class, 'rasioDosenMahasiswa']);
         Route::get('/produktivitas-dosen', [StatistikController::class, 'produktivitasDosen']);

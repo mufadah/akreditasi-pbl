@@ -3,48 +3,19 @@
 namespace Database\Seeders;
 
 use App\Models\BidangKeahlian;
+use App\Models\Dosen;
 use App\Models\JabatanAkademik;
 use App\Models\JenisKegiatan;
 use App\Models\JenisKerjaSama;
 use App\Models\JenisLuaran;
 use App\Models\Pendidikan;
 use App\Models\TahunAkademik;
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 0. Akun Pengguna Default
-        User::firstOrCreate(
-            ['email' => 'admin@polines.ac.id'],
-            [
-                'name' => 'Administrator K2',
-                'password' => Hash::make('password123'),
-                'role' => 'ADMINISTRATOR',
-            ]
-        );
-
-        User::firstOrCreate(
-            ['email' => 'kaprodi.trpl@polines.ac.id'],
-            [
-                'name' => 'Kaprodi TRPL',
-                'password' => Hash::make('password123'),
-                'role' => 'KAPRODI',
-            ]
-        );
-
-        User::firstOrCreate(
-            ['email' => 'dosen@polines.ac.id'],
-            [
-                'name' => 'Dosen Peneliti',
-                'password' => Hash::make('password123'),
-                'role' => 'DOSEN',
-            ]
-        );
-
         // 1. Jabatan Fungsional
         foreach (['Tenaga Pengajar', 'Asisten Ahli', 'Lektor', 'Lektor Kepala', 'Guru Besar'] as $j) {
             JabatanAkademik::firstOrCreate(['nama_jabatan' => $j]);
@@ -123,5 +94,21 @@ class DatabaseSeeder extends Seeder
             JenisKegiatanSeeder::class,
             JenisLuaranSeeder::class,
         ]);
+
+        // 9. Data Akademik Dosen Terkait Akun K1 (Tabel dosen, bukan users)
+        $jabatan = JabatanAkademik::first();
+        $pendidikan = Pendidikan::first();
+        if ($jabatan && $pendidikan) {
+            Dosen::firstOrCreate(
+                ['email' => 'dosen@example.com'],
+                [
+                    'id_jabatan' => $jabatan->id_jabatan,
+                    'id_pendidikan' => $pendidikan->id_pendidikan,
+                    'nidn' => '0012345678',
+                    'nama_dosen' => 'Dosen K1 SSO',
+                    'status_dosen' => 'DTPS',
+                ]
+            );
+        }
     }
 }
