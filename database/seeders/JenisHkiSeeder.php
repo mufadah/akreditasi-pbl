@@ -12,6 +12,10 @@ class JenisHkiSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('jenis_hki')) {
+            return;
+        }
+
         $data = [
             'Hak Cipta',
             'Paten',

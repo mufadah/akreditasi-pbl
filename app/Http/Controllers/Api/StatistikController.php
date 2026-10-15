@@ -130,17 +130,23 @@ class StatistikController extends Controller
             ->pluck('total', 'nama_jenis_luaran');
 
         // Fallback ke tabel lama jika tabel unifikasi belum di-backfill dan data lama ada
-        if ($totalPenelitian === 0 && $totalPkm === 0 && $totalLuaran === 0 && Schema::hasTable('penelitian')) {
-            $legacyPenelitian = Penelitian::when($tahun, fn ($q) => $q->where('tahun', $tahun));
-            $legacyPkm = Pkm::when($tahun, fn ($q) => $q->where('tahun', $tahun));
-            $legacyPublikasi = Publikasi::when($tahun, fn ($q) => $q->where('tahun', $tahun));
+        if ($totalPenelitian === 0 && $totalPkm === 0 && $totalLuaran === 0) {
+            $hasLegacy = \Illuminate\Support\Facades\Schema::hasTable('penelitian')
+                && \Illuminate\Support\Facades\Schema::hasTable('pkm')
+                && \Illuminate\Support\Facades\Schema::hasTable('publikasi');
 
-            if ($legacyPenelitian->exists() || $legacyPkm->exists() || $legacyPublikasi->exists()) {
-                $totalPenelitian = (clone $legacyPenelitian)->count();
-                $penelitianByStatus = (clone $legacyPenelitian)->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
-                $totalPkm = (clone $legacyPkm)->count();
-                $pkmByStatus = (clone $legacyPkm)->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
-                $totalLuaran = (clone $legacyPublikasi)->count();
+            if ($hasLegacy) {
+                $legacyPenelitian = Penelitian::when($tahun, fn ($q) => $q->where('tahun', $tahun));
+                $legacyPkm = Pkm::when($tahun, fn ($q) => $q->where('tahun', $tahun));
+                $legacyPublikasi = Publikasi::when($tahun, fn ($q) => $q->where('tahun', $tahun));
+
+                if ($legacyPenelitian->exists() || $legacyPkm->exists() || $legacyPublikasi->exists()) {
+                    $totalPenelitian = (clone $legacyPenelitian)->count();
+                    $penelitianByStatus = (clone $legacyPenelitian)->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
+                    $totalPkm = (clone $legacyPkm)->count();
+                    $pkmByStatus = (clone $legacyPkm)->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
+                    $totalLuaran = (clone $legacyPublikasi)->count();
+                }
             }
         }
 

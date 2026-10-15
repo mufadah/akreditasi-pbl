@@ -160,7 +160,7 @@ class KerjaSamaController extends Controller
             }
         }
 
-        $kerjaSama = $query->latest('id_kerja_sama')->paginate($request->integer('per_page', 10));
+        $kerjaSama = $query->latest()->paginate($request->integer('per_page', 10));
 
         return $this->respond(true, 200, 'Data kerja sama berhasil diambil.', $kerjaSama);
     }
@@ -176,12 +176,17 @@ class KerjaSamaController extends Controller
 
         $validated = $validator->validated();
 
+        // Default status aktif (Fitur 10 Flowchart: "Simpan ke Database dengan status aktif")
+        if (empty($validated['status'])) {
+            $validated['status'] = 'Aktif';
+        }
+
         try {
             $kerjaSama = DB::transaction(function () use ($validated) {
                 return KerjaSama::create($validated);
             });
             if (class_exists(AuditLogService::class)) {
-                AuditLogService::log('CREATE', 'KerjaSama', $kerjaSama->id_kerja_sama, null, $kerjaSama->toArray());
+                AuditLogService::log('CREATE', 'KerjaSama', $kerjaSama->getKey(), null, $kerjaSama->toArray());
             }
         } catch (\Throwable $e) {
             return $this->respond(false, 500, 'Gagal menyimpan data kerja sama: '.$e->getMessage());
@@ -241,6 +246,11 @@ class KerjaSamaController extends Controller
 
         if (! $kerjaSama) {
             return $this->respond(false, 404, 'Data kerja sama tidak ditemukan.');
+        }
+
+        // Cek keterkaitan ke evidence (Fitur 10 Flowchart)
+        if ($kerjaSama->evidence()->exists()) {
+            return $this->respond(false, 422, 'Kerja sama Masih Dipakai: Data kerja sama tidak dapat dihapus karena masih terkait dengan dokumen evidence.');
         }
 
         try {

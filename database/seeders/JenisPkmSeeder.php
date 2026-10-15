@@ -12,6 +12,10 @@ class JenisPkmSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('jenis_pkm')) {
+            return;
+        }
+
         $data = [
             'Pelatihan',
             'Penyuluhan',

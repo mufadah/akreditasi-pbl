@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Evidence;
 use App\Models\Penelitian;
+use App\Models\Publikasi;
 use App\Services\K1ApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -218,6 +220,14 @@ class PenelitianController extends Controller
         // Cek data ada atau tidak
         if (! $penelitian) {
             return $this->respond(false, 404, 'Data penelitian tidak ditemukan.');
+        }
+
+        // Cek keterkaitan ke Publikasi dan Evidence (Flowchart Fitur 7)
+        $isUsedInPublikasi = Publikasi::where('id_penelitian', $id)->exists();
+        $isUsedInEvidence = Evidence::where('id_penelitian', $id)->exists();
+
+        if ($isUsedInPublikasi || $isUsedInEvidence) {
+            return $this->respond(false, 422, 'Penelitian Masih Dipakai: Data penelitian tidak dapat dihapus karena masih digunakan dalam data Publikasi atau Evidence.');
         }
 
         // Hapus dari database

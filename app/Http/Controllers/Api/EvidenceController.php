@@ -52,7 +52,13 @@ class EvidenceController extends Controller
         return [
             'file' => $fileRules,
             'nama_file' => ['nullable', 'string', 'max:255'],
-            'url_drive' => ['nullable', 'string', 'max:255'],
+            'url_drive' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:/^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/',
+            ],
+            'kode_indikator' => ['nullable', 'string', 'max:50'],
             'jenis_dokumen' => [...$req, 'string', 'max:255'],
             'tanggal_upload' => ['nullable', 'date'],
             'status_validasi' => ['nullable', 'string', 'max:50'],
@@ -66,7 +72,7 @@ class EvidenceController extends Controller
         ];
     }
 
-    // Ambil daftar evidence dengan filter pencarian dan relasi
+    // Ambil daftar evidence dengan filter pencarian dan relasi (Fitur 11 B Repository)
     public function index(Request $request): JsonResponse
     {
         $query = Evidence::with($this->relations);
@@ -75,7 +81,8 @@ class EvidenceController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('nama_file', 'like', "%{$search}%")
-                    ->orWhere('jenis_dokumen', 'like', "%{$search}%");
+                    ->orWhere('jenis_dokumen', 'like', "%{$search}%")
+                    ->orWhere('kode_indikator', 'like', "%{$search}%");
             });
         }
 
@@ -85,6 +92,14 @@ class EvidenceController extends Controller
 
         if ($status = $request->query('status_validasi')) {
             $query->where('status_validasi', $status);
+        }
+
+        if ($kode = $request->query('kode_indikator')) {
+            $query->where('kode_indikator', $kode);
+        }
+
+        if ($tahun = $request->query('tahun')) {
+            $query->whereYear('tanggal_upload', $tahun);
         }
 
         // Filter foreign key
@@ -156,6 +171,7 @@ class EvidenceController extends Controller
                     'id_sertifikasi' => $validated['id_sertifikasi'] ?? null,
                     'id_penelitian' => $validated['id_penelitian'] ?? null,
                     'id_pkm' => $validated['id_pkm'] ?? null,
+                    'kode_indikator' => $validated['kode_indikator'] ?? null,
                     'id_kerja_sama' => $idKerjaSama,
                     'id_kerjasama' => $idKerjaSama,
                 ]);

@@ -36,7 +36,9 @@ return [
     ],
 
     'k1' => [
-        'url' => env('K1_API_URL', ''),
+        'base_url' => env('K1_BASE_URL', env('K1_API_URL', 'https://akademik.fayra.my.id/api')),
+        'url' => env('K1_API_URL', env('K1_BASE_URL', 'https://akademik.fayra.my.id/api')),
+        'login_url' => env('K1_LOGIN_URL', 'https://akademik.fayra.my.id/login'),
         'key' => env('K1_API_KEY', ''),
     ],
 

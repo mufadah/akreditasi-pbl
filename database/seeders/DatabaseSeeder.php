@@ -3,48 +3,20 @@
 namespace Database\Seeders;
 
 use App\Models\BidangKeahlian;
+use App\Models\Dosen;
 use App\Models\JabatanAkademik;
 use App\Models\JenisKegiatan;
 use App\Models\JenisKerjaSama;
 use App\Models\JenisLuaran;
 use App\Models\Pendidikan;
 use App\Models\TahunAkademik;
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 0. Akun Pengguna Default
-        User::firstOrCreate(
-            ['email' => 'admin@polines.ac.id'],
-            [
-                'name' => 'Administrator K2',
-                'password' => Hash::make('password123'),
-                'role' => 'ADMINISTRATOR',
-            ]
-        );
-
-        User::firstOrCreate(
-            ['email' => 'kaprodi.trpl@polines.ac.id'],
-            [
-                'name' => 'Kaprodi TRPL',
-                'password' => Hash::make('password123'),
-                'role' => 'KAPRODI',
-            ]
-        );
-
-        User::firstOrCreate(
-            ['email' => 'dosen@polines.ac.id'],
-            [
-                'name' => 'Dosen Peneliti',
-                'password' => Hash::make('password123'),
-                'role' => 'DOSEN',
-            ]
-        );
-
         // 1. Jabatan Fungsional
         foreach (['Tenaga Pengajar', 'Asisten Ahli', 'Lektor', 'Lektor Kepala', 'Guru Besar'] as $j) {
             JabatanAkademik::firstOrCreate(['nama_jabatan' => $j]);
@@ -117,11 +89,44 @@ class DatabaseSeeder extends Seeder
 
         // 8. Master Data Baru & Seeder Idempotent (Revisi ERD)
         $this->call([
-            JenisHkiSeeder::class,
-            JenisPkmSeeder::class,
             JenisKerjaSamaSeeder::class,
             JenisKegiatanSeeder::class,
             JenisLuaranSeeder::class,
         ]);
+
+        if (Schema::hasTable('jenis_hki')) {
+            $this->call(JenisHkiSeeder::class);
+        }
+
+        if (Schema::hasTable('jenis_pkm')) {
+            $this->call(JenisPkmSeeder::class);
+        }
+
+        // 9. Data Akademik Dosen Terkait Akun K1 (Tabel dosen, bukan users)
+        $jabatan = JabatanAkademik::first();
+        $pendidikan = Pendidikan::first();
+        if ($jabatan && $pendidikan) {
+            $existing = Dosen::withTrashed()->where('nidn', '0012345678')->orWhere('email', 'dosen@example.com')->first();
+            if ($existing) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+                $existing->update([
+                    'email' => 'dosen@example.com',
+                    'id_jabatan' => $jabatan->id_jabatan,
+                    'id_pendidikan' => $pendidikan->id_pendidikan,
+                    'status_dosen' => 'DTPS',
+                ]);
+            } else {
+                Dosen::create([
+                    'nidn' => '0012345678',
+                    'email' => 'dosen@example.com',
+                    'id_jabatan' => $jabatan->id_jabatan,
+                    'id_pendidikan' => $pendidikan->id_pendidikan,
+                    'nama_dosen' => 'Dosen K1 SSO',
+                    'status_dosen' => 'DTPS',
+                ]);
+            }
+        }
     }
 }

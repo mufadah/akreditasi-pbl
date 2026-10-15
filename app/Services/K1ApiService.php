@@ -9,12 +9,118 @@ class K1ApiService
 {
     protected ?string $baseUrl;
 
+    protected ?string $loginUrl;
+
     protected ?string $apiKey;
 
     public function __construct()
     {
-        $this->baseUrl = config('services.k1.url', env('K1_API_URL', ''));
-        $this->apiKey = config('services.k1.key', env('K1_API_KEY', ''));
+        $this->baseUrl = config('services.k1.base_url') ?: (config('services.k1.url') ?: 'https://akademik.fayra.my.id/api');
+        $this->loginUrl = config('services.k1.login_url') ?: 'https://akademik.fayra.my.id/login';
+        $this->apiKey = (string) config('services.k1.key', '');
+    }
+
+    /**
+     * Dapatkan URL login portal SSO K1.
+     */
+    public function getLoginUrl(): string
+    {
+        return $this->loginUrl ?: 'https://akademik.fayra.my.id/login';
+    }
+
+    /**
+     * Hit API Login ke server live Kelompok 1.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function login(string $email, string $password): ?array
+    {
+        if (empty($this->baseUrl)) {
+            return null;
+        }
+
+        $base = rtrim($this->baseUrl, '/');
+        $endpoints = array_unique([
+            $base.'/auth/login',
+            $base.'/login',
+            str_replace('/api', '', $base).'/api/auth/login',
+            str_replace('/api', '', $base).'/api/login',
+        ]);
+
+        foreach ($endpoints as $url) {
+            try {
+                $response = Http::timeout(5)
+                    ->acceptJson()
+                    ->post($url, [
+                        'email' => $email,
+                        'password' => $password,
+                    ]);
+
+                if ($response->successful()) {
+                    $json = $response->json();
+                    if (is_array($json)) {
+                        return $json;
+                    }
+                }
+
+                if ($response->status() === 401) {
+                    return [
+                        'success' => false,
+                        'code' => 401,
+                        'message' => $response->json('message') ?? 'Email atau password salah.',
+                        'data' => null,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                Log::debug("Login ke K1 URL {$url} error: ".$e->getMessage());
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Verifikasi token ke endpoint server K1 (fallback untuk token opaque/Sanctum atau secret berbeda).
+     *
+     * @return array<string, mixed>|null Data payload/user jika valid, atau null jika gagal/tidak valid
+     */
+    public function verifyToken(string $token): ?array
+    {
+        $cleanToken = trim($token);
+        if (empty($cleanToken) || empty($this->baseUrl)) {
+            return null;
+        }
+
+        $base = rtrim($this->baseUrl, '/');
+        $endpoints = array_unique([
+            $base.'/auth/me',
+            $base.'/me',
+            $base.'/verify-token',
+            str_replace('/api', '', $base).'/api/auth/me',
+            str_replace('/api', '', $base).'/api/me',
+            str_replace('/api', '', $base).'/api/verify-token',
+        ]);
+
+        foreach ($endpoints as $url) {
+            try {
+                $response = Http::timeout(5)
+                    ->withToken($cleanToken)
+                    ->acceptJson()
+                    ->get($url);
+
+                if ($response->successful()) {
+                    $json = $response->json();
+                    $userData = $json['data']['user'] ?? $json['data'] ?? $json['user'] ?? $json;
+                    if (is_array($userData) && ! empty($userData)) {
+                        return $userData;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::debug("Percobaan verifikasi token K1 ke {$url} gagal: ".$e->getMessage());
+            }
+        }
+
+        return null;
     }
 
     /**

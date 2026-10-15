@@ -167,6 +167,26 @@ class LuaranController extends Controller
 
         $validated = $validator->validated();
 
+        // Cek duplikasi DOI, Nomor Sertifikat, atau ISBN (Flowchart Fitur 8)
+        $doi = $request->input('doi') ?? $request->input('doi_prosiding');
+        $isbn = $request->input('isbn') ?? $request->input('isbn_prosiding');
+        $nomorSertifikat = $request->input('nomor_sertifikat_hki');
+
+        $isDuplicate = false;
+        if (! empty($doi)) {
+            $isDuplicate = Luaran::where('doi', $doi)->orWhere('doi_prosiding', $doi)->exists();
+        }
+        if (! $isDuplicate && ! empty($isbn)) {
+            $isDuplicate = Luaran::where('isbn', $isbn)->orWhere('isbn_prosiding', $isbn)->exists();
+        }
+        if (! $isDuplicate && ! empty($nomorSertifikat)) {
+            $isDuplicate = Luaran::where('nomor_sertifikat_hki', $nomorSertifikat)->exists();
+        }
+
+        if ($isDuplicate) {
+            return $this->respond(false, 422, 'Data Duplikat: DOI, Nomor Sertifikat, atau ISBN sudah terdaftar dalam sistem.');
+        }
+
         try {
             $luaran = DB::transaction(function () use ($validated) {
                 return Luaran::create($validated);
@@ -231,6 +251,11 @@ class LuaranController extends Controller
 
         if (! $luaran) {
             return $this->respond(false, 404, 'Data luaran tidak ditemukan.');
+        }
+
+        // Cek keterkaitan ke Evidence (Flowchart Fitur 8)
+        if ($luaran->evidence()->exists()) {
+            return $this->respond(false, 422, 'Luaran Masih Dipakai: Data luaran tidak dapat dihapus karena masih terkait dengan data evidence.');
         }
 
         try {
