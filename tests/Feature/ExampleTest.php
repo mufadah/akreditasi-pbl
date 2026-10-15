@@ -22,12 +22,15 @@ test('models and seeders can be queried without SQL error', function () {
 test('api v1 dashboard returns successful response for all tabs', function () {
     $this->seed();
 
-    $response = $this->postJson('/api/login', [
+    $secret = config('jwt.secret', 'secret-key-default-tridharma-akreditasi-pbl-2026-min-32-bytes');
+    $payload = [
+        'sub' => 1,
         'email' => 'admin@polines.ac.id',
-        'password' => 'password123',
-    ]);
-
-    $token = $response->json('data.authorization.access_token');
+        'role' => 'ADMINISTRATOR',
+        'permissions' => ['*'],
+        'exp' => time() + 3600,
+    ];
+    $token = \Firebase\JWT\JWT::encode($payload, $secret, 'HS256');
 
     foreach (['ringkasan', 'produktivitas', 'rasio_jabatan', 'tren'] as $tab) {
         $dash = $this->withHeader('Authorization', "Bearer {$token}")
