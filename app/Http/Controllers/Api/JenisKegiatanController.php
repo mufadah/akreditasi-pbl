@@ -89,6 +89,14 @@ class JenisKegiatanController extends Controller
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
 
+        // Cek keterkaitan data ke data kegiatan (Flowchart Fitur 5)
+        if ($jenis->kegiatan()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data Masih Dipakai: Jenis kegiatan tidak dapat dihapus karena masih digunakan oleh data kegiatan.',
+            ], 422);
+        }
+
         $jenis->delete();
 
         return response()->json([
