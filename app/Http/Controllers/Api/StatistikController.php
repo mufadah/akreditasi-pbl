@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class StatistikController extends Controller
 {
@@ -123,13 +124,13 @@ class StatistikController extends Controller
 
         $totalLuaran = (clone $luaranQuery)->count();
         $luaranByJenis = (clone $luaranQuery)
-            ->join('jenis_luaran', 'luaran.id_jenis_luaran', '=', 'jenis_luaran.id_jenis_publikasi')
+            ->join('jenis_luaran', 'luaran.id_jenis_luaran', '=', 'jenis_luaran.id_jenis_luaran')
             ->select('jenis_luaran.nama_jenis_luaran', DB::raw('count(luaran.id_luaran) as total'))
             ->groupBy('jenis_luaran.nama_jenis_luaran')
             ->pluck('total', 'nama_jenis_luaran');
 
         // Fallback ke tabel lama jika tabel unifikasi belum di-backfill dan data lama ada
-        if ($totalPenelitian === 0 && $totalPkm === 0 && $totalLuaran === 0) {
+        if ($totalPenelitian === 0 && $totalPkm === 0 && $totalLuaran === 0 && Schema::hasTable('penelitian')) {
             $legacyPenelitian = Penelitian::when($tahun, fn ($q) => $q->where('tahun', $tahun));
             $legacyPkm = Pkm::when($tahun, fn ($q) => $q->where('tahun', $tahun));
             $legacyPublikasi = Publikasi::when($tahun, fn ($q) => $q->where('tahun', $tahun));

@@ -63,8 +63,8 @@ class AuthController extends Controller
             ],
         ];
 
-        $key = env('JWT_SECRET', 'secret-key-default');
-        $jwt = JWT::encode($payload, $key, 'HS256');
+        $key = config('jwt.secret', env('JWT_SECRET', 'secret-key-default-tridharma-akreditasi-pbl-2026-min-32-bytes'));
+        $jwt = JWT::encode($payload, $key, config('jwt.algo', 'HS256'));
 
         return response()->json([
             'success' => true,

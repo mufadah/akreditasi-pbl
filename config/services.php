@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'k1' => [
+        'url' => env('K1_API_URL', ''),
+        'key' => env('K1_API_KEY', ''),
+    ],
+
+    'k3' => [
+        'url' => env('K3_API_URL', ''),
+        'key' => env('K3_API_KEY', ''),
+    ],
+
 ];
