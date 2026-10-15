@@ -11,6 +11,7 @@ use App\Models\JenisLuaran;
 use App\Models\Pendidikan;
 use App\Models\TahunAkademik;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -93,11 +94,11 @@ class DatabaseSeeder extends Seeder
             JenisLuaranSeeder::class,
         ]);
 
-        if (\Illuminate\Support\Facades\Schema::hasTable('jenis_hki')) {
+        if (Schema::hasTable('jenis_hki')) {
             $this->call(JenisHkiSeeder::class);
         }
 
-        if (\Illuminate\Support\Facades\Schema::hasTable('jenis_pkm')) {
+        if (Schema::hasTable('jenis_pkm')) {
             $this->call(JenisPkmSeeder::class);
         }
 
@@ -105,16 +106,27 @@ class DatabaseSeeder extends Seeder
         $jabatan = JabatanAkademik::first();
         $pendidikan = Pendidikan::first();
         if ($jabatan && $pendidikan) {
-            Dosen::firstOrCreate(
-                ['email' => 'dosen@example.com'],
-                [
+            $existing = Dosen::withTrashed()->where('nidn', '0012345678')->orWhere('email', 'dosen@example.com')->first();
+            if ($existing) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+                $existing->update([
+                    'email' => 'dosen@example.com',
                     'id_jabatan' => $jabatan->id_jabatan,
                     'id_pendidikan' => $pendidikan->id_pendidikan,
+                    'status_dosen' => 'DTPS',
+                ]);
+            } else {
+                Dosen::create([
                     'nidn' => '0012345678',
+                    'email' => 'dosen@example.com',
+                    'id_jabatan' => $jabatan->id_jabatan,
+                    'id_pendidikan' => $pendidikan->id_pendidikan,
                     'nama_dosen' => 'Dosen K1 SSO',
                     'status_dosen' => 'DTPS',
-                ]
-            );
+                ]);
+            }
         }
     }
 }
