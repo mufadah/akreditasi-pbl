@@ -116,11 +116,11 @@ class MitraController extends Controller
             ], 404);
         }
 
-        // Cek apakah mitra masih dipakai di data PKM atau kerja sama
+        // Cek apakah mitra masih dipakai di data PKM atau kerja sama (Flowchart Fitur 6)
         if ($mitra->pkm()->exists() || $mitra->kerjaSama()->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Mitra tidak dapat dihapus karena masih terkait dengan data PKM atau kerja sama.',
+                'message' => 'Mitra Masih Bekerja sama: Mitra tidak dapat dihapus karena masih terkait dengan data PKM atau kerja sama.',
             ], 422);
         }
 
