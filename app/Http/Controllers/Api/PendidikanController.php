@@ -3,33 +3,79 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Dosen;
 use App\Models\Pendidikan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class PendidikanController extends Controller
 {
-    // Ambil semua data jenjang pendidikan
-    public function index(): JsonResponse
+    /**
+     * Tampilkan Daftar Jenjang Pendidikan (Flowchart: Buka Menu Atribut Dosen -> Pilih Tipe Jenjang -> Tampilkan Daftar)
+     */
+    public function index(Request $request): JsonResponse
     {
+        $query = Pendidikan::query();
+
+        // Hitung keterkaitan ke data dosen
+        $query->withCount('dosen');
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('jenjang', 'like', "%{$search}%")
+                    ->orWhere('program_studi', 'like', "%{$search}%")
+                    ->orWhere('universitas', 'like', "%{$search}%");
+            });
+        }
+
+        $pendidikan = $request->has('per_page')
+            ? $query->paginate($request->integer('per_page', 10))
+            : $query->get();
+
         return response()->json([
             'success' => true,
-            'data' => Pendidikan::all(),
+            'message' => 'Daftar jenjang pendidikan berhasil diambil.',
+            'data' => $pendidikan,
         ]);
     }
 
-    // Tambah data jenjang pendidikan baru
+    /**
+     * Tambah Jenjang Pendidikan (Flowchart: Input kode dan nama -> Simpan ke Database -> Tampilkan Pesan Berhasil)
+     */
     public function store(Request $request): JsonResponse
     {
-        // Validasi nama jenjang wajib dan unik
-        $validated = $request->validate([
-            'jenjang' => 'required|string|max:50|unique:pendidikan,jenjang',
+        $input = $request->all();
+
+        // Mapping fleksibel nama -> jenjang jika jenjang kosong
+        if ($request->filled('nama') && ! $request->filled('jenjang')) {
+            $input['jenjang'] = $request->input('nama');
+        }
+
+        $validator = Validator::make($input, [
+            'jenjang' => 'required|string|max:50',
+            'universitas' => 'nullable|string|max:255',
+            'program_studi' => 'nullable|string|max:255',
+            'tahun_lulus' => 'nullable|integer',
+        ], [
+            'jenjang.required' => 'Jenjang pendidikan wajib diisi.',
         ]);
 
-        // Simpan ke database
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        $validated['universitas'] = $validated['universitas'] ?? 'Politeknik Negeri Semarang';
+        $validated['program_studi'] = $validated['program_studi'] ?? 'Teknik';
+        $validated['tahun_lulus'] = $validated['tahun_lulus'] ?? (int) date('Y');
+
         $pendidikan = Pendidikan::create($validated);
 
-        // Kembalikan respon sukses
         return response()->json([
             'success' => true,
             'message' => 'Jenjang pendidikan berhasil ditambahkan.',
@@ -37,36 +83,63 @@ class PendidikanController extends Controller
         ], 201);
     }
 
-    // Ambil detail satu jenjang pendidikan
+    /**
+     * Detail Jenjang Pendidikan
+     */
     public function show(int $id): JsonResponse
     {
-        $pendidikan = Pendidikan::find($id);
+        $pendidikan = Pendidikan::withCount('dosen')->find($id);
 
-        // Cek data ada atau tidak
         if (! $pendidikan) {
-            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Data jenjang pendidikan tidak ditemukan.',
+            ], 404);
         }
 
-        return response()->json(['success' => true, 'data' => $pendidikan]);
+        return response()->json([
+            'success' => true,
+            'data' => $pendidikan,
+        ]);
     }
 
-    // Update data jenjang pendidikan
+    /**
+     * Ubah Jenjang Pendidikan (Flowchart: Ubah kode atau nama -> Update Data di Database -> Tampilkan Pesan Berhasil)
+     */
     public function update(Request $request, int $id): JsonResponse
     {
         $pendidikan = Pendidikan::find($id);
 
-        // Cek data ada atau tidak
         if (! $pendidikan) {
-            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Data jenjang pendidikan tidak ditemukan.',
+            ], 404);
         }
 
-        // Validasi jenjang unik kecuali untuk id ini
-        $validated = $request->validate([
-            'jenjang' => 'required|string|max:50|unique:pendidikan,jenjang,'.$id.',id_pendidikan',
+        $input = $request->all();
+        if ($request->filled('nama') && ! $request->filled('jenjang')) {
+            $input['jenjang'] = $request->input('nama');
+        }
+
+        $validator = Validator::make($input, [
+            'jenjang' => 'required|string|max:50',
+            'universitas' => 'nullable|string|max:255',
+            'program_studi' => 'nullable|string|max:255',
+            'tahun_lulus' => 'nullable|integer',
+        ], [
+            'jenjang.required' => 'Jenjang pendidikan wajib diisi.',
         ]);
 
-        // Update data di database
-        $pendidikan->update($validated);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $pendidikan->update($validator->validated());
 
         return response()->json([
             'success' => true,
@@ -75,22 +148,40 @@ class PendidikanController extends Controller
         ]);
     }
 
-    // Hapus data jenjang pendidikan
+    /**
+     * Hapus Jenjang Pendidikan (Flowchart: Cek keterkaitan data ke data dosen -> Data Sedang Digunakan?
+     * Ya -> Tampilkan Pesan Error: Data Masih Dipakai
+     * Tidak -> Hapus Data dari Database -> Tampilkan Pesan Berhasil)
+     */
     public function destroy(int $id): JsonResponse
     {
         $pendidikan = Pendidikan::find($id);
 
-        // Cek data ada atau tidak
         if (! $pendidikan) {
-            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Data jenjang pendidikan tidak ditemukan.',
+            ], 404);
         }
 
-        // Hapus dari database
+        // Cek keterkaitan data ke data dosen
+        $isUsed = Dosen::where('id_pendidikan', $id)->exists();
+
+        if ($isUsed) {
+            // Ya -> Tampilkan Pesan Error: Data Masih Dipakai
+            return response()->json([
+                'success' => false,
+                'message' => 'Data Masih Dipakai: Data jenjang pendidikan tidak dapat dihapus karena masih digunakan oleh data dosen.',
+            ], 422);
+        }
+
+        // Tidak -> Hapus Data dari Database
         $pendidikan->delete();
 
+        // Tampilkan Pesan Berhasil
         return response()->json([
             'success' => true,
-            'message' => 'Jenjang pendidikan berhasil dihapus.',
+            'message' => 'Data jenjang pendidikan berhasil dihapus.',
         ]);
     }
 }
