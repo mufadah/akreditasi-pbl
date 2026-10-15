@@ -27,7 +27,7 @@ class JwtAuthenticate
             return response()->json([
                 'success' => false,
                 'code' => 401,
-                'message' => 'Unauthorized: Token Bearer tidak disertakan.',
+                'message' => 'Unauthorized: Token Bearer tidak disertakan. Silakan login melalui portal SSO K1.',
                 'login_url' => $loginUrl,
             ], 401);
         }
@@ -45,7 +45,7 @@ class JwtAuthenticate
                 return response()->json([
                     'success' => false,
                     'code' => 401,
-                    'message' => 'Unauthorized: Token sudah kedaluwarsa.',
+                    'message' => 'Unauthorized: Token sudah kedaluwarsa. Silakan perbarui sesi login SSO K1.',
                     'login_url' => $loginUrl,
                 ], 401);
             } catch (SignatureInvalidException $e) {
@@ -136,7 +136,25 @@ class JwtAuthenticate
             ], 403);
         }
 
-        // 5. Inisialisasi model User secara stateless di memory (tanpa query / simpan ke database)
+        // 5. Ekstraksi Hak Akses (Permissions) dari JWT token K1
+        $rawPermissions = $payload['permissions'] ?? ($payload['user']['permissions'] ?? ($payload['scope'] ?? null));
+        if (is_string($rawPermissions)) {
+            $rawPermissions = preg_split('/[\s,]+/', trim($rawPermissions));
+        }
+        $permissions = is_array($rawPermissions) ? array_values(array_filter(array_map('trim', $rawPermissions))) : [];
+
+        // Default permission jika token K1 hanya membawa claim role
+        if (empty($permissions)) {
+            $permissions = match ($normalizedRole) {
+                'ADMINISTRATOR' => ['*'],
+                'KAPRODI' => ['dosen.read', 'kriteria.read', 'penelitian.read', 'pengabdian.read', 'led.read', 'lkps.read'],
+                'DOSEN' => ['dosen.read', 'penelitian.create', 'penelitian.read', 'penelitian.update', 'pengabdian.create', 'pengabdian.read', 'pengabdian.update'],
+                'ASESOR' => ['dosen.read', 'kriteria.read', 'led.read', 'lkps.read'],
+                default => [],
+            };
+        }
+
+        // 6. Inisialisasi model User secara stateless di memory (tanpa query / simpan ke database)
         $user = new User([
             'name' => $name,
             'email' => $email ?: "user_{$userId}@k1.polines.ac.id",
@@ -145,9 +163,14 @@ class JwtAuthenticate
         if ($userId && is_numeric($userId)) {
             $user->id = (int) $userId;
         }
+        $user->permissions = $permissions;
         $user->exists = true;
 
-        // 6. Simpan autentikasi aktif ke Auth Guard dan Request Resolver
+        if (function_exists('session')) {
+            session(['permissions' => $permissions]);
+        }
+
+        // 7. Simpan autentikasi aktif ke Auth Guard dan Request Resolver
         Auth::setUser($user);
         $request->setUserResolver(fn () => $user);
 
@@ -160,12 +183,13 @@ class JwtAuthenticate
             $currentDosenId = Dosen::where('id_dosen', $user->id)->value('id_dosen');
         }
 
-        // Siapkan struktur array dan object sesuai standar format K1 (id, nama, email, role)
+        // Siapkan struktur array dan object sesuai standar format K1 (id, nama, email, role, permissions)
         $userData = [
             'id' => $user->id ?? $userId,
             'nama' => $user->name ?? $name,
             'email' => $user->email ?? $email,
             'role' => $user->role ?? $normalizedRole,
+            'permissions' => $permissions,
             'id_dosen' => $currentDosenId,
         ];
 
@@ -173,6 +197,7 @@ class JwtAuthenticate
         $request->attributes->set('jwt_payload', $payload);
         $request->attributes->set('jwt_user_id', $user->id ?? $userId);
         $request->attributes->set('jwt_role', $user->role ?? $normalizedRole);
+        $request->attributes->set('jwt_permissions', $permissions);
         $request->attributes->set('current_dosen_id', $currentDosenId);
 
         // Merge untuk backward-compatibility request()->input('auth_user')

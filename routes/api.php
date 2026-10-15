@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AktivitasKerjaSamaController;
-use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\BukuController;
 use App\Http\Controllers\Api\DosenController;
@@ -35,21 +35,36 @@ Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
     ]);
 });
 
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+// Resource Server: Autentikasi dan penerbitan token dilakukan terpusat melalui SSO Kelompok 1
+Route::match(['get', 'post'], '/login', [ProfileController::class, 'resourceServerInfo']);
+Route::match(['get', 'post'], '/register', [ProfileController::class, 'resourceServerInfo']);
 
 Route::middleware(['auth.jwt'])->group(function () {
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [ProfileController::class, 'me']);
+    Route::post('/logout', function () {
+        return response()->json([
+            'success' => true,
+            'code' => 200,
+            'message' => 'Logout berhasil. Sesi token telah dinonaktifkan di sisi klien.',
+            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/login'),
+        ]);
+    });
 });
 
-// 1. Menu Master Data (Khusus Administrator)
+// 1. CRUD Master Dosen (Diproteksi Granular oleh Permission JWT SSO K1)
+Route::middleware(['auth.jwt'])->group(function () {
+    Route::get('/dosen', [DosenController::class, 'index'])->middleware('jwt.permission:dosen.read');
+    Route::get('/dosen/{id}', [DosenController::class, 'show'])->middleware('jwt.permission:dosen.read');
+    Route::post('/dosen', [DosenController::class, 'store'])->middleware('jwt.permission:dosen.create');
+    Route::post('/dosen/import', [DosenController::class, 'importExcel'])->middleware('jwt.permission:dosen.create');
+    Route::match(['put', 'patch'], '/dosen/{id}', [DosenController::class, 'update'])->middleware('jwt.permission:dosen.update');
+    Route::delete('/dosen/{id}', [DosenController::class, 'destroy'])->middleware('jwt.permission:dosen.delete');
+    Route::match(['post', 'delete'], '/dosen/{id}/nonaktifkan', [DosenController::class, 'destroy'])->middleware('jwt.permission:dosen.delete');
+    Route::post('/dosen/{id}/restore', [DosenController::class, 'restore'])->middleware('jwt.permission:dosen.delete');
+});
+
+// 2. Menu Master Data Lainnya (Khusus Administrator)
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
-    Route::post('/dosen/import', [DosenController::class, 'importExcel']);
-    Route::post('/dosen/{id}/restore', [DosenController::class, 'restore']);
-    Route::post('/dosen/{id}/nonaktifkan', [DosenController::class, 'destroy']);
-    Route::delete('/dosen/{id}/nonaktifkan', [DosenController::class, 'destroy']);
-    Route::apiResource('dosen', DosenController::class);
 
     Route::apiResource('jabatan-akademik', JabatanAkademikController::class);
     Route::apiResource('pendidikan', PendidikanController::class);

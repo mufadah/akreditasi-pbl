@@ -16,81 +16,33 @@ beforeEach(function () {
     $this->seed(DatabaseSeeder::class);
 });
 
-test('login lokal Postman berhasil mengembalikan Bearer token dan data user untuk administrator@example.com', function () {
+test('request ke /api/login mengarahkan ke portal SSO K1 karena sistem bertindak sebagai Resource Server', function () {
     $response = $this->postJson('/api/login', [
         'email' => 'administrator@example.com',
         'password' => 'password',
-    ]);
-
-    $response->assertStatus(200)
-        ->assertJson([
-            'success' => true,
-            'code' => 200,
-            'message' => 'Login berhasil',
-        ])
-        ->assertJsonStructure([
-            'data' => [
-                'user' => ['id', 'nama', 'email', 'role'],
-                'authorization' => ['access_token', 'token_type', 'expires_in'],
-            ],
-        ]);
-});
-
-test('login dengan akun di luar 6 akun K1 resmi ditolak dengan respons 401', function () {
-    $response = $this->postJson('/api/login', [
-        'email' => 'admin@polines.ac.id',
-        'password' => 'password123',
     ]);
 
     $response->assertStatus(401)
         ->assertJson([
             'success' => false,
             'code' => 401,
-            'message' => 'Email atau password salah.',
-        ]);
+            'message' => 'Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.',
+        ])
+        ->assertJsonStructure(['login_url']);
 });
 
-test('login dengan 6 akun default K1 berhasil dan mengembalikan token serta role yang tepat', function () {
-    $accounts = [
-        'kaprodi@example.com' => 'KAPRODI',
-        'dosen@example.com' => 'DOSEN',
-        'administrator@example.com' => 'ADMINISTRATOR',
-        'operator@example.com' => 'OPERATOR',
-        'reviewer@example.com' => 'REVIEWER',
-        'pimpinan@example.com' => 'PIMPINAN',
-    ];
-
-    foreach ($accounts as $email => $expectedRole) {
-        $response = $this->postJson('/api/login', [
-            'email' => $email,
-            'password' => 'password',
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'user' => [
-                        'email' => $email,
-                        'role' => $expectedRole,
-                    ],
-                ],
-            ]);
-    }
-});
-
-test('endpoint /api/register menginformasikan bahwa registrasi dikelola terpusat via portal K1 SSO', function () {
+test('request ke /api/register mengarahkan ke portal SSO K1', function () {
     $response = $this->postJson('/api/register', [
         'name' => 'User Test',
         'email' => 'test@polines.ac.id',
         'password' => 'secret123',
     ]);
 
-    $response->assertStatus(403)
+    $response->assertStatus(401)
         ->assertJson([
             'success' => false,
-            'code' => 403,
-            'message' => 'Registrasi mandiri dinonaktifkan. Pengelolaan akun pengguna dikelola secara terpusat melalui portal SSO K1.',
+            'code' => 401,
+            'message' => 'Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.',
         ])
         ->assertJsonStructure(['login_url']);
 });
@@ -102,7 +54,7 @@ test('request tanpa Bearer Token mengembalikan respons 401 dan informasi login_u
         ->assertJson([
             'success' => false,
             'code' => 401,
-            'message' => 'Unauthorized: Token Bearer tidak disertakan.',
+            'message' => 'Unauthorized: Token Bearer tidak disertakan. Silakan login melalui portal SSO K1.',
         ])
         ->assertJsonStructure(['login_url']);
 });
@@ -122,7 +74,7 @@ test('token kedaluwarsa mengembalikan respons 401 dan informasi login_url K1', f
         ->assertJson([
             'success' => false,
             'code' => 401,
-            'message' => 'Unauthorized: Token sudah kedaluwarsa.',
+            'message' => 'Unauthorized: Token sudah kedaluwarsa. Silakan perbarui sesi login SSO K1.',
         ])
         ->assertJsonStructure(['login_url']);
 });
@@ -145,7 +97,7 @@ test('token JWT dari K1 dengan shared secret diolah secara stateless di memory t
         ->assertJson([
             'success' => true,
             'code' => 200,
-            'message' => 'Profil pengguna berhasil diambil.',
+            'message' => 'Profil dan hak akses pengguna berhasil diekstrak dari token JWT SSO K1.',
             'data' => [
                 'user' => [
                     'email' => $uniqueEmail,
