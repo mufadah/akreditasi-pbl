@@ -22,6 +22,7 @@ class Evidence extends Model
         'id_pkm',
         'tipe_entitas',
         'id_entitas',
+        'kode_indikator',
         'jenis_dokumen',
         'nama_file',
         'path_file',

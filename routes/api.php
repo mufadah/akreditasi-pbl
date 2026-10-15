@@ -17,10 +17,15 @@ use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
+use App\Http\Controllers\Api\AssessmentController;
+use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\KonfigurasiMetrikController;
+use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
 use App\Http\Controllers\Api\PenelitianController;
 use App\Http\Controllers\Api\PkmController;
 use App\Http\Controllers\Api\PublikasiController;
+use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
 use App\Services\K1ApiService;
@@ -70,6 +75,7 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('publikasi', PublikasiController::class);
     Route::apiResource('buku', BukuController::class);
     Route::apiResource('hki', HkiController::class);
+    Route::apiResource('sertifikasi', SertifikasiController::class);
 
     // Evidence & Validasi Workflow
     Route::post('/evidence/{id}/validasi', [EvidenceController::class, 'validasi']);
@@ -78,6 +84,21 @@ Route::middleware('jwt.role:ADMINISTRATOR')->group(function () {
     Route::apiResource('evidence', EvidenceController::class);
 
     Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
+
+    // Fitur 13: Konfigurasi Metrik
+    Route::get('/konfigurasi-metrik/indikator-k3', [KonfigurasiMetrikController::class, 'getIndikatorK3']);
+    Route::apiResource('konfigurasi-metrik', KonfigurasiMetrikController::class);
+
+    // Fitur 12: Assessment SDM & Tri Dharma (Termasuk Gap Analysis)
+    Route::post('/assessment/run', [AssessmentController::class, 'runAssessment']);
+    Route::get('/assessment/hasil', [AssessmentController::class, 'index']);
+
+    // Fitur 16: Notifikasi & Audit Log
+    Route::get('/notifikasi', [NotifikasiController::class, 'index']);
+    Route::post('/notifikasi/{id}/baca', [NotifikasiController::class, 'markAsRead']);
+    Route::post('/notifikasi/baca-semua', [NotifikasiController::class, 'markAllAsRead']);
+    Route::get('/audit-logs', [AuditLogController::class, 'index']);
+    Route::get('/audit-logs/{id}', [AuditLogController::class, 'show']);
 
     // API V1: Endpoint Statistik & Agregasi Data
     Route::prefix('v1')->middleware('jwt.role:ADMINISTRATOR')->group(function () {

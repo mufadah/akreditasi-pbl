@@ -11,11 +11,26 @@ class JwtAuthenticate
     public function handle(Request $request, Closure $next): Response
     {
         $token = $request->bearerToken();
+        $apiKey = $request->header('X-API-KEY') ?? $request->header('x-api-key');
+        $validApiKey = config('services.k2.api_key', env('K2_API_KEY', 'k2-secret-key-akreditasi'));
 
+        // 1. Cek autentikasi via API Key (Interoperabilitas K1/K3 - Fitur 15)
+        if ($apiKey && $apiKey === $validApiKey) {
+            $userData = [
+                'id' => 1,
+                'role' => 'ADMINISTRATOR',
+            ];
+            $request->attributes->set('auth_user', (object) $userData);
+            $request->merge(['auth_user' => $userData]);
+
+            return $next($request);
+        }
+
+        // 2. Cek autentikasi via Bearer Token (Fitur 15)
         if (! $token) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized: Token Bearer tidak disertakan.',
+                'message' => 'Unauthorized: API Key atau Bearer Token tidak disertakan pada header.',
             ], 401);
         }
 

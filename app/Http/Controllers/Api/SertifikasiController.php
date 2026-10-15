@@ -1,0 +1,217 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Evidence;
+use App\Models\Sertifikasi;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+
+class SertifikasiController extends Controller
+{
+    /**
+     * Relasi yang selalu dimuat untuk mencegah N+1 query.
+     */
+    private array $relations = [
+        'dosen',
+        'tendik',
+        'evidence',
+    ];
+
+    /**
+     * Helper format response JSON standar.
+     */
+    private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
+    {
+        return response()->json([
+            'success' => $success,
+            'code' => $code,
+            'message' => $message,
+            'data' => $data,
+        ], $code);
+    }
+
+    /**
+     * Aturan validasi data sertifikasi.
+     */
+    private function rules(bool $isUpdate = false): array
+    {
+        $req = $isUpdate ? ['sometimes', 'required'] : ['required'];
+
+        return [
+            'id_dosen' => ['nullable', 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
+            'id_tendik' => ['nullable', 'integer', Rule::exists('tenaga_kependidikan', 'id_tendik')],
+            'jenis_sertifikasi' => [...$req, 'string', 'max:255'],
+            'bidang_studi' => ['nullable', 'string', 'max:255'],
+            'nomor_registrasi_pendidik' => ['nullable', 'string', 'max:100'],
+            'nomor_sk' => ['nullable', 'string', 'max:100'],
+            'nomor_sertifikat' => ['nullable', 'string', 'max:100'],
+            'lembaga_penerbit' => ['nullable', 'string', 'max:255'],
+            'tahun_sertifikasi' => [...$req, 'integer', 'digits:4'],
+            'tanggal_kedaluwarsa' => ['nullable', 'date'],
+            'status_sertifikasi' => ['sometimes', 'string', 'max:50'],
+            'evidence_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'url_drive' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    /**
+     * Ambil daftar sertifikasi dengan filter pencarian dan paginasi.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $query = Sertifikasi::with($this->relations);
+
+        // Filter pencarian berdasarkan jenis, bidang studi, atau nomor sertifikat
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('jenis_sertifikasi', 'like', "%{$search}%")
+                    ->orWhere('bidang_studi', 'like', "%{$search}%")
+                    ->orWhere('nomor_sertifikat', 'like', "%{$search}%")
+                    ->orWhere('lembaga_penerbit', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter spesifik berdasarkan dosen, tendik, tahun, dan status
+        foreach (['id_dosen', 'id_tendik', 'tahun_sertifikasi', 'status_sertifikasi'] as $filter) {
+            if ($request->filled($filter)) {
+                $query->where($filter, $request->query($filter));
+            }
+        }
+
+        $sertifikasi = $query->latest()->paginate($request->integer('per_page', 10));
+
+        return $this->respond(true, 200, 'Data sertifikasi berhasil diambil.', $sertifikasi);
+    }
+
+    /**
+     * Tambah data sertifikasi baru beserta evidence pendukung.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), $this->rules());
+
+        if ($validator->fails()) {
+            return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
+        }
+
+        $validated = $validator->validated();
+
+        if (empty($validated['status_sertifikasi'])) {
+            $validated['status_sertifikasi'] = 'Aktif';
+        }
+
+        try {
+            $sertifikasi = DB::transaction(function () use ($request, $validated) {
+                $sertifikasi = Sertifikasi::create(
+                    collect($validated)->except(['evidence_file', 'url_drive'])->toArray()
+                );
+
+                // Lampirkan dokumen evidence jika ada (Fitur 9 Flowchart)
+                if ($request->hasFile('evidence_file') || ! empty($validated['url_drive'])) {
+                    $pathFile = null;
+                    $namaFile = null;
+
+                    if ($request->hasFile('evidence_file')) {
+                        $file = $request->file('evidence_file');
+                        $namaFile = $file->getClientOriginalName();
+                        $pathFile = $file->store('evidence/sertifikasi', 'public');
+                    }
+
+                    Evidence::create([
+                        'id_sertifikasi' => $sertifikasi->id_sertifikasi,
+                        'tipe_entitas' => 'sertifikasi',
+                        'id_entitas' => $sertifikasi->id_sertifikasi,
+                        'jenis_dokumen' => 'Sertifikat',
+                        'nama_file' => $namaFile ?? 'Bukti Sertifikasi',
+                        'path_file' => $pathFile,
+                        'url_drive' => $validated['url_drive'] ?? null,
+                        'tanggal_upload' => now()->toDateString(),
+                        'status_validasi' => 'Menunggu Validasi',
+                    ]);
+                }
+
+                return $sertifikasi;
+            });
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal menyimpan data sertifikasi: '.$e->getMessage());
+        }
+
+        return $this->respond(true, 201, 'Data sertifikasi berhasil ditambahkan.', $sertifikasi->load($this->relations));
+    }
+
+    /**
+     * Ambil detail satu sertifikasi.
+     */
+    public function show(int $id): JsonResponse
+    {
+        $sertifikasi = Sertifikasi::with($this->relations)->find($id);
+
+        if (! $sertifikasi) {
+            return $this->respond(false, 404, 'Data sertifikasi tidak ditemukan.');
+        }
+
+        return $this->respond(true, 200, 'Detail sertifikasi berhasil diambil.', $sertifikasi);
+    }
+
+    /**
+     * Update data sertifikasi.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $sertifikasi = Sertifikasi::find($id);
+
+        if (! $sertifikasi) {
+            return $this->respond(false, 404, 'Data sertifikasi tidak ditemukan.');
+        }
+
+        $validator = Validator::make($request->all(), $this->rules(true));
+
+        if ($validator->fails()) {
+            return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            DB::transaction(function () use ($sertifikasi, $validated) {
+                $sertifikasi->update(
+                    collect($validated)->except(['evidence_file', 'url_drive'])->toArray()
+                );
+            });
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal memperbarui data sertifikasi: '.$e->getMessage());
+        }
+
+        return $this->respond(true, 200, 'Data sertifikasi berhasil diperbarui.', $sertifikasi->fresh($this->relations));
+    }
+
+    /**
+     * Hapus data sertifikasi.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $sertifikasi = Sertifikasi::find($id);
+
+        if (! $sertifikasi) {
+            return $this->respond(false, 404, 'Data sertifikasi tidak ditemukan.');
+        }
+
+        // Cek keterkaitan ke evidence (Fitur 9 Flowchart: "Luaran Masih Dipakai")
+        if ($sertifikasi->evidence()->exists()) {
+            return $this->respond(false, 422, 'Luaran Masih Dipakai: Data sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence.');
+        }
+
+        try {
+            $sertifikasi->delete();
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal menghapus data sertifikasi: '.$e->getMessage());
+        }
+
+        return $this->respond(true, 200, 'Data sertifikasi berhasil dihapus.');
+    }
+}
