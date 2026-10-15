@@ -30,7 +30,9 @@ class Dosen extends Model
 
     public function bidangKeahlian(): BelongsToMany
     {
-        return $this->belongsToMany(BidangKeahlian::class, 'bidang_keahlian_dosen', 'id_dosen', 'id_bidang_keahlian');
+        return $this->belongsToMany(BidangKeahlian::class, 'bidang_keahlian_dosen', 'id_dosen', 'id_bidang_keahlian')
+            ->withPivot('nama_bidang_keahlian_dosen')
+            ->withTimestamps();
     }
 
     public function sertifikasi(): HasMany
@@ -72,5 +74,21 @@ class Dosen extends Model
     public function hki(): HasMany
     {
         return $this->hasMany(Hki::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function penelitian(): BelongsToMany
+    {
+        return $this->belongsToMany(Kegiatan::class, 'anggota_kegiatan', 'id_dosen', 'id_kegiatan')
+            ->whereHas('jenisKegiatan', function ($q) {
+                $q->where('nama_jenis_kegiatan', 'like', '%Penelitian%');
+            });
+    }
+
+    public function pkm(): BelongsToMany
+    {
+        return $this->belongsToMany(Kegiatan::class, 'anggota_kegiatan', 'id_dosen', 'id_kegiatan')
+            ->whereHas('jenisKegiatan', function ($q) {
+                $q->where('nama_jenis_kegiatan', 'like', '%PkM%');
+            });
     }
 }

@@ -47,6 +47,8 @@ Route::middleware(['auth.jwt'])->group(function () {
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
     Route::post('/dosen/import', [DosenController::class, 'importExcel']);
     Route::post('/dosen/{id}/restore', [DosenController::class, 'restore']);
+    Route::post('/dosen/{id}/nonaktifkan', [DosenController::class, 'destroy']);
+    Route::delete('/dosen/{id}/nonaktifkan', [DosenController::class, 'destroy']);
     Route::apiResource('dosen', DosenController::class);
 
     Route::apiResource('jabatan-akademik', JabatanAkademikController::class);

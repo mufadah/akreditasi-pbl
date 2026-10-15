@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\K1ApiService;
 use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
 
@@ -16,6 +17,17 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        // 1. Hit API Kelompok 1 secara langsung (live server)
+        $k1Service = app(K1ApiService::class);
+        $k1Response = $k1Service->login($request->email, $request->password);
+
+        if ($k1Response !== null) {
+            $status = $k1Response['code'] ?? ($k1Response['success'] ? 200 : 401);
+
+            return response()->json($k1Response, $status);
+        }
+
+        // 2. Fallback in-memory jika server K1 tidak dapat dijangkau
         $k1Presets = [
             'kaprodi@example.com' => ['name' => 'Kaprodi User', 'role' => 'KAPRODI', 'id' => 1],
             'dosen@example.com' => ['name' => 'Dosen User', 'role' => 'DOSEN', 'id' => 2],
