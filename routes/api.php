@@ -54,6 +54,9 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
     Route::apiResource('jabatan-akademik', JabatanAkademikController::class);
     Route::apiResource('pendidikan', PendidikanController::class);
     Route::apiResource('bidang-keahlian', BidangKeahlianController::class);
+    Route::post('/tendik/{id}/restore', [TenagaKependidikanController::class, 'restore']);
+    Route::post('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
+    Route::delete('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
     Route::apiResource('tendik', TenagaKependidikanController::class);
     Route::apiResource('jenis-penelitian', JenisPenelitianController::class);
     Route::apiResource('jenis-publikasi', JenisPublikasiController::class);
