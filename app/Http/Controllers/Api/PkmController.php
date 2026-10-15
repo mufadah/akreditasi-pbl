@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Evidence;
 use App\Models\Pkm;
+use App\Models\Publikasi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -175,6 +177,14 @@ class PkmController extends Controller
         // Cek data ada atau tidak
         if (! $pkm) {
             return $this->respond(false, 404, 'Data PKM tidak ditemukan.');
+        }
+
+        // Cek keterkaitan ke Publikasi dan Evidence (Flowchart Fitur 7)
+        $isUsedInPublikasi = Publikasi::where('id_pkm', $id)->exists();
+        $isUsedInEvidence = Evidence::where('id_pkm', $id)->exists();
+
+        if ($isUsedInPublikasi || $isUsedInEvidence) {
+            return $this->respond(false, 422, 'PkM Masih Dipakai: Data PkM tidak dapat dihapus karena masih digunakan dalam data Publikasi atau Evidence.');
         }
 
         try {
