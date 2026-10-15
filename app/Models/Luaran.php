@@ -93,7 +93,7 @@ class Luaran extends Model
 
     public function jenisLuaran(): BelongsTo
     {
-        return $this->belongsTo(JenisLuaran::class, 'id_jenis_luaran', 'id_jenis_publikasi');
+        return $this->belongsTo(JenisLuaran::class, 'id_jenis_luaran', 'id_jenis_luaran');
     }
 
     public function evidence(): HasMany

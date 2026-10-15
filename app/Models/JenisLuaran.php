@@ -9,7 +9,7 @@ class JenisLuaran extends Model
 {
     protected $table = 'jenis_luaran';
 
-    protected $primaryKey = 'id_jenis_publikasi';
+    protected $primaryKey = 'id_jenis_luaran';
 
     protected $fillable = [
         'nama_jenis_luaran',
@@ -18,6 +18,6 @@ class JenisLuaran extends Model
 
     public function luaran(): HasMany
     {
-        return $this->hasMany(Luaran::class, 'id_jenis_luaran', 'id_jenis_publikasi');
+        return $this->hasMany(Luaran::class, 'id_jenis_luaran', 'id_jenis_luaran');
     }
 }

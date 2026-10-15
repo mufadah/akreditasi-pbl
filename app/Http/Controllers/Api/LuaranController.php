@@ -46,7 +46,7 @@ class LuaranController extends Controller
         $baseRules = [
             'id_kegiatan' => ['nullable', 'integer', Rule::exists('kegiatan', 'id_kegiatan')],
             'id_dosen' => [...$req, 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
-            'id_jenis_luaran' => [...$req, 'integer', Rule::exists('jenis_luaran', 'id_jenis_publikasi')],
+            'id_jenis_luaran' => [...$req, 'integer', Rule::exists('jenis_luaran', 'id_jenis_luaran')],
         ];
 
         // Cari jenis luaran terpilih
