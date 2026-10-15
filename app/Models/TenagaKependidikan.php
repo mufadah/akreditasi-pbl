@@ -5,11 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TenagaKependidikan extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'tenaga_kependidikan';
+
     protected $primaryKey = 'id_tendik';
+
     protected $guarded = ['id_tendik'];
 
     public function pendidikan(): BelongsTo

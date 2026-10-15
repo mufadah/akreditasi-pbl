@@ -10,6 +10,13 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    /**
+     * Hak akses / permission yang diekstrak langsung dari token JWT Kelompok 1.
+     *
+     * @var array<string>
+     */
+    public array $permissions = [];
+
     protected $fillable = [
         'name',
         'email',
@@ -28,5 +35,18 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Memeriksa apakah user memiliki permission tertentu dari JWT K1.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        $role = strtoupper((string) ($this->role ?? ''));
+        if ($role === 'ADMINISTRATOR' || $role === 'ADMIN') {
+            return true;
+        }
+
+        return in_array('*', $this->permissions, true) || in_array($permission, $this->permissions, true);
     }
 }
