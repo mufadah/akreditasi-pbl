@@ -50,7 +50,7 @@ class ProfileController extends Controller
             'success' => false,
             'code' => 401,
             'message' => 'Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.',
-            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/login'),
+            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/api/auth/login'),
         ], 401);
     }
 }

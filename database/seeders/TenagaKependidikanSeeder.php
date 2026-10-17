@@ -6,11 +6,16 @@ use App\Models\Pendidikan;
 use App\Models\Sertifikasi;
 use App\Models\TenagaKependidikan;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class TenagaKependidikanSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! Schema::hasTable('tenaga_kependidikan')) {
+            return;
+        }
+
         // 1. Pastikan jenjang pendidikan untuk Tendik tersedia
         $pendS1 = Pendidikan::firstOrCreate(
             ['jenjang' => 'S1', 'program_studi' => 'Teknik Informatika'],
