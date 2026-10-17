@@ -62,17 +62,39 @@ class NotifikasiController extends Controller
     }
 
     /**
-     * Tandai semua notifikasi telah dibaca.
+     * Kirim notifikasi baru secara manual / API (Fitur 16 Flowchart).
      */
-    public function markAllAsRead(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $authUser = $request->input('auth_user');
-        $userId = is_array($authUser) ? ($authUser['id'] ?? null) : ($authUser->id ?? auth()->id());
+        $validated = $request->validate([
+            'user_id' => 'nullable|integer',
+            'role' => 'nullable|string',
+            'tipe' => 'required|string|max:50',
+            'judul' => 'required|string|max:255',
+            'pesan' => 'required|string',
+            'link' => 'nullable|string|max:255',
+        ]);
 
-        Notifikasi::when($userId, fn ($q) => $q->where('user_id', $userId))
-            ->where('is_read', false)
-            ->update(['is_read' => true]);
+        if (! empty($validated['role'])) {
+            $count = \App\Services\NotifikasiService::kirimKeRole(
+                $validated['role'],
+                $validated['tipe'],
+                $validated['judul'],
+                $validated['pesan'],
+                $validated['link'] ?? null
+            );
 
-        return $this->respond(true, 200, 'Semua notifikasi telah ditandai sebagai dibaca.');
+            return $this->respond(true, 201, "Notifikasi berhasil dikirimkan ke {$count} pengguna dengan role {$validated['role']}.");
+        }
+
+        $notifikasi = \App\Services\NotifikasiService::kirim(
+            $validated['user_id'] ?? null,
+            $validated['tipe'],
+            $validated['judul'],
+            $validated['pesan'],
+            $validated['link'] ?? null
+        );
+
+        return $this->respond(true, 201, 'Notifikasi berhasil dikirim.', $notifikasi);
     }
 }

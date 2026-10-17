@@ -102,6 +102,10 @@ class DatabaseSeeder extends Seeder
             $this->call(JenisPkmSeeder::class);
         }
 
+        if (Schema::hasTable('konfigurasi_metrik')) {
+            $this->call(KonfigurasiMetrikSeeder::class);
+        }
+
         // 9. Data Akademik Dosen Terkait Akun K1 (Tabel dosen, bukan users)
         $jabatan = JabatanAkademik::first();
         $pendidikan = Pendidikan::first();

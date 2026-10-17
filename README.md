@@ -15,85 +15,119 @@ Repositori ini dikembangkan secara khusus oleh **Kelompok 2 (K2)** yang bertangg
 
 ## 📌 Daftar Isi
 1. [Ruang Lingkup & Peran Kelompok 2](#-ruang-lingkup--peran-kelompok-2)
-2. [Fitur Utama & 13 Checklist Kebutuhan](#-fitur-utama--13-checklist-kebutuhan)
-3. [Arsitektur Database (Revisi ERD)](#-arsitektur-database-revisi-erd)
-4. [Tech Stack & Prasyarat Sistem](#-tech-stack--prasyarat-sistem)
-5. [Panduan Instalasi & Menjalankan Proyek](#-panduan-instalasi--menjalankan-proyek)
-6. [Kredensial Akun Default (Hasil Seeder)](#-kredensial-akun-default-hasil-seeder)
-7. [Pengujian Otomatis (Automated Testing)](#-pengujian-otomatis-automated-testing)
-8. [Dokumentasi Lengkap API](#-dokumentasi-lengkap-api)
+2. [Status Checklist 12 Tugas Pengembangan (100% Selesai)](#-status-checklist-12-tugas-pengembangan-100-selesai)
+3. [Pemetaan 16 Fitur & Flowchart Sistem](#-pemetaan-16-fitur--flowchart-sistem)
+4. [Arsitektur Database (Analisis ERD Terbaru & Eliminasi Redundansi)](#-arsitektur-database-analisis-erd-terbaru--eliminasi-redundansi)
+5. [Tech Stack & Prasyarat Sistem](#-tech-stack--prasyarat-sistem)
+6. [Panduan Instalasi & Menjalankan Proyek](#-panduan-instalasi--menjalankan-proyek)
+7. [Kredensial Akun Default (Hasil Seeder)](#-kredensial-akun-default-hasil-seeder)
+8. [Pengujian Otomatis (Automated Testing)](#-pengujian-otomatis-automated-testing)
+9. [Dokumentasi Lengkap RESTful API](#-dokumentasi-lengkap-restful-api)
 
 ---
 
 ## 🏛 Ruang Lingkup & Peran Kelompok 2
 
 Dalam pembagian arsitektur sistem akreditasi bersama:
-* **Kelompok 1 (K1)**: Mengelola Core Akademik, Mahasiswa Baru, Kelulusan Tepat Waktu, IPK, Prestasi Mahasiswa, dan Kurikulum.
-* **Kelompok 2 (K2 - Repositori Ini)**: Mengelola Profil SDM (Dosen DTPS/DTT & Tendik), Sertifikasi Kompetensi, Kegiatan Tri Dharma, Luaran Ilmiah, Kerja Sama & Implementasi, Evidence Drive, serta Interoperabilitas Data Mahasiswa K1 & Evaluasi K3.
+* **Kelompok 1 (K1)**: Mengelola Core Akademik, Mahasiswa Baru, Kelulusan Tepat Waktu, IPK, Prestasi Mahasiswa, serta penyedia Single Sign-On (SSO Auth Server).
+* **Kelompok 2 (K2 - Repositori Ini)**: Mengelola Profil SDM (Dosen DTPS/DTT & Tendik), Sertifikasi Kompetensi, Kegiatan Tri Dharma Terpadu, Luaran Ilmiah, Kemitraan Kerja Sama, Pengelolaan Bukti Dukung (*Evidence*), serta Analitik Akreditasi & Gap Analysis.
 * **Kelompok 3 (K3)**: Mengelola Master Instrumen LAM INFOKOM 2.1, Kriteria, Subkriteria, Indikator, Rubrik Penilaian, Bobot, dan Rekapitulasi Skor Akreditasi.
 
 ```mermaid
 flowchart LR
-    K1[Kelompok 1: Sistem Akademik & Mahasiswa] -->|API Validasi NIM & Total Mhs| K2[Kelompok 2: SDM, Tridharma & Kerja Sama]
-    K2 -->|API Statistik Dosen & Luaran| K3[Kelompok 3: Penilaian Akreditasi LAM]
-    K3 -->|Indikator & Rubrik Aktif| K2
+    K1[Kelompok 1: Sistem Akademik & SSO] -->|Validasi NIM & Token JWT| K2[Kelompok 2: SDM, Tridharma & Kerja Sama]
+    K2 -->|API Statistik Dosen, Luaran & Gap Analysis| K3[Kelompok 3: Penilaian Akreditasi LAM]
+    K3 -->|Indikator & Ambang Target K3| K2
 ```
 
 ---
 
-## ✨ Fitur Utama & 13 Checklist Kebutuhan
+## ✅ Status Checklist 12 Tugas Pengembangan (100% Selesai)
 
-Sistem ini telah mengimplementasikan 13 kebutuhan fungsional baku sesuai standar penilaian:
+Seluruh 12 fitur pada checklist pengembangan telah berhasil diselesaikan dan teruji:
 
-1. **Validasi NIM Mahasiswa via API K1** (`POST /api/k1/validasi-nim`): Memverifikasi keabsahan NIM mahasiswa anggota kegiatan penelitian/PkM secara real-time ke sistem K1.
-2. **Pencatatan Aktivitas Implementasi Kerja Sama** (`POST /api/kerja-sama/{id}/aktivitas`): Mencatat riwayat implementasi turunan dokumen MoU/MoA/IA.
-3. **Input Link Drive & Validasi Format URL** (`POST /api/evidence`): Validasi regex khusus format Google Drive/Docs beserta deteksi duplikasi tautan.
-4. **Workflow Validasi Evidence oleh Kaprodi** (`POST /api/evidence/{id}/validasi`): Siklus status persetujuan dokumen (*Menunggu Validasi*, *Valid*, *Ditolak*, *Perlu Perbaikan*) terintegrasi notifikasi in-app otomatis.
-5. **Repository Evidence & Fitur Ganti Link** (`POST /api/evidence/{id}/ganti-link`): Manajemen arsip link lama di `evidence_histories` saat dilakukan revisi dokumen bukti.
-6. **Konfigurasi Metrik & Evaluasi Kriteria LAM** (`assessment_hasil` & `konfigurasi_metrik`): Engine penilaian gap capaian terhadap ambang batas rubrik instrumen LAM INFOKOM.
-7. **Kalkulasi Rasio Dosen : Mahasiswa** (`GET /api/v1/rasio-dosen-mahasiswa`): Menghitung rasio dosen DTPS terhadap jumlah mahasiswa aktif dari API K1.
-8. **Kalkulasi Produktivitas Dosen** (`GET /api/v1/produktivitas-dosen`): Rata-rata luaran ilmiah dan kegiatan Tri Dharma per dosen DTPS.
-9. **Engine Gap Analysis SDM & Rekomendasi**: Menghitung deviasi skor capaian dan menghasilkan rekomendasi otomatis.
-10. **Dashboard Analitik & Tren TS-n** (`GET /api/v1/tren-tridharma` & `/api/v1/dashboard`): Visualisasi tren 5 tahun (TS-4 s/d TS) untuk publikasi, PkM, penelitian, dan kemitraan.
-11. **Pencatatan Audit Trail / Mutasi Data** (`audit_logs`): Perekaman otomatis setiap aksi `CREATE`, `UPDATE`, `DELETE`, dan `VALIDATE`.
-12. **Sistem Notifikasi In-App** (`notifikasi`): Pemberitahuan real-time untuk penolakan evidence atau permintaan revisi.
-13. **Perpanjangan & Reminder Masa Berlaku Kerja Sama** (`POST /api/kerja-sama/{id}/perpanjang`): Pemantauan tanggal kedaluwarsa dokumen kemitraan.
+- [x] **Konfigurasi metrik & indikator LAM (API K3)**: CRUD dan sinkronisasi indikator K3 via `GET /api/konfigurasi-metrik/indikator-k3` dan `KonfigurasiMetrikController`.
+- [x] **Kalkulasi rasio Dosen : Mahasiswa (API K1)**: Perhitungan rasio DTPS terhadap mahasiswa aktif via `GET /api/v1/rasio-dosen-mahasiswa`.
+- [x] **Kalkulasi produktivitas dosen**: Perhitungan rasio publikasi, penelitian, dan PkM per dosen DTPS via `GET /api/v1/produktivitas-dosen`.
+- [x] **Engine Gap Analysis SDM & rekomendasi**: Engine kalkulasi deviasi capaian riil vs ambang target kriteria LAM dengan rekomendasi taktis via `POST /api/assessment/run` & `GET /api/assessment/hasil`.
+- [x] **Dashboard analitik & tren TS-n**: Agregasi tren multi-tahun (TS-4 s/d TS) untuk penelitian, PkM, luaran, dan kemitraan via `GET /api/v1/dashboard` & `GET /api/v1/tren-tridharma`.
+- [x] **Middleware Auth API Key / Token**: Dual Authentication mendukung otorisasi Bearer JWT (SSO K1) dan header `X-API-KEY` pada `JwtAuthenticate`.
+- [x] **Endpoint GET /api/v1/dosen/statistik**: Statistik demografi, status DTPS/DTT, jabatan akademik, dan sebaran jenjang pendidikan dosen.
+- [x] **Endpoint GET /api/v1/tridharma/summary**: Rekapitulasi kuantitas kegiatan penelitian, PkM, dan luaran ilmiah berbasis tahun laporan.
+- [x] **Endpoint GET /api/v1/kerjasama/aktif**: Rekap dan daftar kerja sama berstatus aktif dengan filter pencarian dan relasi lengkap.
+- [x] **Catat audit log mutasi data**: Audit trail otomatis mencatat mutasi `CREATE`, `UPDATE`, `DELETE`, dan `VALIDATE` ke tabel `audit_logs` via `AuditLogController` & `AuditLogService`.
+- [x] **Kirim notifikasi in-app**: Pengiriman notifikasi berbasis user atau role secara real-time via `POST /api/notifikasi` dan `NotifikasiService`.
+- [x] **Reminder otomatis kedaluwarsa kerja sama**: Endpoint monitoring `GET /api/kerja-sama/reminder-kedaluwarsa`, sinkronisasi status otomatis `POST /api/kerja-sama/check-kedaluwarsa`, dan Command CLI `php artisan kerjasama:check-kedaluwarsa` terjadwal harian pukul 01:00 WIB.
 
 ---
 
-## 🗄 Arsitektur Database (Revisi ERD)
+## 🗺 Pemetaan 16 Fitur & Flowchart Sistem
 
-Database menggunakan pendekatan **Unified Activities & Outputs** yang modular:
-* **Kegiatan Terpadu (`kegiatan`)**: Menyatukan Penelitian & PkM dalam satu struktur tabel yang fleksibel dengan relasi ke `pendanaan_kegiatan` dan `anggota_kegiatan` (Dosen/Mahasiswa).
-* **Luaran Komprehensif (`luaran`)**: Menampung data Buku Ajar, Artikel Jurnal, Prosiding Seminar, Sertifikat HKI, dan Produk Teknologi TKT.
-* **Multi-Entity Evidence (`evidence`)**: Tautan langsung ke `kerja_sama`, `sertifikasi`, `kegiatan`, dan `luaran`.
+Pengembangan dibagi ke dalam 16 alur kerja terstruktur:
+
+### A. Fitur 1 s/d 8 (Modul Master Data & Evidence — Rekan Tim)
+1. **Fitur 1**: Pengelolaan Master Dosen DTPS & DTT (CRUD, Import Excel, Soft Deletes, Guard Relasi Kegiatan/Evidence).
+2. **Fitur 2**: Pengelolaan Tenaga Kependidikan / Tendik (CRUD, Kualifikasi, Soft Deletes).
+3. **Fitur 3**: Pengunggahan Evidence Bukti Dukung (Validasi URL Google Drive, Cek Duplikasi).
+4. **Fitur 4**: Workflow Validasi Evidence (Approval Kaprodi/Asesor: Menunggu, Valid, Ditolak, Perlu Perbaikan).
+5. **Fitur 5**: Manajemen Riwayat & Ganti Link Evidence (`evidence_histories`).
+6. **Fitur 6**: Pengelolaan Profil Mitra Kerja Sama (Kategori Nasional, Multinasional, Internasional).
+7. **Fitur 7**: Kegiatan Tri Dharma Terpadu (`kegiatan`, `anggota_kegiatan`, `pendanaan_kegiatan`).
+8. **Fitur 8**: Pengelolaan Luaran Ilmiah Komprehensif (`luaran` polimorfik: Buku, Jurnal, Prosiding, HKI, Produk).
+
+### B. Fitur 9 s/d 16 (Modul Analitik, Interoperabilitas, Keamanan, & Otomasi — Tanggung Jawab Pengembang)
+9. **Fitur 9**: Kalkulasi Rasio Dosen : Mahasiswa & Produktivitas Dosen (Interoperabilitas K1).
+10. **Fitur 10**: Manajemen Masa Berlaku Kerja Sama, Perpanjangan, & Reminder Otomatis Kedaluwarsa.
+11. **Fitur 11**: Dashboard Analitik Komposit & Tren TS-n (TS-4 s/d TS).
+12. **Fitur 12**: Engine Gap Analysis SDM & Tri Dharma serta Rekomendasi Tindak Lanjut Akreditasi.
+13. **Fitur 13**: Konfigurasi Metrik & Indikator Penilaian Standar LAM INFOKOM (API K3).
+14. **Fitur 14**: Pencatatan & Monitoring Audit Log Mutasi Data (Audit Trail Forensik).
+15. **Fitur 15**: Middleware Keamanan Dual-Auth (JWT SSO K1 & Shared API Key `X-API-KEY`).
+16. **Fitur 16**: Layanan Notifikasi In-App Pengguna & Peringatan Otomatis Sistem.
+
+---
+
+## 🗄 Arsitektur Database (Analisis ERD Terbaru & Eliminasi Redundansi)
+
+Berdasarkan tinjauan ERD terbaru, arsitektur database telah disederhanakan dan dibersihkan dari tabel-tabel legacy yang redundan:
+
+### 1. Eliminasi Redundansi (Clean-up Schema):
+* **Penyatuan Kegiatan (`kegiatan`)**: Mengeliminasi tabel terpisah `penelitian` dan `pkm`. Semua kegiatan Tri Dharma kini dikonsolidasikan ke tabel `kegiatan` dengan relasi `jenis_kegiatan`, `pendanaan_kegiatan`, dan `anggota_kegiatan` (mendukung kolaborasi Dosen dan Mahasiswa).
+* **Penyatuan Luaran Ilmiah (`luaran`)**: Mengeliminasi tabel parsial `publikasi`, `buku`, dan `hki`. Seluruh kategori output akademik ditampung secara terpadu di tabel `luaran` dengan klasifikasi fleksibel melalui `jenis_luaran`.
+* **Pembersihan Rute Redundan**: Rute legacy (`apiResource('penelitian')`, `pkm`, `publikasi`, `buku`, `hki`, `jenis-penelitian`, `jenis-publikasi`) dan duplikasi deklarasi rute `aktivitas-kerja-sama` di `routes/api.php` telah dihapus.
+
+### 2. Diagram ERD Terbaru (Unified Schema):
 
 ```mermaid
 erDiagram
-    users ||--o{ dosen : "memiliki akun"
-    users ||--o{ tenaga_kependidikan : "memiliki akun"
+    users ||--o{ dosen : "memiliki akun SSO"
+    users ||--o{ tenaga_kependidikan : "memiliki akun SSO"
+    users ||--o{ audit_logs : "pelaku aksi"
+    users ||--o{ notifikasi : "penerima notifikasi"
     jabatan_akademik ||--o{ dosen : "disandang"
-    pendidikan ||--o{ dosen : "riwayat"
-    pendidikan ||--o{ tenaga_kependidikan : "riwayat"
-    bidang_keahlian ||--o{ bidang_keahlian_dosen : "kategori"
-    dosen ||--o{ bidang_keahlian_dosen : "memiliki"
+    pendidikan ||--o{ dosen : "riwayat studi"
+    pendidikan ||--o{ tenaga_kependidikan : "riwayat studi"
+    bidang_keahlian ||--o{ bidang_keahlian_dosen : "klasifikasi"
+    dosen ||--o{ bidang_keahlian_dosen : "memiliki keahlian"
     dosen ||--o{ sertifikasi : "memiliki"
     tenaga_kependidikan ||--o{ sertifikasi : "memiliki"
-    mitra ||--o{ kerja_sama : "bermitra"
-    jenis_kerja_sama ||--o{ kerja_sama : "kategori"
-    dosen ||--o{ kerja_sama : "PIC"
-    kerja_sama ||--o{ aktivitas_kerja_sama : "implementasi"
-    jenis_kegiatan ||--o{ kegiatan : "kategori"
-    kegiatan ||--o{ pendanaan_kegiatan : "didanai"
+    mitra ||--o{ kerja_sama : "rekanan mitra"
+    jenis_kerja_sama ||--o{ kerja_sama : "kategori (MoU/MoA/IA)"
+    dosen ||--o{ kerja_sama : "dosen penanggung jawab"
+    kerja_sama ||--o{ aktivitas_kerja_sama : "bukti implementasi"
+    jenis_kegiatan ||--o{ kegiatan : "klasifikasi kegiatan"
+    kegiatan ||--o{ pendanaan_kegiatan : "sumber dana"
     kegiatan ||--o{ anggota_kegiatan : "tim pelaksana"
-    dosen ||--o{ anggota_kegiatan : "anggota"
-    jenis_luaran ||--o{ luaran : "kategori"
-    kegiatan ||--o{ luaran : "menghasilkan"
-    dosen ||--o{ luaran : "penulis/pemilik"
-    kerja_sama ||--o{ evidence : "bukti dokumen"
-    sertifikasi ||--o{ evidence : "bukti dokumen"
-    kegiatan ||--o{ evidence : "bukti dokumen"
-    luaran ||--o{ evidence : "bukti dokumen"
+    dosen ||--o{ anggota_kegiatan : "dosen pelaksana"
+    jenis_luaran ||--o{ luaran : "kategori luaran"
+    kegiatan ||--o{ luaran : "payung kegiatan"
+    dosen ||--o{ luaran : "pemilik/penulis"
+    kerja_sama ||--o{ evidence : "dokumen bukti"
+    sertifikasi ||--o{ evidence : "dokumen bukti"
+    kegiatan ||--o{ evidence : "dokumen bukti"
+    luaran ||--o{ evidence : "dokumen bukti"
+    evidence ||--o{ evidence_histories : "arsip link lama"
+    konfigurasi_metrik ||--o{ assessment_hasil : "dasar perhitungan gap"
 ```
 
 ---
@@ -180,6 +214,40 @@ Aplikasi telah dilengkapi unit & feature testing menggunakan **Pest PHP**. Jalan
 ```bash
 php artisan test
 ```
+
+---
+
+---
+
+## 🔌 Ringkasan Endpoint Modul Analitik & Otomasi (Fitur 9 s/d 16)
+
+Berikut adalah daftar endpoint utama untuk fitur-fitur yang dikembangkan:
+
+| Fitur | Method | Endpoint | Deskripsi & Hak Akses |
+|:---|:---:|:---|:---|
+| **Fitur 9 (Rasio & Produktivitas)** | `GET` | `/api/v1/rasio-dosen-mahasiswa` | Rasio dosen DTPS terhadap mahasiswa aktif (Admin, Kaprodi, Asesor, Dosen) |
+| | `GET` | `/api/v1/produktivitas-dosen` | Rata-rata publikasi dan tridharma per dosen DTPS |
+| | `GET` | `/api/v1/dosen/statistik` | Demografi, sebaran status DTPS/DTT, jabatan, dan pendidikan dosen |
+| | `GET` | `/api/v1/tridharma/summary` | Rekapitulasi volume kegiatan penelitian, PkM, dan luaran per tahun |
+| **Fitur 10 (Kerja Sama & Reminder)** | `GET` | `/api/v1/kerjasama/aktif` | Daftar kerja sama yang saat ini berstatus Aktif |
+| | `GET` | `/api/kerja-sama/reminder-kedaluwarsa` | Monitoring dokumen kerja sama yang telah atau akan kedaluwarsa dlm 30 hari |
+| | `POST` | `/api/kerja-sama/check-kedaluwarsa` | Trigger sinkronisasi otomatis status kedaluwarsa & pengiriman notifikasi |
+| | `POST` | `/api/kerja-sama/{id}/perpanjang` | Perpanjangan tanggal selesai kerja sama |
+| | `CLI` | `php artisan kerjasama:check-kedaluwarsa` | Artisan Command terjadwal harian (pukul 01:00 WIB via scheduler) |
+| **Fitur 11 (Dashboard & Tren TS-n)** | `GET` | `/api/v1/dashboard` | Dashboard analitik terpadu (ringkasan SDM, tridharma, mitra, dan tren) |
+| | `GET` | `/api/v1/tren-tridharma` | Tren 5 tahun (TS-4 s/d TS) luaran, penelitian, PkM, dan kerja sama |
+| **Fitur 12 (Gap Analysis & Rekomendasi)** | `POST` | `/api/assessment/run` | Eksekusi engine kalkulasi capaian vs target metrik kriteria LAM & generate rekomendasi |
+| | `GET` | `/api/assessment/hasil` | Mengambil riwayat hasil gap analysis dan rekomendasi tindak lanjut |
+| **Fitur 13 (Konfigurasi Metrik K3)** | `GET` | `/api/konfigurasi-metrik/indikator-k3` | Integrasi indikator kriteria akreditasi standar LAM INFOKOM dari K3 |
+| | `CRUD` | `/api/konfigurasi-metrik` | Pengelolaan data ambang batas (target) dan formula indikator |
+| **Fitur 14 (Audit Trail Log)** | `GET` | `/api/audit-logs` | Mengambil riwayat audit log mutasi data (CREATE, UPDATE, DELETE, VALIDATE) |
+| | `GET` | `/api/audit-logs/{id}` | Detail log forensik mutasi data (payload nilai lama vs baru) |
+| **Fitur 15 (Dual Authentication)** | `HEADER` | `Authorization: Bearer <TOKEN_JWT>` | Autentikasi pengguna SSO Kelompok 1 terverifikasi |
+| | `HEADER` | `X-API-KEY: <API_KEY>` | Autentikasi server-to-server untuk microservice K1 & K3 |
+| **Fitur 16 (Notifikasi In-App)** | `GET` | `/api/notifikasi` | Daftar notifikasi in-app pengguna terautentikasi (filter `unread_only`) |
+| | `POST` | `/api/notifikasi` | Kirim notifikasi manual / sistem berdasarkan user ID atau role |
+| | `POST` | `/api/notifikasi/{id}/baca` | Menandai satu notifikasi telah dibaca |
+| | `POST` | `/api/notifikasi/baca-semua` | Menandai seluruh notifikasi pengguna telah dibaca |
 
 ---
 

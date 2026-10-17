@@ -3,16 +3,12 @@
 use App\Http\Controllers\Api\AktivitasKerjaSamaController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\BidangKeahlianController;
-use App\Http\Controllers\Api\BukuController;
 use App\Http\Controllers\Api\DosenController;
 use App\Http\Controllers\Api\EvidenceController;
-use App\Http\Controllers\Api\HkiController;
 use App\Http\Controllers\Api\JabatanAkademikController;
 use App\Http\Controllers\Api\JenisKegiatanController;
 use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
-use App\Http\Controllers\Api\JenisPenelitianController;
-use App\Http\Controllers\Api\JenisPublikasiController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\LuaranController;
@@ -22,9 +18,6 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
-use App\Http\Controllers\Api\PenelitianController;
-use App\Http\Controllers\Api\PkmController;
-use App\Http\Controllers\Api\PublikasiController;
 use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
@@ -78,8 +71,6 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
     Route::post('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
     Route::delete('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
     Route::apiResource('tendik', TenagaKependidikanController::class);
-    Route::apiResource('jenis-penelitian', JenisPenelitianController::class);
-    Route::apiResource('jenis-publikasi', JenisPublikasiController::class);
     Route::apiResource('jenis-kegiatan', JenisKegiatanController::class);
     Route::apiResource('jenis-luaran', JenisLuaranController::class);
     Route::apiResource('jenis-kerja-sama', JenisKerjaSamaController::class);
@@ -94,23 +85,18 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(
 
 // 3. Menu Tridharma, Repository Evidence, & Interaksi (Admin, Kaprodi, Dosen, Asesor)
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->group(function () {
-    // Kerja Sama
+    // Kerja Sama (Fitur 10 & Reminder Kedaluwarsa)
+    Route::get('/kerja-sama/reminder-kedaluwarsa', [KerjaSamaController::class, 'reminderKedaluwarsa']);
+    Route::post('/kerja-sama/check-kedaluwarsa', [KerjaSamaController::class, 'checkKedaluwarsa']);
     Route::get('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'getAktivitas']);
     Route::post('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'storeAktivitas']);
     Route::post('/kerja-sama/{id}/perpanjang', [KerjaSamaController::class, 'perpanjang']);
     Route::apiResource('kerja-sama', KerjaSamaController::class);
     Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
 
-    // Kegiatan & Luaran
+    // Kegiatan & Luaran (Unified Tridharma & Luaran Ilmiah Sesuai ERD Terbaru)
     Route::apiResource('kegiatan', KegiatanController::class);
     Route::apiResource('luaran', LuaranController::class);
-
-    // Penelitian, PkM, Publikasi, Buku, HKI
-    Route::apiResource('penelitian', PenelitianController::class);
-    Route::apiResource('pkm', PkmController::class);
-    Route::apiResource('publikasi', PublikasiController::class);
-    Route::apiResource('buku', BukuController::class);
-    Route::apiResource('hki', HkiController::class);
     Route::apiResource('sertifikasi', SertifikasiController::class);
 
     // Repository Evidence
@@ -118,18 +104,17 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
     Route::get('/evidence/{id}/download', [EvidenceController::class, 'download']);
     Route::apiResource('evidence', EvidenceController::class);
 
-    Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
-
-    // Fitur 13: Konfigurasi Metrik
+    // Fitur 13: Konfigurasi Metrik (API K3)
     Route::get('/konfigurasi-metrik/indikator-k3', [KonfigurasiMetrikController::class, 'getIndikatorK3']);
     Route::apiResource('konfigurasi-metrik', KonfigurasiMetrikController::class);
 
-    // Fitur 12: Assessment SDM & Tri Dharma (Termasuk Gap Analysis)
+    // Fitur 12: Assessment SDM & Tri Dharma (Engine Gap Analysis SDM & Rekomendasi)
     Route::post('/assessment/run', [AssessmentController::class, 'runAssessment']);
     Route::get('/assessment/hasil', [AssessmentController::class, 'index']);
 
-    // Fitur 16: Notifikasi & Audit Log
+    // Fitur 16: Notifikasi & Audit Log (Checklist 10 & 11)
     Route::get('/notifikasi', [NotifikasiController::class, 'index']);
+    Route::post('/notifikasi', [NotifikasiController::class, 'store']);
     Route::post('/notifikasi/{id}/baca', [NotifikasiController::class, 'markAsRead']);
     Route::post('/notifikasi/baca-semua', [NotifikasiController::class, 'markAllAsRead']);
     Route::get('/audit-logs', [AuditLogController::class, 'index']);

@@ -33,19 +33,47 @@ class K3ApiService
             ];
         }
 
-        try {
-            $response = Http::timeout(5)
-                ->withHeaders(['X-API-KEY' => $this->apiKey])
-                ->get("{$this->baseUrl}/instrumen/indikator-aktif");
+        $base = rtrim($this->baseUrl, '/');
+        $candidateUrls = [
+            $base.'/v1/master/indikator',
+            $base.'/api/v1/master/indikator',
+            $base.'/master/indikator',
+            $base.'/instrumen/indikator-aktif',
+        ];
 
-            if ($response->successful()) {
-                return $response->json('data') ?? [];
+        foreach ($candidateUrls as $url) {
+            try {
+                $response = Http::timeout(5)
+                    ->withHeaders(['X-API-KEY' => $this->apiKey])
+                    ->get($url);
+
+                if ($response->successful()) {
+                    $items = $response->json('data') ?? [];
+                    if (! empty($items)) {
+                        return array_map(function ($item) {
+                            return [
+                                'kode' => $item['kode_indikator'] ?? $item['kode'] ?? '',
+                                'nama' => $item['deskripsi_indikator'] ?? $item['nama_indikator'] ?? $item['nama'] ?? '',
+                                'bidang' => $item['subkriteria']['kriteria']['nama_kriteria'] ?? $item['bidang'] ?? 'SDM',
+                                'parameter' => $item['parameter_penilaian'] ?? null,
+                            ];
+                        }, $items);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Gagal mengambil indikator dari API K3 URL {$url}: {$e->getMessage()}");
             }
-        } catch (\Throwable $e) {
-            Log::warning("Gagal mengambil indikator dari API K3: {$e->getMessage()}");
         }
 
-        return [];
+        // Fallback default LAM jika server K3 gagal dihubungi
+        return [
+            ['kode' => 'SDM-01', 'nama' => 'Kecukupan Dosen Tetap Perguruan Tinggi (DTPS)', 'bidang' => 'SDM'],
+            ['kode' => 'SDM-02', 'nama' => 'Kualifikasi Akademik Dosen Tetap (Doktor)', 'bidang' => 'SDM'],
+            ['kode' => 'SDM-03', 'nama' => 'Jabatan Akademik Dosen Tetap (Lektor Kepala/Guru Besar)', 'bidang' => 'SDM'],
+            ['kode' => 'PEN-01', 'nama' => 'Produktivitas Penelitian DTPS per Tahun', 'bidang' => 'Penelitian'],
+            ['kode' => 'PKM-01', 'nama' => 'Produktivitas PkM DTPS per Tahun', 'bidang' => 'PkM'],
+            ['kode' => 'KS-01',  'nama' => 'Kerja Sama Tridharma Internasional & Nasional', 'bidang' => 'Kerja Sama'],
+        ];
     }
 
     /**
