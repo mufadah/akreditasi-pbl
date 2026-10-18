@@ -15,8 +15,8 @@ class K1ApiService
 
     public function __construct()
     {
-        $this->baseUrl = config('services.k1.base_url') ?: (config('services.k1.url') ?: 'https://akademik.fayra.my.id/api');
-        $this->loginUrl = config('services.k1.login_url') ?: 'https://akademik.fayra.my.id/auth/login';
+        $this->baseUrl = config('services.k1.base_url') ?: (config('services.k1.url') ?: 'http://akademik.fayra.my.id/api');
+        $this->loginUrl = config('services.k1.login_url') ?: 'http://akademik.fayra.my.id/api/auth/login';
         $this->apiKey = (string) config('services.k1.key', '');
     }
 
@@ -25,7 +25,7 @@ class K1ApiService
      */
     public function getLoginUrl(): string
     {
-        return $this->loginUrl ?: 'https://akademik.fayra.my.id/auth/login';
+        return $this->loginUrl ?: 'http://akademik.fayra.my.id/api/auth/login';
     }
 
     /**

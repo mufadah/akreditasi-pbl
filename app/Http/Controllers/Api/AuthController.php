@@ -100,7 +100,7 @@ class AuthController extends Controller
             'success' => false,
             'code' => 403,
             'message' => 'Registrasi mandiri dinonaktifkan. Pengelolaan akun pengguna dikelola secara terpusat melalui portal SSO K1.',
-            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/auth/login'),
+            'login_url' => config('services.k1.login_url', 'http://akademik.fayra.my.id/api/auth/login'),
         ], 403);
     }
 
