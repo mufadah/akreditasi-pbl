@@ -911,6 +911,75 @@ Mengirim notifikasi in-app kepada pengguna spesifik berdasarkan `user_id` atau k
 
 ---
 
+## 🎖️ 12. Modul Data Sertifikasi (Dosen & Tendik)
+
+Modul ini mengelola data sertifikasi kompetensi, sertifikasi pendidik (Serdos), sertifikasi profesi BNSP/internasional untuk Dosen DTPS dan Tenaga Kependidikan, lengkap dengan lampiran bukti dokumen (*evidence*), filter masa berlaku, dan sinkronisasi otomatis ke profil.
+
+### 12.1 Daftar Sertifikasi Terpaginasi & Filter Lengkap
+* **Method**: `GET`
+* **Endpoint**: `/api/sertifikasi`
+* **Query Parameters**:
+  * `search` *(string)*: Pencarian teks luas (jenis sertifikasi, bidang studi, nomor sertifikat/SK, lembaga penerbit, nama dosen/NIDN, nama tendik/NIP).
+  * `tipe_pemilik` *(string)*: `dosen` (hanya sertifikasi dosen) atau `tendik` (hanya sertifikasi tendik).
+  * `status_masa_berlaku` *(string)*:
+    * `aktif`: Masa berlaku masih aktif.
+    * `kedaluwarsa`: Masa berlaku telah habis.
+    * `segera_berakhir`: Akan habis dalam kurun waktu tertentu (default 30 hari).
+  * `hari_kedaluwarsa` *(integer)*: Ambang hari untuk filter `segera_berakhir` (default: `30`).
+  * `tahun_sertifikasi` *(integer)*: Filter tahun spesifik penerbitan.
+  * `tahun_mulai` *(integer)* & `tahun_selesai` *(integer)*: Filter rentang tahun penerbitan sertifikasi.
+  * `id_dosen` *(integer)*: Filter sertifikasi milik dosen spesifik.
+  * `id_tendik` *(integer)*: Filter sertifikasi milik tendik spesifik.
+  * `status_sertifikasi` *(string)*: Filter status eksplisit (misal: `Aktif`, `Kedaluwarsa`).
+  * `per_page` *(integer)*: Jumlah data per halaman (default `10`).
+  * `page` *(integer)*: Nomor halaman paginasi.
+
+### 12.2 Tambah Sertifikasi Baru
+Menambahkan sertifikat baru dan secara **otomatis menyinkronkan** nama sertifikat ke kolom `sertifikasi` pada profil Dosen atau Tendik yang bersangkutan.
+
+* **Method**: `POST`
+* **Endpoint**: `/api/sertifikasi`
+* **Content-Type**: `multipart/form-data` atau `application/json`
+
+#### Request Body
+```json
+{
+  "id_dosen": 1,
+  "id_tendik": null,
+  "jenis_sertifikasi": "Sertifikat Pendidik (Serdos)",
+  "bidang_studi": "Teknik Informatika",
+  "nomor_registrasi_pendidik": "REG-DIKTI-2023-8871",
+  "nomor_sk": "SK-SERTIF-2023-01",
+  "nomor_sertifikat": "CERT-KOMP-2023-45",
+  "lembaga_penerbit": "Kemendikbudristek",
+  "tahun_sertifikasi": 2023,
+  "tanggal_kedaluwarsa": "2028-12-31",
+  "status_sertifikasi": "Aktif",
+  "url_drive": "https://drive.google.com/file/d/xxx/view"
+}
+```
+
+### 12.3 Detail Sertifikasi
+* **Method**: `GET`
+* **Endpoint**: `/api/sertifikasi/{id}`
+
+### 12.4 Perbarui Sertifikasi
+* **Method**: `PUT`
+* **Endpoint**: `/api/sertifikasi/{id}`
+
+### 12.5 Hapus Sertifikasi
+Menghapus sertifikat dan otomatis memperbarui profil pemilik.
+* **Method**: `DELETE`
+* **Endpoint**: `/api/sertifikasi/{id}`
+* *Catatan*: Ditolak dengan HTTP 422 jika sertifikasi masih terikat dengan dokumen evidence aktif (*Luaran Masih Dipakai*).
+
+### 12.6 Sinkronisasi Massal Sertifikasi ke Profil
+* **Method**: `POST`
+* **Endpoint**: `/api/sertifikasi/sync-profil`
+* *Fungsi*: Memicu sinkronisasi ulang seluruh daftar sertifikasi ke kolom profil master Dosen dan Tendik di database.
+
+---
+
 ## 🛠 Contoh Pengujian Cepat dengan cURL
 
 ### 1. Login

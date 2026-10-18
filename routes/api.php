@@ -97,6 +97,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
     // Kegiatan & Luaran (Unified Tridharma & Luaran Ilmiah Sesuai ERD Terbaru)
     Route::apiResource('kegiatan', KegiatanController::class);
     Route::apiResource('luaran', LuaranController::class);
+    Route::post('/sertifikasi/sync-profil', [SertifikasiController::class, 'syncProfil']);
     Route::apiResource('sertifikasi', SertifikasiController::class);
 
     // Repository Evidence

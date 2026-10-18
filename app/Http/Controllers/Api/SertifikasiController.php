@@ -61,23 +61,83 @@ class SertifikasiController extends Controller
 
     /**
      * Ambil daftar sertifikasi dengan filter pencarian dan paginasi.
+     * Mendukung filter: search, tipe_pemilik (dosen/tendik), status_masa_berlaku,
+     * tahun_sertifikasi, tahun_mulai, tahun_selesai, id_dosen, id_tendik, dan status_sertifikasi.
      */
     public function index(Request $request): JsonResponse
     {
         $query = Sertifikasi::with($this->relations);
 
-        // Filter pencarian berdasarkan jenis, bidang studi, atau nomor sertifikat
+        // 1. Filter pencarian teks luas (jenis, bidang studi, no. sertifikat, penerbit, serta nama/identitas pemilik)
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('jenis_sertifikasi', 'like', "%{$search}%")
                     ->orWhere('bidang_studi', 'like', "%{$search}%")
                     ->orWhere('nomor_sertifikat', 'like', "%{$search}%")
-                    ->orWhere('lembaga_penerbit', 'like', "%{$search}%");
+                    ->orWhere('nomor_sk', 'like', "%{$search}%")
+                    ->orWhere('nomor_registrasi_pendidik', 'like', "%{$search}%")
+                    ->orWhere('lembaga_penerbit', 'like', "%{$search}%")
+                    ->orWhereHas('dosen', function ($qd) use ($search) {
+                        $qd->where('nama_dosen', 'like', "%{$search}%")
+                            ->orWhere('nidn', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('tendik', function ($qt) use ($search) {
+                        $qt->where('nama_tendik', 'like', "%{$search}%")
+                            ->orWhere('nip', 'like', "%{$search}%");
+                    });
             });
         }
 
-        // Filter spesifik berdasarkan dosen, tendik, tahun, dan status
-        foreach (['id_dosen', 'id_tendik', 'tahun_sertifikasi', 'status_sertifikasi'] as $filter) {
+        // 2. Filter tipe pemilik (dosen vs tendik)
+        if ($tipePemilik = $request->query('tipe_pemilik')) {
+            $tipeLower = strtolower($tipePemilik);
+            if ($tipeLower === 'dosen') {
+                $query->whereNotNull('id_dosen');
+            } elseif ($tipeLower === 'tendik') {
+                $query->whereNotNull('id_tendik');
+            }
+        }
+
+        // 3. Filter status masa berlaku (aktif, kedaluwarsa, segera_berakhir)
+        $today = now()->toDateString();
+        if ($statusMasaBerlaku = $request->query('status_masa_berlaku', $request->query('status'))) {
+            $statusVal = strtolower($statusMasaBerlaku);
+            if ($statusVal === 'aktif') {
+                $query->where(function ($q) use ($today) {
+                    $q->whereNull('tanggal_kedaluwarsa')
+                        ->orWhere('tanggal_kedaluwarsa', '>=', $today);
+                })->where(function ($q) {
+                    $q->whereNull('status_sertifikasi')
+                        ->orWhere('status_sertifikasi', '!=', 'Kedaluwarsa');
+                });
+            } elseif (in_array($statusVal, ['kedaluwarsa', 'expired'])) {
+                $query->where(function ($q) use ($today) {
+                    $q->where(function ($sq) use ($today) {
+                        $sq->whereNotNull('tanggal_kedaluwarsa')
+                            ->where('tanggal_kedaluwarsa', '<', $today);
+                    })->orWhere('status_sertifikasi', 'Kedaluwarsa');
+                });
+            } elseif (in_array($statusVal, ['segera_berakhir', 'expiring_soon'])) {
+                $hari = $request->integer('hari_kedaluwarsa', 30);
+                $targetDate = now()->addDays($hari)->toDateString();
+                $query->whereNotNull('tanggal_kedaluwarsa')
+                    ->whereBetween('tanggal_kedaluwarsa', [$today, $targetDate]);
+            }
+        }
+
+        // 4. Filter tahun dan rentang tahun sertifikasi
+        if ($tahun = $request->query('tahun_sertifikasi', $request->query('tahun'))) {
+            $query->where('tahun_sertifikasi', $tahun);
+        }
+        if ($tahunMulai = $request->query('tahun_mulai')) {
+            $query->where('tahun_sertifikasi', '>=', $tahunMulai);
+        }
+        if ($tahunSelesai = $request->query('tahun_selesai')) {
+            $query->where('tahun_sertifikasi', '<=', $tahunSelesai);
+        }
+
+        // 5. Filter spesifik berdasarkan foreign key & status eksplisit
+        foreach (['id_dosen', 'id_tendik', 'status_sertifikasi'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->query($filter));
             }
@@ -86,6 +146,16 @@ class SertifikasiController extends Controller
         $sertifikasi = $query->latest()->paginate($request->integer('per_page', 10));
 
         return $this->respond(true, 200, 'Data sertifikasi berhasil diambil.', $sertifikasi);
+    }
+
+    /**
+     * Trigger sinkronisasi data sertifikasi ke profil Dosen dan Tendik secara massal.
+     */
+    public function syncProfil(Request $request): JsonResponse
+    {
+        $hasil = Sertifikasi::syncAllProfil();
+
+        return $this->respond(true, 200, 'Sinkronisasi sertifikasi ke profil Dosen & Tendik berhasil.', $hasil);
     }
 
     /**
