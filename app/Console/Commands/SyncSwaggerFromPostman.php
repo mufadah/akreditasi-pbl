@@ -26,7 +26,7 @@ class SyncSwaggerFromPostman extends Command
      * @var array<string, string>
      */
     private array $tagDescriptions = [
-        'Auth' => 'Autentikasi Terpusat via SSO Kelompok 1 (https://akademik.fayra.my.id/auth/login)',
+        'Auth' => 'Autentikasi Terpusat via SSO Kelompok 1 (http://akademik.fayra.my.id/api/auth/login)',
         'Jabatan Akademik' => 'Endpoint API Master Jabatan Akademik Dosen',
         'Pendidikan' => 'Endpoint API Master Jenjang Pendidikan',
         'Bidang Keahlian' => 'Endpoint API Master Bidang Keahlian',
@@ -81,7 +81,7 @@ class SyncSwaggerFromPostman extends Command
             'openapi' => '3.0.0',
             'info' => [
                 'title' => 'API Tridharma & Akreditasi PBL (LAM-INFOKOM 2.1)',
-                'description' => "Dokumentasi REST API Sistem Informasi Akreditasi & Manajemen Tridharma PBL (Kelompok 2: SDM, Penelitian, PkM, & Kerja Sama).\n\n### 🔐 Panduan Autentikasi & Otorisasi Swagger:\n1. **Autentikasi Terpusat SSO K1**: Autentikasi akun dan penerbitan token dilakukan melalui server SSO Kelompok 1 di: 👉 **[akademik.fayra.my.id/auth/login](https://akademik.fayra.my.id/auth/login)** (atau uji langsung via endpoint `POST /api/login` di bawah).\n2. **Salin Token JWT**: Salin `access_token` hasil login dari server akademik.\n3. **Otorisasi di Swagger**: Klik tombol hijau **Authorize** di pojok kanan atas halaman Swagger, lalu tempel token Anda.\n4. **Coba Endpoint (Try it out)**: Seluruh endpoint fitur K2 kini dapat diuji secara interaktif.",
+                'description' => "Dokumentasi REST API Sistem Informasi Akreditasi & Manajemen Tridharma PBL (Kelompok 2: SDM, Penelitian, PkM, & Kerja Sama).\n\n### 🔐 Panduan Autentikasi & Otorisasi Swagger:\n1. **Autentikasi Akun SSO K1**: Autentikasi akun dan penerbitan token JWT dikelola terpusat oleh server SSO Kelompok 1 di endpoint API:\n   👉 **`POST http://akademik.fayra.my.id/api/auth/login`**\n   - **Body JSON**: `{\"email\": \"administrator@polines.ac.id\", \"password\": \"password\"}`\n2. **Uji Coba Langsung di Swagger UI**: Anda dapat langsung mengklik endpoint `POST /api/login` di bawah ini (**Try it out**), masukkan kredensial, lalu klik Execute untuk memperoleh token JWT secara langsung!\n3. **Otorisasi di Swagger**: Salin token dari `data.authorization.access_token`, klik tombol hijau **Authorize 🔓** di pojok kanan atas halaman Swagger, lalu tempel token Anda.\n4. **Verifikasi Token**: Jalankan endpoint `GET /api/me` untuk melihat profil, role (ADMINISTRATOR / KAPRODI / DOSEN / ASESOR), serta permissions Anda.\n5. **Coba Seluruh Endpoint**: Seluruh 61 endpoint fitur K2 kini siap diuji secara interaktif (**Try it out**).",
                 'version' => '1.0.0',
                 'contact' => [
                     'name' => 'Tim Pengembang Akreditasi PBL',
@@ -500,22 +500,23 @@ class SyncSwaggerFromPostman extends Command
             '/api/login' => [
                 'post' => [
                     'tags' => ['Auth'],
-                    'summary' => 'Informasi SSO & Portal Login (Kelompok 1)',
-                    'description' => "Layanan Akreditasi & Tridharma PBL (Kelompok 2) bertindak murni sebagai **Resource Server**. Autentikasi akun, validasi kredensial, dan penerbitan token dilakukan terpusat melalui portal Single Sign-On (SSO) Kelompok 1:\n👉 **[https://akademik.fayra.my.id/auth/login](https://akademik.fayra.my.id/auth/login)**\n\n### Alur Otorisasi Swagger:\n1. Buka portal **[akademik.fayra.my.id/auth/login](https://akademik.fayra.my.id/auth/login)**.\n2. Masukkan akun pengguna Anda lalu salin token JWT (`access_token`).\n3. Klik tombol hijau **Authorize 🔓** di pojok kanan atas halaman Swagger ini, lalu tempel token Anda.\n4. Sekarang Anda dapat menguji seluruh endpoint lainnya secara langsung (**Try it out**).",
+                    'summary' => 'Login SSO Terpusat (http://akademik.fayra.my.id/api/auth/login)',
+                    'description' => "Login akun terpusat via API SSO Kelompok 1 (http://akademik.fayra.my.id/api/auth/login).\n\nEndpoint ini dapat langsung dieksekusi (**Try it out**) dari Swagger UI. Masukkan kredensial email & password Anda untuk memperoleh Bearer token JWT secara instan, atau gunakan endpoint live eksternal di `http://akademik.fayra.my.id/api/auth/login`.",
                     'operationId' => 'loginSSOTerpusat',
                     'security' => [],
                     'requestBody' => [
-                        'required' => false,
-                        'description' => 'Payload opsional kredensial',
+                        'required' => true,
+                        'description' => 'Kredensial login akun SSO Kelompok 1',
                         'content' => [
                             'application/json' => [
                                 'schema' => [
                                     'type' => 'object',
+                                    'required' => ['email', 'password'],
                                     'properties' => [
                                         'email' => [
                                             'type' => 'string',
-                                            'example' => 'admin@polines.ac.id',
-                                            'description' => 'Email terdaftar pada portal akademik.fayra.my.id',
+                                            'example' => 'administrator@polines.ac.id',
+                                            'description' => 'Email terdaftar pada server akademik (K1)',
                                         ],
                                         'password' => [
                                             'type' => 'string',
@@ -524,12 +525,45 @@ class SyncSwaggerFromPostman extends Command
                                         ],
                                     ],
                                 ],
+                                'example' => [
+                                    'email' => 'administrator@polines.ac.id',
+                                    'password' => 'password',
+                                ],
                             ],
                         ],
                     ],
                     'responses' => [
+                        '200' => [
+                            'description' => 'Login berhasil, token JWT SSO berhasil diperoleh.',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        '$ref' => '#/components/schemas/StandardResponse',
+                                    ],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 200,
+                                        'message' => 'Login berhasil',
+                                        'data' => [
+                                            'user' => [
+                                                'id' => 3,
+                                                'nama' => 'Administrator User',
+                                                'email' => 'administrator@polines.ac.id',
+                                                'role' => 'ADMINISTRATOR',
+                                            ],
+                                            'authorization' => [
+                                                'access_token' => 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vYWthZGVtaWsuZmF5cmEubXkuaWQvYXBpL2F1dGgvbG9naW4iLCJpYXQiOjE3OTIzMzg0NDUsImV4cCI6MTc5MjM0MjA0NSwibmJmIjoxNzkyMzM4NDQ1LCJqdGkiOiI0T0V5RlFLN3AxRXIzQU1RIiwic3ViIjoiMyIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjciLCJyb2xlIjoiQURNSU5JU1RSQVRPUiIsInBlcm1pc3Npb25zIjpbImRvc2VuLmNyZWF0ZSIsImRvc2VuLnJlYWQiLCJkb3Nlbi51cGRhdGUiLCJkb3Nlbi5kZWxldGUiLCJrcml0ZXJpYS5jcmVhdGUiLCJrcml0ZXJpYS5yZWFkIiwia3JpdGVyaWEudXBkYXRlIiwia3JpdGVyaWEuZGVsZXRlIiwicGVuZWxpdGlhbi5jcmVhdGUiLCJwZW5lbGl0aWFuLnJlYWQiLCJwZW5lbGl0aWFuLnVwZGF0ZSIsInBlbmVsaXRpYW4uZGVsZXRlIiwicGVuZ2FiZGlhbi5jcmVhdGUiLCJwZW5nYWJkaWFuLnJlYWQiLCJwZW5nYWJkaWFuLnVwZGF0ZSIsInBlbmdhYmRpYW4uZGVsZXRlIiwibGVkLmNyZWF0ZSIsImxlZC5yZWFkIiwibGVkLnVwZGF0ZSIsImxlZC5kZWxldGUiLCJsa3BzLmNyZWF0ZSIsImxrcHMucmVhZCIsImxrcHMudXBkYXRlIiwibGtwcy5kZWxldGUiLCJ1c2VyLmNyZWF0ZSIsInVzZXIucmVhZCIsInVzZXIudXBkYXRlIiwidXNlci5kZWxldGUiLCJyb2xlLmNyZWF0ZSIsInJvbGUucmVhZCIsInJvbGUudXBkYXRlIiwicm9sZS5kZWxldGUiLCJwZXJtaXNzaW9uLmNyZWF0ZSIsInBlcm1pc3Npb24ucmVhZCIsInBlcm1pc3Npb24udXBkYXRlIiwicGVybWlzc2lvbi5kZWxldGUiXX0.MvurHvfVgg9rVhBznGRorzYTonTwkMw-RITDeutApIw',
+                                                'token_type' => 'Bearer',
+                                                'expires_in' => 3600,
+                                                'permissions' => [],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
                         '401' => [
-                            'description' => 'Informasi pengalihan ke portal SSO K1 (https://akademik.fayra.my.id/auth/login).',
+                            'description' => 'Informasi pengalihan atau kredensial gagal di portal SSO K1 (http://akademik.fayra.my.id/api/auth/login).',
                             'content' => [
                                 'application/json' => [
                                     'schema' => [
@@ -539,7 +573,7 @@ class SyncSwaggerFromPostman extends Command
                                         'success' => false,
                                         'code' => 401,
                                         'message' => 'Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.',
-                                        'login_url' => 'https://akademik.fayra.my.id/auth/login',
+                                        'login_url' => 'http://akademik.fayra.my.id/api/auth/login',
                                     ],
                                 ],
                             ],
@@ -606,7 +640,7 @@ class SyncSwaggerFromPostman extends Command
                                         'success' => true,
                                         'code' => 200,
                                         'message' => 'Logout berhasil. Sesi token telah dinonaktifkan di sisi klien.',
-                                        'login_url' => 'https://akademik.fayra.my.id/auth/login',
+                                        'login_url' => 'http://akademik.fayra.my.id/api/auth/login',
                                     ],
                                 ],
                             ],

@@ -81,7 +81,7 @@ class RoleMiddleware
                 'success' => false,
                 'code' => 401,
                 'message' => 'Unauthorized: Token Authorization tidak ditemukan atau tidak valid.',
-                'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/auth/login'),
+                'login_url' => config('services.k1.login_url', 'http://akademik.fayra.my.id/api/auth/login'),
             ], 401);
         }
 

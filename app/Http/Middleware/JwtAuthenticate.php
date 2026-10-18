@@ -47,7 +47,7 @@ class JwtAuthenticate
             return $next($request);
         }
 
-        $loginUrl = config('services.k1.login_url', 'https://akademik.fayra.my.id/auth/login');
+        $loginUrl = config('services.k1.login_url', 'http://akademik.fayra.my.id/api/auth/login');
 
         // 2. Validasi keberadaan Bearer Token
         if (! $token) {

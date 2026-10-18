@@ -42,15 +42,29 @@ class ProfileController extends Controller
     }
 
     /**
-     * Informasi Resource Server ketika ada client yang mencoba memanggil /api/login atau /api/register secara lokal ke K2.
+     * Informasi Resource Server atau Proxy Login ke server SSO Kelompok 1 (http://akademik.fayra.my.id/api/auth/login).
      */
-    public function resourceServerInfo(): JsonResponse
+    public function resourceServerInfo(Request $request): JsonResponse
     {
+        $loginUrl = config('services.k1.login_url', 'http://akademik.fayra.my.id/api/auth/login');
+
+        // Jika request membawa email dan password, teruskan autentikasi ke API SSO K1
+        if ($request->filled('email') && $request->filled('password')) {
+            $k1Service = app(\App\Services\K1ApiService::class);
+            $k1Response = $k1Service->login($request->input('email'), $request->input('password'));
+
+            if ($k1Response && ! empty($k1Response['success'])) {
+                $status = $k1Response['code'] ?? 200;
+
+                return response()->json($k1Response, $status);
+            }
+        }
+
         return response()->json([
             'success' => false,
             'code' => 401,
             'message' => 'Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.',
-            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/auth/login'),
+            'login_url' => $loginUrl,
         ], 401);
     }
 }
