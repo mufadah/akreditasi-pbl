@@ -21,7 +21,36 @@ class Sertifikasi extends Model
         'tahun_sertifikasi',
         'tanggal_kedaluwarsa',
         'status_sertifikasi',
+        'url_sertifikasi',
     ];
+
+    protected $attributes = [
+        'status_sertifikasi' => 'Aktif',
+        'url_sertifikasi' => '',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'tahun_sertifikasi' => 'date:Y-m-d',
+            'tanggal_kedaluwarsa' => 'date:Y-m-d',
+        ];
+    }
+
+    /**
+     * Mutator agar jika tahun_sertifikasi diisi format 4 digit tahun (YYYY),
+     * otomatis dinormalisasi menjadi format tanggal valid (YYYY-01-01).
+     */
+    public function setTahunSertifikasiAttribute($value): void
+    {
+        if ($value !== null && $value !== '') {
+            if (is_numeric($value) && strlen((string) $value) === 4) {
+                $this->attributes['tahun_sertifikasi'] = $value . '-01-01';
+                return;
+            }
+        }
+        $this->attributes['tahun_sertifikasi'] = $value;
+    }
 
     protected static function booted(): void
     {

@@ -21,9 +21,10 @@ return new class extends Migration
             $table->string('nomor_sk')->nullable();
             $table->string('nomor_sertifikat')->nullable();
             $table->string('lembaga_penerbit')->nullable();
-            $table->integer('tahun_sertifikasi');
+            $table->date('tahun_sertifikasi');
             $table->date('tanggal_kedaluwarsa')->nullable();
             $table->string('status_sertifikasi')->default('Aktif');
+            $table->string('url_sertifikasi')->default('');
             $table->timestamps();
 
             $table->foreign('id_dosen')->references('id_dosen')->on('dosen')->cascadeOnDelete();
