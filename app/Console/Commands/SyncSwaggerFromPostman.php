@@ -43,6 +43,10 @@ class SyncSwaggerFromPostman extends Command
         'Evidence' => 'Endpoint API Repository Dokumen, Berkas Fisik, Link Drive & Validasi Kaprodi',
         'Validasi Mahasiswa' => 'Endpoint API Validasi Keabsahan NIM Mahasiswa (Integrasi Sistem K1)',
         'Statistik' => 'Endpoint API Statistik, Agregasi, Rasio Dosen-Mahasiswa & Dashboard LAM',
+        'Sertifikasi' => 'Fitur 9: Pengelolaan Data Sertifikasi Pendidik & Kompetensi Profesi',
+        'Assessment & Gap Analysis' => 'Fitur 12: Kalkulasi Gap Analysis & Evaluasi Rubrik LAM K3',
+        'Konfigurasi Metrik' => 'Fitur 13: Pemetaan Indikator K3 dan Rumus Formula Metrik K2',
+        'Notifikasi & Audit Log' => 'Fitur 14 & 16: Notifikasi In-App & Riwayat Audit Log Forensik',
     ];
 
     /**
@@ -100,6 +104,12 @@ class SyncSwaggerFromPostman extends Command
                         'bearerFormat' => 'JWT',
                         'description' => 'Masukkan token JWT Anda yang diperoleh setelah login.',
                     ],
+                    'apiKeyAuth' => [
+                        'type' => 'apiKey',
+                        'in' => 'header',
+                        'name' => 'X-API-KEY',
+                        'description' => 'API Key untuk interoperabilitas machine-to-machine (K1 & K3). Nilai default: k2-secret-key-akreditasi.',
+                    ],
                 ],
                 'schemas' => [
                     'StandardResponse' => [
@@ -128,6 +138,18 @@ class SyncSwaggerFromPostman extends Command
         $paths = [];
 
         $this->parseItems($postman['item'] ?? [], [], $tags, $paths);
+
+        // Tambahkan rute fitur lanjutan (Sertifikasi, Reminder, Gap Analysis, Konfigurasi Metrik, Notifikasi & Audit)
+        foreach ($this->getSupplementaryPaths() as $suppPath => $suppOps) {
+            $paths[$suppPath] = $suppOps;
+            foreach ($suppOps as $op) {
+                foreach ($op['tags'] ?? [] as $t) {
+                    if (! in_array($t, $tags)) {
+                        $tags[] = $t;
+                    }
+                }
+            }
+        }
 
         $openapi['tags'] = array_map(function ($t) {
             return [
@@ -466,4 +488,376 @@ class SyncSwaggerFromPostman extends Command
 
         return ['type' => 'string', 'example' => (string) $val];
     }
+
+    /**
+     * Definisi OpenAPI untuk endpoint fitur lanjutan yang belum terdaftar di Postman Collection.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function getSupplementaryPaths(): array
+    {
+        return [
+            '/api/sertifikasi' => [
+                'get' => [
+                    'tags' => ['Sertifikasi'],
+                    'summary' => 'Daftar Sertifikasi (Dosen & Tendik)',
+                    'description' => 'Mengambil daftar data sertifikasi dengan paginasi dan filter lengkap (tipe pemilik dosen vs tendik, status masa berlaku aktif/kedaluwarsa/segera berakhir, tahun, dan pencarian teks luas).',
+                    'operationId' => 'getSertifikasiList',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'search', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string'], 'description' => 'Pencarian jenis sertifikasi, no. sertifikat, no. sk, penerbit, atau nama/NIDN/NIP pemilik'],
+                        ['name' => 'tipe_pemilik', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['dosen', 'tendik']], 'description' => 'Filter berdasarkan pemilik sertifikasi: "dosen" atau "tendik"'],
+                        ['name' => 'status_masa_berlaku', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['aktif', 'kedaluwarsa', 'segera_berakhir']], 'description' => 'Filter status masa berlaku: "aktif", "kedaluwarsa", atau "segera_berakhir"'],
+                        ['name' => 'hari_kedaluwarsa', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 30], 'description' => 'Ambang batas hari untuk filter segera_berakhir (default: 30 hari)'],
+                        ['name' => 'tahun_sertifikasi', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Filter tahun spesifik penerbitan sertifikasi'],
+                        ['name' => 'tahun_mulai', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Rentang tahun mulai penerbitan'],
+                        ['name' => 'tahun_selesai', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Rentang tahun selesai penerbitan'],
+                        ['name' => 'id_dosen', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Filter ID dosen tertentu'],
+                        ['name' => 'id_tendik', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Filter ID tendik tertentu'],
+                        ['name' => 'status_sertifikasi', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string'], 'description' => 'Filter status sertifikasi eksplisit (misal: "Aktif", "Kedaluwarsa")'],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 10], 'description' => 'Jumlah data per halaman'],
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1], 'description' => 'Nomor halaman'],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Data sertifikasi berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+                'post' => [
+                    'tags' => ['Sertifikasi'],
+                    'summary' => 'Tambah Data Sertifikasi Baru',
+                    'description' => 'Menambahkan data sertifikasi baru (Dosen atau Tendik) dan secara otomatis menyinkronkan ke profil Dosen/Tendik bersangkutan.',
+                    'operationId' => 'storeSertifikasi',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'requestBody' => [
+                        'required' => true,
+                        'content' => [
+                            'multipart/form-data' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'required' => ['jenis_sertifikasi', 'tahun_sertifikasi'],
+                                    'properties' => [
+                                        'id_dosen' => ['type' => 'integer', 'nullable' => true, 'example' => 1],
+                                        'id_tendik' => ['type' => 'integer', 'nullable' => true],
+                                        'jenis_sertifikasi' => ['type' => 'string', 'example' => 'Sertifikat Pendidik (Serdos)'],
+                                        'bidang_studi' => ['type' => 'string', 'example' => 'Teknik Informatika / Rekayasa Perangkat Lunak'],
+                                        'nomor_registrasi_pendidik' => ['type' => 'string', 'nullable' => true, 'example' => 'REG-DIKTI-2023-8871'],
+                                        'nomor_sk' => ['type' => 'string', 'nullable' => true, 'example' => 'SK-SERTIF-2023-01'],
+                                        'nomor_sertifikat' => ['type' => 'string', 'nullable' => true, 'example' => 'CERT-KOMP-2023-45'],
+                                        'lembaga_penerbit' => ['type' => 'string', 'nullable' => true, 'example' => 'Kemendikbudristek / BNSP'],
+                                        'tahun_sertifikasi' => ['type' => 'integer', 'example' => 2023],
+                                        'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2028-12-31'],
+                                        'status_sertifikasi' => ['type' => 'string', 'example' => 'Aktif'],
+                                        'evidence_file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Berkas bukti sertifikat (PDF/JPG/PNG max 10MB)'],
+                                        'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/xxx/view'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'responses' => [
+                        '201' => [
+                            'description' => 'Data sertifikasi berhasil ditambahkan.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                        '422' => [
+                            'description' => 'Validasi input gagal.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ValidationErrorResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/sertifikasi/{id}' => [
+                'get' => [
+                    'tags' => ['Sertifikasi'],
+                    'summary' => 'Detail Sertifikasi',
+                    'description' => 'Mengambil detail satu data sertifikasi beserta relasi pemilik (dosen/tendik) dan dokumen evidence pendukung.',
+                    'operationId' => 'showSertifikasi',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Detail sertifikasi berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                        '404' => ['description' => 'Data sertifikasi tidak ditemukan.'],
+                    ],
+                ],
+                'put' => [
+                    'tags' => ['Sertifikasi'],
+                    'summary' => 'Perbarui Data Sertifikasi',
+                    'description' => 'Memperbarui data sertifikasi dan secara otomatis menyinkronkan perubahan ke profil Dosen/Tendik bersangkutan.',
+                    'operationId' => 'updateSertifikasi',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
+                    ],
+                    'requestBody' => [
+                        'required' => true,
+                        'content' => [
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'id_dosen' => ['type' => 'integer', 'nullable' => true],
+                                        'id_tendik' => ['type' => 'integer', 'nullable' => true],
+                                        'jenis_sertifikasi' => ['type' => 'string'],
+                                        'bidang_studi' => ['type' => 'string'],
+                                        'nomor_registrasi_pendidik' => ['type' => 'string', 'nullable' => true],
+                                        'nomor_sk' => ['type' => 'string', 'nullable' => true],
+                                        'nomor_sertifikat' => ['type' => 'string', 'nullable' => true],
+                                        'lembaga_penerbit' => ['type' => 'string', 'nullable' => true],
+                                        'tahun_sertifikasi' => ['type' => 'integer'],
+                                        'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true],
+                                        'status_sertifikasi' => ['type' => 'string'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Data sertifikasi berhasil diperbarui.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                        '422' => ['description' => 'Validasi gagal.'],
+                    ],
+                ],
+                'delete' => [
+                    'tags' => ['Sertifikasi'],
+                    'summary' => 'Hapus Data Sertifikasi',
+                    'description' => 'Menghapus data sertifikasi dan otomatis menyinkronkan profil Dosen/Tendik. Ditolak jika sertifikasi masih terikat pada dokumen evidence.',
+                    'operationId' => 'destroySertifikasi',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Data sertifikasi berhasil dihapus.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                        '422' => ['description' => 'Luaran Masih Dipakai: Sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence.'],
+                    ],
+                ],
+            ],
+            '/api/sertifikasi/sync-profil' => [
+                'post' => [
+                    'tags' => ['Sertifikasi'],
+                    'summary' => 'Sinkronisasi Massal Sertifikasi ke Profil Dosen & Tendik',
+                    'description' => 'Memicu sinkronisasi menyeluruh daftar sertifikasi ke kolom `sertifikasi` pada profil master Dosen dan Tendik di database.',
+                    'operationId' => 'syncProfilSertifikasi',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Sinkronisasi sertifikasi ke profil Dosen & Tendik berhasil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/kerja-sama/reminder-kedaluwarsa' => [
+                'get' => [
+                    'tags' => ['Kerja Sama'],
+                    'summary' => 'Monitoring Reminder Kedaluwarsa Kerja Sama',
+                    'description' => 'Mengambil daftar dokumen kerja sama yang telah kedaluwarsa atau akan kedaluwarsa dalam 30 hari ke depan.',
+                    'operationId' => 'reminderKedaluwarsaKerjaSama',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Daftar reminder masa berlaku kerja sama berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/kerja-sama/check-kedaluwarsa' => [
+                'post' => [
+                    'tags' => ['Kerja Sama'],
+                    'summary' => 'Trigger Sinkronisasi Status Kedaluwarsa & Notifikasi Otomatis',
+                    'description' => 'Memperbarui status dokumen kerja sama yang lewat masa berlaku menjadi "Kedaluwarsa" dan mengirimkan notifikasi in-app otomatis kepada Administrator dan Kaprodi.',
+                    'operationId' => 'checkKedaluwarsaKerjaSama',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Pemeriksaan status kedaluwarsa dan notifikasi berhasil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/assessment/run' => [
+                'post' => [
+                    'tags' => ['Assessment & Gap Analysis'],
+                    'summary' => 'Jalankan Engine Assessment SDM & Gap Analysis K3',
+                    'description' => 'Melakukan kalkulasi komputasi gap analysis per kriteria LAM INFOKOM K2 berdasarkan data riil vs target K3 dan menghasilkan rekomendasi taktis.',
+                    'operationId' => 'runAssessmentGapAnalysis',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Assessment dan kalkulasi gap analysis berhasil dieksekusi.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/assessment/hasil' => [
+                'get' => [
+                    'tags' => ['Assessment & Gap Analysis'],
+                    'summary' => 'Daftar Riwayat Hasil Assessment & Rekomendasi',
+                    'description' => 'Mengambil riwayat hasil komputasi assessment SDM dan rekomendasi perbaikan indikator.',
+                    'operationId' => 'getAssessmentHasil',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Riwayat hasil assessment berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/konfigurasi-metrik/indikator-k3' => [
+                'get' => [
+                    'tags' => ['Konfigurasi Metrik'],
+                    'summary' => 'Sinkronisasi Indikator Standar LAM INFOKOM dari K3',
+                    'description' => 'Mengambil daftar indikator dan kriteria akreditasi standar dari modul K3.',
+                    'operationId' => 'getIndikatorK3',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Daftar indikator K3 berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/konfigurasi-metrik' => [
+                'get' => [
+                    'tags' => ['Konfigurasi Metrik'],
+                    'summary' => 'Daftar Konfigurasi Metrik Akreditasi',
+                    'description' => 'Mengambil seluruh konfigurasi metrik, bobot, dan ambang batas indikator akreditasi.',
+                    'operationId' => 'getKonfigurasiMetrikList',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Daftar konfigurasi metrik berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+                'post' => [
+                    'tags' => ['Konfigurasi Metrik'],
+                    'summary' => 'Tambah Konfigurasi Metrik',
+                    'description' => 'Menyimpan konfigurasi indikator baru.',
+                    'operationId' => 'storeKonfigurasiMetrik',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '201' => [
+                            'description' => 'Konfigurasi metrik berhasil disimpan.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/notifikasi' => [
+                'get' => [
+                    'tags' => ['Notifikasi & Audit Log'],
+                    'summary' => 'Daftar Notifikasi In-App Pengguna',
+                    'description' => 'Mengambil daftar notifikasi pengguna dengan filter unread_only.',
+                    'operationId' => 'getNotifikasiList',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'unread_only', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'boolean'], 'description' => 'Filter hanya notifikasi yang belum dibaca'],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Daftar notifikasi berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+                'post' => [
+                    'tags' => ['Notifikasi & Audit Log'],
+                    'summary' => 'Kirim Notifikasi In-App Baru',
+                    'description' => 'Mengirim notifikasi ke user atau role tertentu.',
+                    'operationId' => 'sendNotifikasi',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '201' => [
+                            'description' => 'Notifikasi berhasil dikirim.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/notifikasi/{id}/baca' => [
+                'post' => [
+                    'tags' => ['Notifikasi & Audit Log'],
+                    'summary' => 'Tandai Notifikasi Telah Dibaca',
+                    'operationId' => 'markNotifikasiAsRead',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Notifikasi ditandai telah dibaca.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/notifikasi/baca-semua' => [
+                'post' => [
+                    'tags' => ['Notifikasi & Audit Log'],
+                    'summary' => 'Tandai Seluruh Notifikasi Telah Dibaca',
+                    'operationId' => 'markAllNotifikasiAsRead',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Seluruh notifikasi ditandai telah dibaca.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/audit-logs' => [
+                'get' => [
+                    'tags' => ['Notifikasi & Audit Log'],
+                    'summary' => 'Riwayat Audit Trail Log',
+                    'description' => 'Mengambil catatan audit log forensik aktivitas mutasi data.',
+                    'operationId' => 'getAuditLogs',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Daftar audit log berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+            '/api/audit-logs/{id}' => [
+                'get' => [
+                    'tags' => ['Notifikasi & Audit Log'],
+                    'summary' => 'Detail Forensik Audit Log',
+                    'operationId' => 'showAuditLog',
+                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Detail audit log berhasil diambil.',
+                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
 }
+

@@ -1,8 +1,8 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "Sistem Informasi Akreditasi & Manajemen Tridharma PBL API (LAM-INFOKOM 2.1)",
-        "description": "Dokumentasi REST API Interaktif Sistem Informasi Akreditasi dan Manajemen Tridharma PBL (Kelompok 2: SDM, Penelitian, PkM, & Kerja Sama).\n\n### 🔐 Panduan Autentikasi:\n1. **Bearer Token (JWT)**: Diterbitkan oleh portal SSO Kelompok 1. Klik tombol hijau **Authorize** di pojok kanan atas, lalu masukkan token JWT Anda.\n2. **API Key Header (`X-API-KEY`)**: Digunakan untuk pertukaran data machine-to-machine (M2M) dengan Kelompok 1 & Kelompok 3 (default: `k2-secret-key-akreditasi`).\n\n### 📑 16 Fitur Terintegrasi:\n- **Fitur 1**: Hak Akses & SSO K1\n- **Fitur 2**: Master Dosen & Data DTPS\n- **Fitur 3**: Master Tenaga Kependidikan (Tendik)\n- **Fitur 4**: Master Atribut Dosen (Jabatan, Pendidikan, Bidang Keahlian)\n- **Fitur 5**: Master Jenis Kegiatan (Penelitian & PkM)\n- **Fitur 6**: Master Mitra Kerja Sama\n- **Fitur 7**: Kegiatan Penelitian & PkM (Validasi NIM K1)\n- **Fitur 8**: Master Luaran & Publikasi (Proteksi DOI/ISBN)\n- **Fitur 9**: Data Sertifikasi Pendidik & Profesi\n- **Fitur 10**: Kerja Sama (MoU, MoA, IA & Perpanjangan)\n- **Fitur 11**: Repository Evidence Dokumen & Validasi Asesor\n- **Fitur 12**: Assessment SDM & Gap Analysis K3\n- **Fitur 13**: Konfigurasi Formula Metrik K3\n- **Fitur 14**: Dashboard KPI & Analitik LAM\n- **Fitur 15**: REST API Interoperabilitas M2M\n- **Fitur 16**: Notifikasi In-App & Riwayat Audit Log",
+        "title": "API Tridharma & Akreditasi PBL",
+        "description": "Dokumentasi REST API Sistem Informasi Akreditasi & Manajemen Tridharma PBL.\n\n### Panduan Otorisasi:\n1. Buka kelompok endpoint **Auth**, lalu jalankan endpoint **Login**.\n2. Salin token dari `data.authorization.access_token`.\n3. Klik tombol hijau **Authorize** di pojok kanan atas Swagger UI, lalu tempel token JWT Anda.\n4. Sekarang Anda dapat mencoba seluruh endpoint (**Try it out**) secara interaktif.",
         "version": "1.0.0",
         "contact": {
             "name": "Tim Pengembang Akreditasi PBL",
@@ -98,7 +98,7 @@
         },
         {
             "name": "Notifikasi & Audit Log",
-            "description": "Fitur 16: Event Tracking Perubahan Data dan Pengiriman Notifikasi In-App"
+            "description": "Fitur 14 & 16: Notifikasi In-App & Riwayat Audit Log Forensik"
         }
     ],
     "paths": {
@@ -152,7 +152,7 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "example": "administrator@example.com"
+                                        "example": "administrator@polines.ac.id"
                                     },
                                     "password": {
                                         "type": "string",
@@ -161,7 +161,7 @@
                                 }
                             },
                             "example": {
-                                "email": "administrator@example.com",
+                                "email": "administrator@polines.ac.id",
                                 "password": "password"
                             }
                         }
@@ -577,9 +577,6 @@
                     },
                     "404": {
                         "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Data Masih Dipakai: Tidak dapat dihapus karena masih digunakan dosen."
                     }
                 },
                 "security": [
@@ -850,9 +847,6 @@
                     },
                     "404": {
                         "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Data Masih Dipakai: Tidak dapat dihapus karena masih digunakan dosen."
                     }
                 },
                 "security": [
@@ -1123,9 +1117,6 @@
                     },
                     "404": {
                         "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Data Masih Dipakai: Tidak dapat dihapus karena masih digunakan dosen."
                     }
                 },
                 "security": [
@@ -1438,9 +1429,6 @@
                     },
                     "404": {
                         "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Mitra Masih Bekerja sama: Tidak dapat dihapus karena masih memiliki ikatan kerja sama aktif."
                     }
                 },
                 "security": [
@@ -1721,9 +1709,6 @@
                     },
                     "404": {
                         "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Data Masih Dipakai: Tidak dapat dihapus karena masih digunakan kegiatan."
                     }
                 },
                 "security": [
@@ -3760,7 +3745,14 @@
                         "description": "Data tidak ditemukan."
                     },
                     "422": {
-                        "description": "Data Duplikat: DOI, Nomor Sertifikat, atau ISBN sudah terdaftar dalam sistem."
+                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -4106,9 +4098,6 @@
                     },
                     "404": {
                         "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Luaran Masih Dipakai: Data luaran tidak dapat dihapus karena masih terkait data evidence."
                     }
                 },
                 "security": [
@@ -6462,502 +6451,6 @@
                 }
             }
         },
-        "/api/assessment/run": {
-            "post": {
-                "tags": [
-                    "Assessment & Gap Analysis"
-                ],
-                "summary": "Jalankan Kalkulasi Assessment & Gap Analysis K3",
-                "description": "Menjalankan mesin evaluasi metrik akreditasi secara otomatis dan mengirimkan hasilnya ke server K3.",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": [
-                                    "bidang"
-                                ],
-                                "properties": {
-                                    "bidang": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Semua",
-                                            "SDM",
-                                            "Penelitian",
-                                            "PkM",
-                                            "Kerja Sama"
-                                        ],
-                                        "example": "Semua"
-                                    },
-                                    "versi_instrumen": {
-                                        "type": "string",
-                                        "example": "LAM-INFOKOM-2.1"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Assessment dan Gap Analysis berhasil dijalankan serta dikirim ke K3.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validasi gagal."
-                    }
-                }
-            }
-        },
-        "/api/assessment/hasil": {
-            "get": {
-                "tags": [
-                    "Assessment & Gap Analysis"
-                ],
-                "summary": "Daftar Riwayat Hasil Assessment",
-                "description": "Mengambil riwayat hasil evaluasi skor metrik capaian akreditasi beserta rekomendasi perbaikan gap.",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "versi_instrumen",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Daftar hasil assessment berhasil diambil.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/konfigurasi-metrik": {
-            "get": {
-                "tags": [
-                    "Konfigurasi Metrik"
-                ],
-                "summary": "Daftar Konfigurasi Formula Metrik",
-                "description": "Mengambil seluruh konfigurasi pemetaan kode indikator K3 dan formula perhitungan.",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Daftar konfigurasi metrik berhasil diambil.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "Konfigurasi Metrik"
-                ],
-                "summary": "Tambah / Simpan Konfigurasi Formula Metrik",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": [
-                                    "kode_indikator",
-                                    "nama_metrik",
-                                    "formula"
-                                ],
-                                "properties": {
-                                    "kode_indikator": {
-                                        "type": "string",
-                                        "example": "SDM-01"
-                                    },
-                                    "nama_metrik": {
-                                        "type": "string",
-                                        "example": "Kecukupan Dosen Tetap"
-                                    },
-                                    "formula": {
-                                        "type": "string",
-                                        "example": "total_dtps >= 12 ? 4 : (total_dtps / 12) * 4"
-                                    },
-                                    "keterangan": {
-                                        "type": "string",
-                                        "example": "Formula standar LAM-INFOKOM"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Konfigurasi metrik berhasil disimpan.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/konfigurasi-metrik/indikator-k3": {
-            "get": {
-                "tags": [
-                    "Konfigurasi Metrik"
-                ],
-                "summary": "Daftar Indikator Standar dari K3",
-                "description": "Mengambil master indikator akreditasi langsung dari server instrumen K3.",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Berhasil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/konfigurasi-metrik/{id}": {
-            "get": {
-                "tags": [
-                    "Konfigurasi Metrik"
-                ],
-                "summary": "Detail Konfigurasi Metrik",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Berhasil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "tags": [
-                    "Konfigurasi Metrik"
-                ],
-                "summary": "Perbarui Formula Metrik",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Konfigurasi metrik berhasil diperbarui.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "Konfigurasi Metrik"
-                ],
-                "summary": "Hapus Konfigurasi Metrik",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Konfigurasi metrik berhasil dihapus.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/notifikasi": {
-            "get": {
-                "tags": [
-                    "Notifikasi & Audit Log"
-                ],
-                "summary": "Daftar Notifikasi Pengguna",
-                "description": "Mengambil notifikasi in-app untuk pengguna yang sedang aktif.",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Daftar notifikasi berhasil diambil.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/notifikasi/{id}/baca": {
-            "post": {
-                "tags": [
-                    "Notifikasi & Audit Log"
-                ],
-                "summary": "Tandai Satu Notifikasi Sudah Dibaca",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Notifikasi ditandai dibaca.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/notifikasi/baca-semua": {
-            "post": {
-                "tags": [
-                    "Notifikasi & Audit Log"
-                ],
-                "summary": "Tandai Semua Notifikasi Sudah Dibaca",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Semua notifikasi berhasil ditandai sebagai dibaca.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/audit-logs": {
-            "get": {
-                "tags": [
-                    "Notifikasi & Audit Log"
-                ],
-                "summary": "Riwayat Audit Log Perubahan Sistem",
-                "description": "Mengambil catatan log audit (waktu, user, modul, aksi, data lama vs data baru).",
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Daftar audit log berhasil diambil.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/audit-logs/{id}": {
-            "get": {
-                "tags": [
-                    "Notifikasi & Audit Log"
-                ],
-                "summary": "Detail Audit Log",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Detail audit log berhasil diambil.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/sertifikasi/sync-profil": {
             "post": {
                 "tags": [
@@ -6987,6 +6480,420 @@
                     }
                 }
             }
+        },
+        "/api/kerja-sama/reminder-kedaluwarsa": {
+            "get": {
+                "tags": [
+                    "Kerja Sama"
+                ],
+                "summary": "Monitoring Reminder Kedaluwarsa Kerja Sama",
+                "description": "Mengambil daftar dokumen kerja sama yang telah kedaluwarsa atau akan kedaluwarsa dalam 30 hari ke depan.",
+                "operationId": "reminderKedaluwarsaKerjaSama",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar reminder masa berlaku kerja sama berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/kerja-sama/check-kedaluwarsa": {
+            "post": {
+                "tags": [
+                    "Kerja Sama"
+                ],
+                "summary": "Trigger Sinkronisasi Status Kedaluwarsa & Notifikasi Otomatis",
+                "description": "Memperbarui status dokumen kerja sama yang lewat masa berlaku menjadi \"Kedaluwarsa\" dan mengirimkan notifikasi in-app otomatis kepada Administrator dan Kaprodi.",
+                "operationId": "checkKedaluwarsaKerjaSama",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pemeriksaan status kedaluwarsa dan notifikasi berhasil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/assessment/run": {
+            "post": {
+                "tags": [
+                    "Assessment & Gap Analysis"
+                ],
+                "summary": "Jalankan Engine Assessment SDM & Gap Analysis K3",
+                "description": "Melakukan kalkulasi komputasi gap analysis per kriteria LAM INFOKOM K2 berdasarkan data riil vs target K3 dan menghasilkan rekomendasi taktis.",
+                "operationId": "runAssessmentGapAnalysis",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assessment dan kalkulasi gap analysis berhasil dieksekusi.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/assessment/hasil": {
+            "get": {
+                "tags": [
+                    "Assessment & Gap Analysis"
+                ],
+                "summary": "Daftar Riwayat Hasil Assessment & Rekomendasi",
+                "description": "Mengambil riwayat hasil komputasi assessment SDM dan rekomendasi perbaikan indikator.",
+                "operationId": "getAssessmentHasil",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Riwayat hasil assessment berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/konfigurasi-metrik/indikator-k3": {
+            "get": {
+                "tags": [
+                    "Konfigurasi Metrik"
+                ],
+                "summary": "Sinkronisasi Indikator Standar LAM INFOKOM dari K3",
+                "description": "Mengambil daftar indikator dan kriteria akreditasi standar dari modul K3.",
+                "operationId": "getIndikatorK3",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar indikator K3 berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/konfigurasi-metrik": {
+            "get": {
+                "tags": [
+                    "Konfigurasi Metrik"
+                ],
+                "summary": "Daftar Konfigurasi Metrik Akreditasi",
+                "description": "Mengambil seluruh konfigurasi metrik, bobot, dan ambang batas indikator akreditasi.",
+                "operationId": "getKonfigurasiMetrikList",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar konfigurasi metrik berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Konfigurasi Metrik"
+                ],
+                "summary": "Tambah Konfigurasi Metrik",
+                "description": "Menyimpan konfigurasi indikator baru.",
+                "operationId": "storeKonfigurasiMetrik",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Konfigurasi metrik berhasil disimpan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifikasi": {
+            "get": {
+                "tags": [
+                    "Notifikasi & Audit Log"
+                ],
+                "summary": "Daftar Notifikasi In-App Pengguna",
+                "description": "Mengambil daftar notifikasi pengguna dengan filter unread_only.",
+                "operationId": "getNotifikasiList",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "unread_only",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "Filter hanya notifikasi yang belum dibaca"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar notifikasi berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Notifikasi & Audit Log"
+                ],
+                "summary": "Kirim Notifikasi In-App Baru",
+                "description": "Mengirim notifikasi ke user atau role tertentu.",
+                "operationId": "sendNotifikasi",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Notifikasi berhasil dikirim.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifikasi/{id}/baca": {
+            "post": {
+                "tags": [
+                    "Notifikasi & Audit Log"
+                ],
+                "summary": "Tandai Notifikasi Telah Dibaca",
+                "operationId": "markNotifikasiAsRead",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notifikasi ditandai telah dibaca.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifikasi/baca-semua": {
+            "post": {
+                "tags": [
+                    "Notifikasi & Audit Log"
+                ],
+                "summary": "Tandai Seluruh Notifikasi Telah Dibaca",
+                "operationId": "markAllNotifikasiAsRead",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Seluruh notifikasi ditandai telah dibaca.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/audit-logs": {
+            "get": {
+                "tags": [
+                    "Notifikasi & Audit Log"
+                ],
+                "summary": "Riwayat Audit Trail Log",
+                "description": "Mengambil catatan audit log forensik aktivitas mutasi data.",
+                "operationId": "getAuditLogs",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar audit log berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/audit-logs/{id}": {
+            "get": {
+                "tags": [
+                    "Notifikasi & Audit Log"
+                ],
+                "summary": "Detail Forensik Audit Log",
+                "operationId": "showAuditLog",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail audit log berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -7001,7 +6908,7 @@
                 "type": "apiKey",
                 "in": "header",
                 "name": "X-API-KEY",
-                "description": "API Key untuk interoperabilitas machine-to-machine (K1 & K3). Nilai default: `k2-secret-key-akreditasi`."
+                "description": "API Key untuk interoperabilitas machine-to-machine (K1 & K3). Nilai default: k2-secret-key-akreditasi."
             }
         },
         "schemas": {
