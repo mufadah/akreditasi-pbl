@@ -88,6 +88,8 @@ API menggunakan struktur envelope respon JSON yang konsisten di semua endpoint:
 7. [Modul 7: Repository Evidence & Workflow Validasi](#7-modul-repository-evidence--workflow-validasi)
 8. [Modul 8: Interoperabilitas Sistem (API K1 & K3)](#8-modul-interoperabilitas-sistem)
 9. [Modul 9: Analitik, Rasio, & Dashboard Akreditasi V1](#9-modul-analitik-rasio--dashboard-v1)
+10. [Modul 10: Evaluasi Akreditasi, Metrik K3, & Gap Analysis](#10-modul-evaluasi-akreditasi-metrik-k3--gap-analysis)
+11. [Modul 11: Audit Trail Forensik & Notifikasi In-App](#11-modul-audit-trail-forensik--notifikasi-in-app)
 
 ---
 
@@ -331,6 +333,47 @@ Memperbarui tanggal kedaluwarsa dokumen kemitraan dan otomatis mencatat riwayat 
 {
   "tanggal_selesai_baru": "2029-01-15",
   "keterangan": "Perpanjangan adendum periode kedua selama 1 tahun."
+}
+```
+
+### 4.5 Monitoring Reminder & Sinkronisasi Kedaluwarsa Otomatis
+Memantau masa berlaku seluruh dokumen kerja sama aktif, mendeteksi dokumen yang segera berakhir dalam kurun waktu 30 hari ke depan, serta mengubah status dokumen yang lewat waktu menjadi `Kedaluwarsa` dan memicu notifikasi in-app otomatis ke Administrator dan Kaprodi.
+
+#### 1. Ambil Data Reminder Kedaluwarsa
+* **Method**: `GET`
+* **Endpoint**: `/api/kerja-sama/reminder-kedaluwarsa`
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "code": 200,
+  "message": "Data reminder masa berlaku kerja sama berhasil diambil.",
+  "data": {
+    "tanggal_hari_ini": "2026-10-17",
+    "total_kedaluwarsa": 1,
+    "total_segera_berakhir_30_hari": 2,
+    "daftar_kedaluwarsa": [ ... ],
+    "daftar_segera_berakhir": [ ... ]
+  }
+}
+```
+
+#### 2. Trigger Sinkronisasi Status & Notifikasi Otomatis
+* **Method**: `POST`
+* **Endpoint**: `/api/kerja-sama/check-kedaluwarsa`
+* **CLI Schedule**: Terjadwal otomatis harian pukul 01:00 WIB via `php artisan kerjasama:check-kedaluwarsa`
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "code": 200,
+  "message": "Pemeriksaan status kedaluwarsa dan pengiriman reminder berhasil.",
+  "data": {
+    "total_status_diubah_ke_kedaluwarsa": 1,
+    "total_notifikasi_reminder_dikirim": 2
+  }
 }
 ```
 
@@ -701,6 +744,170 @@ Visualisasi tren 5 tahun (*TS-4 s/d TS*) untuk seluruh kegiatan Tri Dharma dan k
 * **Method**: `GET`
 * **Endpoint**: `/api/v1/kerjasama/aktif`
 * **Query Parameters**: `search`, `per_page`.
+
+---
+
+## 10. Modul Evaluasi Akreditasi, Metrik K3, & Gap Analysis
+
+Modul ini bertanggung jawab mengelola konfigurasi indikator standar LAM INFOKOM (API K3) dan menjalankan engine Gap Analysis otomatis untuk menghitung deviasi capaian riil serta menghasilkan rekomendasi perbaikan.
+
+### 10.1 Ambil Indikator K3 Standar LAM
+* **Method**: `GET`
+* **Endpoint**: `/api/konfigurasi-metrik/indikator-k3`
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "code": 200,
+  "message": "Daftar indikator K3 berhasil diambil.",
+  "data": [
+    {
+      "kode_indikator": "SDM-01",
+      "nama_indikator": "Kecukupan Dosen Tetap Perguruan Tinggi (DTPS)",
+      "bidang": "SDM",
+      "rumus_formula": "COUNT(dosen_dtps)",
+      "ambang_target": 12.0,
+      "jenjang": "S1"
+    },
+    {
+      "kode_indikator": "SDM-02",
+      "nama_indikator": "Kualifikasi Akademik Dosen Tetap (Doktor/S3)",
+      "bidang": "SDM",
+      "rumus_formula": "(COUNT(dosen_s3) / COUNT(dosen_dtps)) * 100",
+      "ambang_target": 3.5,
+      "jenjang": "S1"
+    }
+  ]
+}
+```
+
+### 10.2 Master Data Konfigurasi Metrik (CRUD)
+* **Resource Route**: `/api/konfigurasi-metrik`
+* **Methods**: `GET`, `POST`, `PUT`, `DELETE`
+* **Fields**: `kode_indikator`, `nama_indikator`, `bidang`, `rumus_formula`, `ambang_target`, `bobot`, `jenjang`.
+
+### 10.3 Eksekusi Engine Gap Analysis & Rekomendasi
+Menghitung capaian riil seluruh indikator SDM dan Tri Dharma, membandingkan terhadap target instrumen LAM, menghitung gap deviasi, serta merumuskan rekomendasi tindak lanjut secara otomatis.
+
+* **Method**: `POST`
+* **Endpoint**: `/api/assessment/run`
+
+#### Request Body
+```json
+{
+  "tahun_penilaian": 2026,
+  "catatan_auditor": "Simulasi asesmen internal persiapan reakreditasi LAM INFOKOM."
+}
+```
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "code": 200,
+  "message": "Engine assessment berhasil dijalankan.",
+  "data": {
+    "tahun_penilaian": 2026,
+    "total_indikator_dievaluasi": 6,
+    "ringkasan_capaian": {
+      "memenuhi_target": 4,
+      "perlu_peningkatan": 2
+    },
+    "hasil_detail": [
+      {
+        "kode_indikator": "SDM-01",
+        "nama_indikator": "Kecukupan Dosen Tetap (DTPS)",
+        "nilai_capaian": 14.0,
+        "ambang_target": 12.0,
+        "gap": 2.0,
+        "status_capaian": "Memenuhi Target",
+        "rekomendasi": "Pertahankan jumlah dan rasio dosen tetap."
+      },
+      {
+        "kode_indikator": "SDM-02",
+        "nama_indikator": "Kualifikasi Dosen Berpendidikan S3",
+        "nilai_capaian": 2.8,
+        "ambang_target": 3.5,
+        "gap": -0.7,
+        "status_capaian": "Perlu Peningkatan",
+        "rekomendasi": "Dukung 1-2 dosen untuk melanjutkan studi doktoral (S3)."
+      }
+    ]
+  }
+}
+```
+
+### 10.4 Riwayat Hasil Assessment
+* **Method**: `GET`
+* **Endpoint**: `/api/assessment/hasil`
+* **Query Parameters**: `tahun_penilaian`, `status_capaian`, `per_page`.
+
+---
+
+## 11. Modul Audit Trail Forensik & Notifikasi In-App
+
+### 11.1 Riwayat Audit Log Mutasi Data
+Perekaman forensik seluruh operasi mutasi data (`CREATE`, `UPDATE`, `DELETE`, `VALIDATE`) termasuk rekaman nilai lama (`old_values`) dan nilai baru (`new_values`) serta IP address pengguna.
+
+* **Method**: `GET`
+* **Endpoint**: `/api/audit-logs`
+* **Query Parameters**: `aksi`, `tabel`, `user_id`, `per_page`.
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "code": 200,
+  "message": "Daftar audit log berhasil diambil.",
+  "data": {
+    "current_page": 1,
+    "data": [
+      {
+        "id_audit_log": 45,
+        "user_id": 1,
+        "aksi": "UPDATE",
+        "tabel": "KerjaSama",
+        "record_id": 12,
+        "ip_address": "127.0.0.1",
+        "user_agent": "PostmanRuntime/7.43.0",
+        "created_at": "2026-10-17T12:00:00.000000Z"
+      }
+    ]
+  }
+}
+```
+
+* **Method**: `GET`
+* **Endpoint**: `/api/audit-logs/{id}`: Menampilkan detail log lengkap beserta perbandingan data JSON sebelum dan sesudah perubahan.
+
+### 11.2 Daftar Notifikasi In-App Pengguna
+* **Method**: `GET`
+* **Endpoint**: `/api/notifikasi`
+* **Query Parameters**: `unread_only` (boolean: `true`/`false`), `per_page`.
+
+### 11.3 Kirim Notifikasi Baru
+Mengirim notifikasi in-app kepada pengguna spesifik berdasarkan `user_id` atau kepada seluruh pengguna dengan `role` tertentu.
+
+* **Method**: `POST`
+* **Endpoint**: `/api/notifikasi`
+
+#### Request Body (Kirim ke Role)
+```json
+{
+  "role": "KAPRODI",
+  "tipe": "VALIDASI_EVIDENCE",
+  "judul": "Pengajuan Bukti Dukung Baru",
+  "pesan": "Dosen telah mengunggah evidence baru untuk kegiatan Penelitian AI.",
+  "link": "/evidence/24"
+}
+```
+
+### 11.4 Tandai Notifikasi Telah Dibaca
+* **Method**: `POST`
+* **Endpoint**: `/api/notifikasi/{id}/baca` (Tandai satu)
+* **Method**: `POST`
+* **Endpoint**: `/api/notifikasi/baca-semua` (Tandai seluruh notifikasi pengguna)
 
 ---
 

@@ -264,4 +264,83 @@ class KerjaSamaController extends Controller
 
         return $this->respond(true, 200, 'Data kerja sama berhasil dihapus.');
     }
+
+    /**
+     * Ambil daftar kerja sama yang akan atau sudah kedaluwarsa (Checklist 12).
+     */
+    public function reminderKedaluwarsa(Request $request): JsonResponse
+    {
+        $today = now()->toDateString();
+        $targetDate = now()->addDays(30)->toDateString();
+
+        $kedaluwarsa = KerjaSama::with(['mitra', 'jenisKerjaSama', 'dosen'])
+            ->whereNotNull('tanggal_selesai')
+            ->where('tanggal_selesai', '<', $today)
+            ->get();
+
+        $segeraBerakhir = KerjaSama::with(['mitra', 'jenisKerjaSama', 'dosen'])
+            ->where('status', 'Aktif')
+            ->whereNotNull('tanggal_selesai')
+            ->whereBetween('tanggal_selesai', [$today, $targetDate])
+            ->get();
+
+        return $this->respond(true, 200, 'Data reminder masa berlaku kerja sama berhasil diambil.', [
+            'tanggal_hari_ini' => $today,
+            'total_kedaluwarsa' => $kedaluwarsa->count(),
+            'total_segera_berakhir_30_hari' => $segeraBerakhir->count(),
+            'daftar_kedaluwarsa' => $kedaluwarsa,
+            'daftar_segera_berakhir' => $segeraBerakhir,
+        ]);
+    }
+
+    /**
+     * Eksekusi sinkronisasi status kedaluwarsa & kirim notifikasi in-app otomatis.
+     */
+    public function checkKedaluwarsa(): JsonResponse
+    {
+        $today = now()->toDateString();
+        $targetDate = now()->addDays(30)->toDateString();
+
+        // 1. Update status kerja sama yang sudah lewat tanggal selesai
+        $expiredList = KerjaSama::where('status', 'Aktif')
+            ->whereNotNull('tanggal_selesai')
+            ->where('tanggal_selesai', '<', $today)
+            ->get();
+
+        $updatedCount = 0;
+        foreach ($expiredList as $item) {
+            $item->update(['status' => 'Kedaluwarsa']);
+            $updatedCount++;
+
+            \App\Services\NotifikasiService::kirimKeRole(
+                ['ADMINISTRATOR', 'KAPRODI'],
+                'KERJASAMA_KEDALUWARSA',
+                'Dokumen Kerja Sama Telah Kedaluwarsa',
+                "Dokumen '{$item->judul_kerja_sama}' telah kedaluwarsa pada tanggal {$item->tanggal_selesai}.",
+                "/kerja-sama/{$item->getKey()}"
+            );
+        }
+
+        // 2. Kirim reminder untuk kerja sama yang akan berakhir dalam 30 hari
+        $expiringSoon = KerjaSama::where('status', 'Aktif')
+            ->whereNotNull('tanggal_selesai')
+            ->whereBetween('tanggal_selesai', [$today, $targetDate])
+            ->get();
+
+        foreach ($expiringSoon as $item) {
+            $sisaHari = now()->diffInDays(\Carbon\Carbon::parse($item->tanggal_selesai));
+            \App\Services\NotifikasiService::kirimKeRole(
+                ['ADMINISTRATOR', 'KAPRODI'],
+                'KERJASAMA_REMINDER',
+                'Peringatan Masa Berlaku Kerja Sama',
+                "Dokumen '{$item->judul_kerja_sama}' akan berakhir dalam {$sisaHari} hari ({$item->tanggal_selesai}).",
+                "/kerja-sama/{$item->getKey()}"
+            );
+        }
+
+        return $this->respond(true, 200, 'Pemeriksaan status kedaluwarsa dan pengiriman reminder berhasil.', [
+            'total_status_diubah_ke_kedaluwarsa' => $updatedCount,
+            'total_notifikasi_reminder_dikirim' => $expiringSoon->count(),
+        ]);
+    }
 }

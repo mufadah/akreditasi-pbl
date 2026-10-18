@@ -87,20 +87,16 @@ class DatabaseSeeder extends Seeder
         TahunAkademik::firstOrCreate(['tahun_akademik' => 2025]);
         TahunAkademik::firstOrCreate(['tahun_akademik' => 2026]);
 
-        // 8. Master Data Baru & Seeder Idempotent (Revisi ERD)
+        // 8. Master Data Baru & Semua Seeder Terhubung
         $this->call([
             JenisKerjaSamaSeeder::class,
             JenisKegiatanSeeder::class,
             JenisLuaranSeeder::class,
+            JenisHkiSeeder::class,
+            JenisPkmSeeder::class,
+            KonfigurasiMetrikSeeder::class,
+            TenagaKependidikanSeeder::class,
         ]);
-
-        if (Schema::hasTable('jenis_hki')) {
-            $this->call(JenisHkiSeeder::class);
-        }
-
-        if (Schema::hasTable('jenis_pkm')) {
-            $this->call(JenisPkmSeeder::class);
-        }
 
         // 9. Data Akademik Dosen Terkait Akun K1 (Tabel dosen, bukan users)
         $jabatan = JabatanAkademik::first();

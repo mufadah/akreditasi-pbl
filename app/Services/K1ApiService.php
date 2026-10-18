@@ -137,21 +137,39 @@ class K1ApiService
 
         // 1. Jika URL server K1 sudah ada di .env, tembak API K1 secara riil
         if (! empty($this->baseUrl)) {
-            try {
-                $response = Http::timeout(5)
-                    ->withHeaders(['X-API-KEY' => $this->apiKey])
-                    ->get("{$this->baseUrl}/mahasiswa/{$cleanNim}/check");
+            $base = rtrim($this->baseUrl, '/');
+            $candidateUrls = [
+                "{$base}/mahasiswa/{$cleanNim}/check",
+                "{$base}/mahasiswa/{$cleanNim}",
+                "{$base}/mahasiswa",
+            ];
 
-                if ($response->successful()) {
-                    return (bool) ($response->json('is_active') ?? $response->json('valid') ?? true);
-                }
+            foreach ($candidateUrls as $url) {
+                try {
+                    $response = Http::timeout(5)
+                        ->withHeaders(['X-API-KEY' => $this->apiKey])
+                        ->get($url);
 
-                // Jika server K1 merespon 404 (Mahasiswa tidak ditemukan)
-                if ($response->status() === 404) {
-                    return false;
+                    if ($response->successful()) {
+                        $json = $response->json();
+                        if (str_ends_with($url, '/mahasiswa')) {
+                            $list = $json['data'] ?? $json;
+                            if (is_array($list)) {
+                                foreach ($list as $m) {
+                                    if (($m['nim'] ?? '') === $cleanNim) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        } else {
+                            return (bool) ($json['is_active'] ?? $json['valid'] ?? true);
+                        }
+                    } elseif ($response->status() === 404 && ! str_ends_with($url, '/mahasiswa')) {
+                        return false;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Gagal menghubungi API K1 untuk NIM {$cleanNim}: ".$e->getMessage());
                 }
-            } catch (\Throwable $e) {
-                Log::warning("Gagal menghubungi API K1 untuk NIM {$cleanNim}: ".$e->getMessage());
             }
         }
 
@@ -168,13 +186,31 @@ class K1ApiService
     {
         // 1. Jika URL server K1 sudah ada di .env, tembak API K1
         if (! empty($this->baseUrl)) {
+            $base = rtrim($this->baseUrl, '/');
             try {
+                // 1a. Coba endpoint agregasi statistik K1
                 $response = Http::timeout(5)
                     ->withHeaders(['X-API-KEY' => $this->apiKey])
-                    ->get("{$this->baseUrl}/statistik/mahasiswa", $params);
+                    ->get("{$base}/statistik/mahasiswa", $params);
 
                 if ($response->successful()) {
                     return $response->json('data') ?? $response->json();
+                }
+
+                // 1b. Coba endpoint daftar mahasiswa K1 (/mahasiswa) dari repositori siakre-api
+                $responseMhs = Http::timeout(5)
+                    ->withHeaders(['X-API-KEY' => $this->apiKey])
+                    ->get("{$base}/mahasiswa");
+
+                if ($responseMhs->successful()) {
+                    $list = $responseMhs->json('data') ?? $responseMhs->json();
+                    if (is_array($list)) {
+                        return [
+                            'total_mahasiswa' => count($list),
+                            'prodi' => $params['prodi'] ?? 'Teknologi Rekayasa Komputer',
+                            'tahun_akademik' => $params['tahun'] ?? date('Y'),
+                        ];
+                    }
                 }
             } catch (\Throwable $e) {
                 Log::warning('Gagal mengambil statistik mahasiswa dari API K1: '.$e->getMessage());
