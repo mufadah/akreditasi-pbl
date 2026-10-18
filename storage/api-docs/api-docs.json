@@ -1,8 +1,8 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "API Tridharma & Akreditasi PBL",
-        "description": "Dokumentasi REST API Sistem Informasi Akreditasi & Manajemen Tridharma PBL.\n\n### Panduan Otorisasi:\n1. Buka kelompok endpoint **Auth**, lalu jalankan endpoint **Login**.\n2. Salin token dari `data.authorization.access_token`.\n3. Klik tombol hijau **Authorize** di pojok kanan atas Swagger UI, lalu tempel token JWT Anda.\n4. Sekarang Anda dapat mencoba seluruh endpoint (**Try it out**) secara interaktif.",
+        "title": "API Tridharma & Akreditasi PBL (LAM-INFOKOM 2.1)",
+        "description": "Dokumentasi REST API Sistem Informasi Akreditasi & Manajemen Tridharma PBL (Kelompok 2: SDM, Penelitian, PkM, & Kerja Sama).\n\n### 🔐 Panduan Autentikasi & Otorisasi Swagger:\n1. **Autentikasi Terpusat SSO K1**: Autentikasi akun dan penerbitan token dilakukan melalui server SSO Kelompok 1 di: 👉 **[akademik.fayra.my.id/auth/login](https://akademik.fayra.my.id/auth/login)** (atau uji langsung via endpoint `POST /api/login` di bawah).\n2. **Salin Token JWT**: Salin `access_token` hasil login dari server akademik.\n3. **Otorisasi di Swagger**: Klik tombol hijau **Authorize** di pojok kanan atas halaman Swagger, lalu tempel token Anda.\n4. **Coba Endpoint (Try it out)**: Seluruh endpoint fitur K2 kini dapat diuji secara interaktif.",
         "version": "1.0.0",
         "contact": {
             "name": "Tim Pengembang Akreditasi PBL",
@@ -18,7 +18,7 @@
     "tags": [
         {
             "name": "Auth",
-            "description": "Autentikasi Pengguna & Manajemen Token JWT"
+            "description": "Autentikasi Terpusat via SSO Kelompok 1 (https://akademik.fayra.my.id/auth/login)"
         },
         {
             "name": "Jabatan Akademik",
@@ -107,44 +107,13 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Login",
-                "description": "Endpoint API untuk Login.",
-                "operationId": "761e4be54db52e262ad32134a86954b1",
-                "responses": {
-                    "201": {
-                        "description": "Data berhasil dibuat / diproses.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Permintaan tidak valid / Bad Request."
-                    },
-                    "401": {
-                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
-                    },
-                    "404": {
-                        "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
+                "summary": "Informasi SSO & Portal Login (Kelompok 1)",
+                "description": "Layanan Akreditasi & Tridharma PBL (Kelompok 2) bertindak murni sebagai **Resource Server**. Autentikasi akun, validasi kredensial, dan penerbitan token dilakukan terpusat melalui portal Single Sign-On (SSO) Kelompok 1:\n👉 **[https://akademik.fayra.my.id/auth/login](https://akademik.fayra.my.id/auth/login)**\n\n### Alur Otorisasi Swagger:\n1. Buka portal **[akademik.fayra.my.id/auth/login](https://akademik.fayra.my.id/auth/login)**.\n2. Masukkan akun pengguna Anda lalu salin token JWT (`access_token`).\n3. Klik tombol hijau **Authorize 🔓** di pojok kanan atas halaman Swagger ini, lalu tempel token Anda.\n4. Sekarang Anda dapat menguji seluruh endpoint lainnya secara langsung (**Try it out**).",
+                "operationId": "loginSSOTerpusat",
                 "security": [],
                 "requestBody": {
-                    "required": true,
-                    "description": "Data payload JSON",
+                    "required": false,
+                    "description": "Payload opsional kredensial",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -152,17 +121,33 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "example": "administrator@polines.ac.id"
+                                        "example": "admin@polines.ac.id",
+                                        "description": "Email terdaftar pada portal akademik.fayra.my.id"
                                     },
                                     "password": {
                                         "type": "string",
-                                        "example": "password"
+                                        "example": "password",
+                                        "description": "Kata sandi akun SSO K1"
                                     }
                                 }
-                            },
-                            "example": {
-                                "email": "administrator@polines.ac.id",
-                                "password": "password"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "401": {
+                        "description": "Informasi pengalihan ke portal SSO K1 (https://akademik.fayra.my.id/auth/login).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": false,
+                                    "code": 401,
+                                    "message": "Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.",
+                                    "login_url": "https://akademik.fayra.my.id/auth/login"
+                                }
                             }
                         }
                     }
@@ -251,35 +236,53 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Current User Profile",
-                "description": "Endpoint API untuk Current User Profile.",
-                "operationId": "94c2ae9e9cc9975c0405367b71f508f0",
-                "responses": {
-                    "200": {
-                        "description": "Operasi berhasil diproses.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Permintaan tidak valid / Bad Request."
-                    },
-                    "401": {
-                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
-                    },
-                    "404": {
-                        "description": "Data tidak ditemukan."
-                    }
-                },
+                "summary": "Introspeksi Profil & Hak Akses Pengguna Aktif",
+                "description": "Mengekstrak profil pengguna, peran (ADMINISTRATOR, KAPRODI, DOSEN, ASESOR), dan hak akses (permissions) dari Bearer Token JWT SSO K1.",
+                "operationId": "getProfileMe",
                 "security": [
                     {
                         "bearerAuth": []
                     }
-                ]
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profil dan hak akses berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Profil dan hak akses pengguna berhasil diekstrak dari token JWT SSO K1.",
+                                    "data": {
+                                        "user": {
+                                            "id": 1,
+                                            "nama": "Dr. Budi Santoso, M.Kom.",
+                                            "email": "dosen@polines.ac.id",
+                                            "role": "DOSEN",
+                                            "permissions": [
+                                                "dosen.read",
+                                                "luaran.create",
+                                                "luaran.read"
+                                            ]
+                                        },
+                                        "role": "DOSEN",
+                                        "permissions": [
+                                            "dosen.read",
+                                            "luaran.create",
+                                            "luaran.read"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated / Token Bearer tidak disertakan atau kedaluwarsa."
+                    }
+                }
             }
         },
         "/api/logout": {
@@ -287,45 +290,32 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Logout",
-                "description": "Endpoint API untuk Logout.",
-                "operationId": "bdcbd2a916dcd20824653d3c11b75ec3",
-                "responses": {
-                    "201": {
-                        "description": "Data berhasil dibuat / diproses.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Permintaan tidak valid / Bad Request."
-                    },
-                    "401": {
-                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
-                    },
-                    "404": {
-                        "description": "Data tidak ditemukan."
-                    },
-                    "422": {
-                        "description": "Validasi gagal: format data input tidak sesuai ketentuan.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
+                "summary": "Logout Sesi Pengguna",
+                "description": "Menghapus sesi token JWT aktif di sisi klien dan mengembalikan tautan portal SSO.",
+                "operationId": "logoutAuth",
                 "security": [
                     {
                         "bearerAuth": []
                     }
-                ]
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logout berhasil diproses.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Logout berhasil. Sesi token telah dinonaktifkan di sisi klien.",
+                                    "login_url": "https://akademik.fayra.my.id/auth/login"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/jabatan-akademik": {

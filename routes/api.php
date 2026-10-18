@@ -44,7 +44,7 @@ Route::middleware(['auth.jwt'])->group(function () {
             'success' => true,
             'code' => 200,
             'message' => 'Logout berhasil. Sesi token telah dinonaktifkan di sisi klien.',
-            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/login'),
+            'login_url' => config('services.k1.login_url', 'https://akademik.fayra.my.id/auth/login'),
         ]);
     });
 });
