@@ -952,10 +952,11 @@ Menambahkan sertifikat baru dan secara **otomatis menyinkronkan** nama sertifika
   "nomor_sk": "SK-SERTIF-2023-01",
   "nomor_sertifikat": "CERT-KOMP-2023-45",
   "lembaga_penerbit": "Kemendikbudristek",
-  "tahun_sertifikasi": 2023,
+  "tahun_sertifikasi": "2023-08-20",
   "tanggal_kedaluwarsa": "2028-12-31",
   "status_sertifikasi": "Aktif",
-  "url_drive": "https://drive.google.com/file/d/xxx/view"
+  "url_sertifikasi": "https://drive.google.com/file/d/sertif-kompetensi/view",
+  "url_drive": "https://drive.google.com/file/d/sertif-kompetensi/view"
 }
 ```
 

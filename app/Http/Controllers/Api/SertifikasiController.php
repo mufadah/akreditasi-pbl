@@ -51,9 +51,21 @@ class SertifikasiController extends Controller
             'nomor_sk' => ['nullable', 'string', 'max:100'],
             'nomor_sertifikat' => ['nullable', 'string', 'max:100'],
             'lembaga_penerbit' => ['nullable', 'string', 'max:255'],
-            'tahun_sertifikasi' => [...$req, 'integer', 'digits:4'],
+            'tahun_sertifikasi' => [
+                ...$req,
+                function ($attribute, $value, $fail) {
+                    if (is_numeric($value) && strlen((string) $value) === 4) {
+                        return;
+                    }
+                    if (is_string($value) && strtotime($value) !== false) {
+                        return;
+                    }
+                    $fail("Kolom {$attribute} harus berupa tahun 4 digit (YYYY) atau format tanggal valid (YYYY-MM-DD).");
+                },
+            ],
             'tanggal_kedaluwarsa' => ['nullable', 'date'],
             'status_sertifikasi' => ['sometimes', 'string', 'max:50'],
+            'url_sertifikasi' => [...$req, 'string', 'max:2048'],
             'evidence_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'url_drive' => ['nullable', 'string', 'max:255'],
         ];
@@ -127,13 +139,25 @@ class SertifikasiController extends Controller
 
         // 4. Filter tahun dan rentang tahun sertifikasi
         if ($tahun = $request->query('tahun_sertifikasi', $request->query('tahun'))) {
-            $query->where('tahun_sertifikasi', $tahun);
+            if (is_numeric($tahun) && strlen((string) $tahun) === 4) {
+                $query->whereYear('tahun_sertifikasi', $tahun);
+            } else {
+                $query->where('tahun_sertifikasi', $tahun);
+            }
         }
         if ($tahunMulai = $request->query('tahun_mulai')) {
-            $query->where('tahun_sertifikasi', '>=', $tahunMulai);
+            if (is_numeric($tahunMulai) && strlen((string) $tahunMulai) === 4) {
+                $query->whereYear('tahun_sertifikasi', '>=', $tahunMulai);
+            } else {
+                $query->where('tahun_sertifikasi', '>=', $tahunMulai);
+            }
         }
         if ($tahunSelesai = $request->query('tahun_selesai')) {
-            $query->where('tahun_sertifikasi', '<=', $tahunSelesai);
+            if (is_numeric($tahunSelesai) && strlen((string) $tahunSelesai) === 4) {
+                $query->whereYear('tahun_sertifikasi', '<=', $tahunSelesai);
+            } else {
+                $query->where('tahun_sertifikasi', '<=', $tahunSelesai);
+            }
         }
 
         // 5. Filter spesifik berdasarkan foreign key & status eksplisit
@@ -182,7 +206,9 @@ class SertifikasiController extends Controller
                 );
 
                 // Lampirkan dokumen evidence jika ada (Fitur 9 Flowchart)
-                if ($request->hasFile('evidence_file') || ! empty($validated['url_drive'])) {
+                // Baik melalui upload file, url_drive, maupun url_sertifikasi
+                $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
+                if ($request->hasFile('evidence_file') || ! empty($urlBukti)) {
                     $pathFile = null;
                     $namaFile = null;
 
@@ -194,12 +220,11 @@ class SertifikasiController extends Controller
 
                     Evidence::create([
                         'id_sertifikasi' => $sertifikasi->id_sertifikasi,
-                        'tipe_entitas' => 'sertifikasi',
-                        'id_entitas' => $sertifikasi->id_sertifikasi,
                         'jenis_dokumen' => 'Sertifikat',
-                        'nama_file' => $namaFile ?? 'Bukti Sertifikasi',
+                        'nama_file' => $namaFile ?? ($sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi'),
                         'path_file' => $pathFile,
-                        'url_drive' => $validated['url_drive'] ?? null,
+                        'url_drive' => $validated['url_drive'] ?? $urlBukti,
+                        'url_evidence' => $urlBukti,
                         'tanggal_upload' => now()->toDateString(),
                         'status_validasi' => 'Menunggu Validasi',
                     ]);
@@ -252,6 +277,28 @@ class SertifikasiController extends Controller
                 $sertifikasi->update(
                     collect($validated)->except(['evidence_file', 'url_drive'])->toArray()
                 );
+
+                $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
+                if ($urlBukti) {
+                    $evidence = $sertifikasi->evidence()->first();
+                    if ($evidence) {
+                        $evidence->update([
+                            'url_evidence' => $urlBukti,
+                            'url_drive' => $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti,
+                        ]);
+                    } else {
+                        Evidence::create([
+                            'id_sertifikasi' => $sertifikasi->id_sertifikasi,
+                            'jenis_dokumen' => 'Sertifikat',
+                            'nama_file' => $sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi',
+                            'path_file' => null,
+                            'url_drive' => $validated['url_drive'] ?? $urlBukti,
+                            'url_evidence' => $urlBukti,
+                            'tanggal_upload' => now()->toDateString(),
+                            'status_validasi' => 'Menunggu Validasi',
+                        ]);
+                    }
+                }
             });
         } catch (\Throwable $e) {
             return $this->respond(false, 500, 'Gagal memperbarui data sertifikasi: '.$e->getMessage());
@@ -271,12 +318,13 @@ class SertifikasiController extends Controller
             return $this->respond(false, 404, 'Data sertifikasi tidak ditemukan.');
         }
 
-        // Cek keterkaitan ke evidence (Fitur 9 Flowchart: "Luaran Masih Dipakai")
-        if ($sertifikasi->evidence()->exists()) {
-            return $this->respond(false, 422, 'Luaran Masih Dipakai: Data sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence.');
+        // Cek keterkaitan ke evidence yang sudah divalidasi (Fitur 9 Flowchart: "Luaran Masih Dipakai")
+        if ($sertifikasi->evidence()->where('status_validasi', 'Valid')->exists()) {
+            return $this->respond(false, 422, 'Luaran Masih Dipakai: Data sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence yang telah divalidasi.');
         }
 
         try {
+            $sertifikasi->evidence()->delete();
             $sertifikasi->delete();
         } catch (\Throwable $e) {
             return $this->respond(false, 500, 'Gagal menghapus data sertifikasi: '.$e->getMessage());

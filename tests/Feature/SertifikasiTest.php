@@ -133,15 +133,18 @@ test('filter sertifikasi: dapat memfilter berdasarkan tahun dan rentang tahun se
     // Filter spesifik tahun 2018
     $res2018 = $this->withToken($this->adminToken)->getJson('/api/sertifikasi?tahun_sertifikasi=2018');
     $res2018->assertStatus(200);
-    $tahun2018 = collect($res2018->json('data.data'))->pluck('tahun_sertifikasi')->unique();
-    expect($tahun2018->all())->toBe([2018]);
+    expect($res2018->json('data.data'))->not->toBeEmpty();
+    foreach ($res2018->json('data.data') as $item) {
+        expect(str_starts_with($item['tahun_sertifikasi'], '2018'))->toBeTrue();
+    }
 
     // Filter rentang tahun 2024 - 2026
     $resRentang = $this->withToken($this->adminToken)->getJson('/api/sertifikasi?tahun_mulai=2024&tahun_selesai=2026');
     $resRentang->assertStatus(200);
     foreach ($resRentang->json('data.data') as $item) {
-        expect($item['tahun_sertifikasi'])->toBeGreaterThanOrEqual(2024)
-            ->and($item['tahun_sertifikasi'])->toBeLessThanOrEqual(2026);
+        $tahun = (int) substr($item['tahun_sertifikasi'], 0, 4);
+        expect($tahun)->toBeGreaterThanOrEqual(2024)
+            ->and($tahun)->toBeLessThanOrEqual(2026);
     }
 });
 
@@ -153,6 +156,7 @@ test('sinkronisasi otomatis: menambah dan menghapus sertifikasi otomatis memperb
         'id_dosen' => $dosen->id_dosen,
         'jenis_sertifikasi' => 'Sertifikat Pendidik Profesional',
         'tahun_sertifikasi' => 2024,
+        'url_sertifikasi' => 'https://drive.google.com/file/d/sertif-pendidik/view',
     ]);
     $resStore1->assertStatus(201);
     $idSertif1 = $resStore1->json('data.id_sertifikasi');
@@ -166,6 +170,7 @@ test('sinkronisasi otomatis: menambah dan menghapus sertifikasi otomatis memperb
         'id_dosen' => $dosen->id_dosen,
         'jenis_sertifikasi' => 'Sertifikasi BNSP Cloud Architect',
         'tahun_sertifikasi' => 2025,
+        'url_sertifikasi' => 'https://drive.google.com/file/d/sertif-bnsp/view',
     ]);
     $resStore2->assertStatus(201);
     $idSertif2 = $resStore2->json('data.id_sertifikasi');
@@ -181,6 +186,62 @@ test('sinkronisasi otomatis: menambah dan menghapus sertifikasi otomatis memperb
     $dosenFresh3 = $dosen->fresh();
     expect($dosenFresh3->sertifikasi)->toContain('Sertifikat Pendidik Profesional')
         ->and($dosenFresh3->sertifikasi)->not->toContain('Sertifikasi BNSP Cloud Architect');
+});
+
+test('crud sertifikasi: menyimpan url_sertifikasi dan otomatis membuatkan evidence dengan url_evidence', function () {
+    $dosen = Dosen::first();
+    $urlAwal = 'https://drive.google.com/file/d/sertif-evidence-01/view';
+    $urlUpdate = 'https://drive.google.com/file/d/sertif-evidence-01-updated/view';
+
+    // 1. Simpan sertifikasi baru dengan url_sertifikasi
+    $resStore = $this->withToken($this->adminToken)->postJson('/api/sertifikasi', [
+        'id_dosen' => $dosen->id_dosen,
+        'jenis_sertifikasi' => 'Certified Scrum Master',
+        'nomor_sertifikat' => 'CSM-2024-001',
+        'tahun_sertifikasi' => '2024-03-01',
+        'url_sertifikasi' => $urlAwal,
+    ]);
+
+    $resStore->assertStatus(201)
+        ->assertJsonPath('data.url_sertifikasi', $urlAwal)
+        ->assertJsonPath('data.tahun_sertifikasi', '2024-03-01');
+
+    $idSertif = $resStore->json('data.id_sertifikasi');
+
+    // Cek bahwa record evidence otomatis dibuatkan dengan url_evidence
+    $this->assertDatabaseHas('evidence', [
+        'id_sertifikasi' => $idSertif,
+        'url_evidence' => $urlAwal,
+        'status_validasi' => 'Menunggu Validasi',
+    ]);
+
+    // 2. Update url_sertifikasi
+    $resUpdate = $this->withToken($this->adminToken)->putJson("/api/sertifikasi/{$idSertif}", [
+        'url_sertifikasi' => $urlUpdate,
+    ]);
+
+    $resUpdate->assertStatus(200)
+        ->assertJsonPath('data.url_sertifikasi', $urlUpdate);
+
+    // Cek bahwa record evidence ikut tersinkronisasi
+    $this->assertDatabaseHas('evidence', [
+        'id_sertifikasi' => $idSertif,
+        'url_evidence' => $urlUpdate,
+    ]);
+
+    // 3. Tolak hapus jika evidence sudah divalidasi 'Valid' (Luaran Masih Dipakai)
+    \App\Models\Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Valid']);
+    $resDelFail = $this->withToken($this->adminToken)->deleteJson("/api/sertifikasi/{$idSertif}");
+    $resDelFail->assertStatus(422)
+        ->assertJsonPath('message', 'Luaran Masih Dipakai: Data sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence yang telah divalidasi.');
+
+    // 4. Jika diubah kembali menjadi 'Menunggu Validasi', dapat dihapus
+    \App\Models\Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Menunggu Validasi']);
+    $resDelOk = $this->withToken($this->adminToken)->deleteJson("/api/sertifikasi/{$idSertif}");
+    $resDelOk->assertStatus(200);
+
+    $this->assertDatabaseMissing('sertifikasi', ['id_sertifikasi' => $idSertif]);
+    $this->assertDatabaseMissing('evidence', ['id_sertifikasi' => $idSertif]);
 });
 
 test('endpoint sync-profil: dapat memicu sinkronisasi massal seluruh profil Dosen dan Tendik', function () {

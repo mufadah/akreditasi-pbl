@@ -35,6 +35,7 @@ Route::middleware(['auth.jwt'])->get('/test-auth', function (Request $request) {
 
 // Resource Server: Autentikasi dan penerbitan token dilakukan terpusat melalui SSO Kelompok 1
 Route::match(['get', 'post'], '/login', [ProfileController::class, 'resourceServerInfo']);
+Route::match(['get', 'post'], '/auth/login', [ProfileController::class, 'resourceServerInfo']);
 Route::match(['get', 'post'], '/register', [ProfileController::class, 'resourceServerInfo']);
 
 Route::middleware(['auth.jwt'])->group(function () {

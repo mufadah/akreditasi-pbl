@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('jenis_dokumen'); // Proposal, Kontrak, Laporan, Publikasi, HKI, Sertifikat
             $table->string('nama_file');    // URL Google Drive / path dokumen
             $table->string('path_file')->nullable();
+            $table->string('url_drive')->nullable();
+            $table->string('url_evidence')->nullable();
             $table->date('tanggal_upload')->useCurrent();
             $table->string('status_validasi')->default('Menunggu'); // Menunggu, Valid, Ditolak, Perlu Perbaikan
             $table->text('catatan_validasi')->nullable();

@@ -27,6 +27,7 @@ class Evidence extends Model
         'nama_file',
         'path_file',
         'url_drive',
+        'url_evidence',
         'tanggal_upload',
         'status_validasi',
         'catatan_validasi',

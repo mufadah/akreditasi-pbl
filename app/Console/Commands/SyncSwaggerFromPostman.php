@@ -139,9 +139,12 @@ class SyncSwaggerFromPostman extends Command
 
         $this->parseItems($postman['item'] ?? [], [], $tags, $paths);
 
-        // Tambahkan rute fitur lanjutan (Sertifikasi, Reminder, Gap Analysis, Konfigurasi Metrik, Notifikasi & Audit)
-        foreach ($this->getSupplementaryPaths() as $suppPath => $suppOps) {
-            $paths[$suppPath] = $suppOps;
+        // Hapus endpoint auth bawaan Postman agar digantikan secara presisi oleh endpoint SSO live K1
+        unset($paths['/api/login'], $paths['/api/register'], $paths['/api/me'], $paths['/api/logout']);
+
+        // Tambahkan rute fitur lanjutan (Auth SSO K1, Sertifikasi, Reminder, Gap Analysis, Konfigurasi Metrik, Notifikasi & Audit)
+        $suppPaths = $this->getSupplementaryPaths();
+        foreach ($suppPaths as $suppPath => $suppOps) {
             foreach ($suppOps as $op) {
                 foreach ($op['tags'] ?? [] as $t) {
                     if (! in_array($t, $tags)) {
@@ -150,6 +153,8 @@ class SyncSwaggerFromPostman extends Command
                 }
             }
         }
+
+        $paths = array_merge($suppPaths, $paths);
 
         $openapi['tags'] = array_map(function ($t) {
             return [
@@ -497,12 +502,22 @@ class SyncSwaggerFromPostman extends Command
     private function getSupplementaryPaths(): array
     {
         return [
-            '/api/login' => [
+            '/api/auth/login' => [
                 'post' => [
                     'tags' => ['Auth'],
                     'summary' => 'Login SSO Terpusat (http://akademik.fayra.my.id/api/auth/login)',
-                    'description' => "Login akun terpusat via API SSO Kelompok 1 (http://akademik.fayra.my.id/api/auth/login).\n\nEndpoint ini dapat langsung dieksekusi (**Try it out**) dari Swagger UI. Masukkan kredensial email & password Anda untuk memperoleh Bearer token JWT secara instan, atau gunakan endpoint live eksternal di `http://akademik.fayra.my.id/api/auth/login`.",
+                    'description' => "Login akun terpusat via API SSO Kelompok 1 (http://akademik.fayra.my.id/api/auth/login).\n\nEndpoint ini mengeksekusi request langsung ke server SSO Akademik K1 untuk memvalidasi kredensial dan menerbitkan access_token JWT.\n\nSalin token dari `data.authorization.access_token` hasil respons, lalu klik tombol **Authorize 🔓** di pojok kanan atas Swagger UI untuk mulai menguji endpoint lainnya.",
                     'operationId' => 'loginSSOTerpusat',
+                    'servers' => [
+                        [
+                            'url' => 'http://akademik.fayra.my.id',
+                            'description' => 'Server SSO Kelompok 1 (http://akademik.fayra.my.id)',
+                        ],
+                        [
+                            'url' => 'https://akademik.fayra.my.id',
+                            'description' => 'Server SSO Kelompok 1 (https://akademik.fayra.my.id)',
+                        ],
+                    ],
                     'security' => [],
                     'requestBody' => [
                         'required' => true,
@@ -563,7 +578,7 @@ class SyncSwaggerFromPostman extends Command
                             ],
                         ],
                         '401' => [
-                            'description' => 'Informasi pengalihan atau kredensial gagal di portal SSO K1 (http://akademik.fayra.my.id/api/auth/login).',
+                            'description' => 'Email atau password salah.',
                             'content' => [
                                 'application/json' => [
                                     'schema' => [
@@ -572,8 +587,9 @@ class SyncSwaggerFromPostman extends Command
                                     'example' => [
                                         'success' => false,
                                         'code' => 401,
-                                        'message' => 'Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.',
-                                        'login_url' => 'http://akademik.fayra.my.id/api/auth/login',
+                                        'message' => 'Email atau password salah.',
+                                        'errors' => null,
+                                        'data' => null,
                                     ],
                                 ],
                             ],
@@ -688,7 +704,7 @@ class SyncSwaggerFromPostman extends Command
                             'multipart/form-data' => [
                                 'schema' => [
                                     'type' => 'object',
-                                    'required' => ['jenis_sertifikasi', 'tahun_sertifikasi'],
+                                    'required' => ['jenis_sertifikasi', 'tahun_sertifikasi', 'url_sertifikasi'],
                                     'properties' => [
                                         'id_dosen' => ['type' => 'integer', 'nullable' => true, 'example' => 1],
                                         'id_tendik' => ['type' => 'integer', 'nullable' => true],
@@ -698,10 +714,11 @@ class SyncSwaggerFromPostman extends Command
                                         'nomor_sk' => ['type' => 'string', 'nullable' => true, 'example' => 'SK-SERTIF-2023-01'],
                                         'nomor_sertifikat' => ['type' => 'string', 'nullable' => true, 'example' => 'CERT-KOMP-2023-45'],
                                         'lembaga_penerbit' => ['type' => 'string', 'nullable' => true, 'example' => 'Kemendikbudristek / BNSP'],
-                                        'tahun_sertifikasi' => ['type' => 'integer', 'example' => 2023],
+                                        'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
                                         'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2028-12-31'],
                                         'status_sertifikasi' => ['type' => 'string', 'example' => 'Aktif'],
-                                        'evidence_file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Berkas bukti sertifikat (PDF/JPG/PNG max 10MB)'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/sertif-kompetensi/view', 'description' => 'URL Berkas Sertifikasi (Google Drive/Cloud)'],
+                                        'evidence_file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Berkas fisik bukti sertifikat (PDF/JPG/PNG max 10MB)'],
                                         'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/xxx/view'],
                                     ],
                                 ],
@@ -762,9 +779,10 @@ class SyncSwaggerFromPostman extends Command
                                         'nomor_sk' => ['type' => 'string', 'nullable' => true],
                                         'nomor_sertifikat' => ['type' => 'string', 'nullable' => true],
                                         'lembaga_penerbit' => ['type' => 'string', 'nullable' => true],
-                                        'tahun_sertifikasi' => ['type' => 'integer'],
+                                        'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
                                         'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true],
                                         'status_sertifikasi' => ['type' => 'string'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/sertif-kompetensi/view'],
                                     ],
                                 ],
                             ],
