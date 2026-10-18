@@ -6018,14 +6018,137 @@
                 "tags": [
                     "Sertifikasi"
                 ],
-                "summary": "Daftar Data Sertifikasi",
-                "description": "Mengambil semua riwayat sertifikasi dosen dan tenaga kependidikan.",
+                "summary": "Daftar Sertifikasi (Dosen & Tendik)",
+                "description": "Mengambil daftar data sertifikasi dengan paginasi dan filter lengkap (tipe pemilik dosen vs tendik, status masa berlaku aktif/kedaluwarsa/segera berakhir, tahun, dan pencarian teks luas).",
+                "operationId": "getSertifikasiList",
                 "security": [
                     {
                         "bearerAuth": []
                     },
                     {
                         "apiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Pencarian jenis sertifikasi, no. sertifikat, no. sk, penerbit, atau nama/NIDN/NIP pemilik"
+                    },
+                    {
+                        "name": "tipe_pemilik",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "dosen",
+                                "tendik"
+                            ]
+                        },
+                        "description": "Filter berdasarkan pemilik sertifikasi: \"dosen\" atau \"tendik\""
+                    },
+                    {
+                        "name": "status_masa_berlaku",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "aktif",
+                                "kedaluwarsa",
+                                "segera_berakhir"
+                            ]
+                        },
+                        "description": "Filter status masa berlaku: \"aktif\", \"kedaluwarsa\", atau \"segera_berakhir\""
+                    },
+                    {
+                        "name": "hari_kedaluwarsa",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 30
+                        },
+                        "description": "Ambang batas hari untuk filter segera_berakhir (default: 30 hari)"
+                    },
+                    {
+                        "name": "tahun_sertifikasi",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Filter tahun spesifik penerbitan sertifikasi"
+                    },
+                    {
+                        "name": "tahun_mulai",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Rentang tahun mulai penerbitan"
+                    },
+                    {
+                        "name": "tahun_selesai",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Rentang tahun selesai penerbitan"
+                    },
+                    {
+                        "name": "id_dosen",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Filter ID dosen tertentu"
+                    },
+                    {
+                        "name": "id_tendik",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Filter ID tendik tertentu"
+                    },
+                    {
+                        "name": "status_sertifikasi",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Filter status sertifikasi eksplisit (misal: \"Aktif\", \"Kedaluwarsa\")"
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        },
+                        "description": "Jumlah data per halaman"
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        },
+                        "description": "Nomor halaman"
                     }
                 ],
                 "responses": {
@@ -6038,9 +6161,6 @@
                                 }
                             }
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized: Token Bearer atau API Key tidak valid."
                     }
                 }
             },
@@ -6048,8 +6168,9 @@
                 "tags": [
                     "Sertifikasi"
                 ],
-                "summary": "Tambah Data Sertifikasi",
-                "description": "Menambahkan data sertifikasi pendidik atau kompetensi profesi baru.",
+                "summary": "Tambah Data Sertifikasi Baru",
+                "description": "Menambahkan data sertifikasi baru (Dosen atau Tendik) dan secara otomatis menyinkronkan ke profil Dosen/Tendik bersangkutan.",
+                "operationId": "storeSertifikasi",
                 "security": [
                     {
                         "bearerAuth": []
@@ -6061,16 +6182,17 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "required": [
                                     "jenis_sertifikasi",
-                                    "nomor_sk_sertifikasi"
+                                    "tahun_sertifikasi"
                                 ],
                                 "properties": {
                                     "id_dosen": {
                                         "type": "integer",
+                                        "nullable": true,
                                         "example": 1
                                     },
                                     "id_tendik": {
@@ -6079,19 +6201,56 @@
                                     },
                                     "jenis_sertifikasi": {
                                         "type": "string",
-                                        "example": "Sertifikasi Pendidik"
+                                        "example": "Sertifikat Pendidik (Serdos)"
                                     },
                                     "bidang_studi": {
                                         "type": "string",
-                                        "example": "Teknik Informatika"
+                                        "example": "Teknik Informatika / Rekayasa Perangkat Lunak"
                                     },
-                                    "nomor_sk_sertifikasi": {
+                                    "nomor_registrasi_pendidik": {
                                         "type": "string",
-                                        "example": "SK-SERTIF-2026/001"
+                                        "nullable": true,
+                                        "example": "REG-DIKTI-2023-8871"
+                                    },
+                                    "nomor_sk": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "example": "SK-SERTIF-2023-01"
+                                    },
+                                    "nomor_sertifikat": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "example": "CERT-KOMP-2023-45"
+                                    },
+                                    "lembaga_penerbit": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "example": "Kemendikbudristek / BNSP"
                                     },
                                     "tahun_sertifikasi": {
                                         "type": "integer",
-                                        "example": 2025
+                                        "example": 2023
+                                    },
+                                    "tanggal_kedaluwarsa": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true,
+                                        "example": "2028-12-31"
+                                    },
+                                    "status_sertifikasi": {
+                                        "type": "string",
+                                        "example": "Aktif"
+                                    },
+                                    "evidence_file": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true,
+                                        "description": "Berkas bukti sertifikat (PDF/JPG/PNG max 10MB)"
+                                    },
+                                    "url_drive": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "example": "https://drive.google.com/file/d/xxx/view"
                                     }
                                 }
                             }
@@ -6100,7 +6259,153 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Sertifikasi berhasil ditambahkan.",
+                        "description": "Data sertifikasi berhasil ditambahkan.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi input gagal.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sertifikasi/{id}": {
+            "get": {
+                "tags": [
+                    "Sertifikasi"
+                ],
+                "summary": "Detail Sertifikasi",
+                "description": "Mengambil detail satu data sertifikasi beserta relasi pemilik (dosen/tendik) dan dokumen evidence pendukung.",
+                "operationId": "showSertifikasi",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "ID sertifikasi"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail sertifikasi berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Data sertifikasi tidak ditemukan."
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Sertifikasi"
+                ],
+                "summary": "Perbarui Data Sertifikasi",
+                "description": "Memperbarui data sertifikasi dan secara otomatis menyinkronkan perubahan ke profil Dosen/Tendik bersangkutan.",
+                "operationId": "updateSertifikasi",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "ID sertifikasi"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "id_dosen": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "id_tendik": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "jenis_sertifikasi": {
+                                        "type": "string"
+                                    },
+                                    "bidang_studi": {
+                                        "type": "string"
+                                    },
+                                    "nomor_registrasi_pendidik": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "nomor_sk": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "nomor_sertifikat": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "lembaga_penerbit": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "tahun_sertifikasi": {
+                                        "type": "integer"
+                                    },
+                                    "tanggal_kedaluwarsa": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "status_sertifikasi": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data sertifikasi berhasil diperbarui.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -6113,96 +6418,14 @@
                         "description": "Validasi gagal."
                     }
                 }
-            }
-        },
-        "/api/sertifikasi/{id}": {
-            "get": {
-                "tags": [
-                    "Sertifikasi"
-                ],
-                "summary": "Detail Sertifikasi",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Berhasil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "tags": [
-                    "Sertifikasi"
-                ],
-                "summary": "Perbarui Sertifikasi",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Berhasil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
-                                }
-                            }
-                        }
-                    }
-                }
             },
             "delete": {
                 "tags": [
                     "Sertifikasi"
                 ],
-                "summary": "Hapus Sertifikasi",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
+                "summary": "Hapus Data Sertifikasi",
+                "description": "Menghapus data sertifikasi dan otomatis menyinkronkan profil Dosen/Tendik. Ditolak jika sertifikasi masih terikat pada dokumen evidence.",
+                "operationId": "destroySertifikasi",
                 "security": [
                     {
                         "bearerAuth": []
@@ -6211,9 +6434,20 @@
                         "apiKeyAuth": []
                     }
                 ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "ID sertifikasi"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Sertifikasi berhasil dihapus.",
+                        "description": "Data sertifikasi berhasil dihapus.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -6221,6 +6455,9 @@
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "description": "Luaran Masih Dipakai: Sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence."
                     }
                 }
             }
@@ -6710,6 +6947,36 @@
                 "responses": {
                     "200": {
                         "description": "Detail audit log berhasil diambil.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sertifikasi/sync-profil": {
+            "post": {
+                "tags": [
+                    "Sertifikasi"
+                ],
+                "summary": "Sinkronisasi Massal Sertifikasi ke Profil Dosen & Tendik",
+                "description": "Memicu sinkronisasi menyeluruh daftar sertifikasi ke kolom `sertifikasi` pada profil master Dosen dan Tendik di database.",
+                "operationId": "syncProfilSertifikasi",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "apiKeyAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sinkronisasi sertifikasi ke profil Dosen & Tendik berhasil.",
                         "content": {
                             "application/json": {
                                 "schema": {
