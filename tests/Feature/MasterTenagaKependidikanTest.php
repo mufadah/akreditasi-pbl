@@ -63,25 +63,25 @@ test('flowchart: buka menu tenaga kependidikan berhasil menampilkan daftar tendi
 test('flowchart: tampilkan daftar tendik mendukung pencarian berdasarkan nama, nip, dan jabatan', function () {
     $pendidikan = Pendidikan::first();
     TenagaKependidikan::create([
-        'nip' => '199008222015042001',
-        'nama_tendik' => 'Siti Rahmawati, A.Md.',
-        'jabatan_tendik' => 'Pustakawan',
+        'nip' => '199508222015042999',
+        'nama_tendik' => 'Rina Kartika Unik, A.Md.',
+        'jabatan_tendik' => 'Kepala Arsip Khusus',
         'id_pendidikan' => $pendidikan->id_pendidikan,
     ]);
 
     // Cari by NIP
-    $resNip = $this->withToken($this->adminToken)->getJson('/api/tendik?search=199008222015042001');
+    $resNip = $this->withToken($this->adminToken)->getJson('/api/tendik?search=199508222015042999');
     $resNip->assertStatus(200);
     expect($resNip->json('data.data'))->toHaveCount(1)
-        ->and($resNip->json('data.data.0.nama_tendik'))->toBe('Siti Rahmawati, A.Md.');
+        ->and($resNip->json('data.data.0.nama_tendik'))->toBe('Rina Kartika Unik, A.Md.');
 
     // Cari by Nama
-    $resNama = $this->withToken($this->adminToken)->getJson('/api/tendik?search=Rahmawati');
+    $resNama = $this->withToken($this->adminToken)->getJson('/api/tendik?search=Kartika+Unik');
     $resNama->assertStatus(200);
     expect($resNama->json('data.data'))->toHaveCount(1);
 
     // Cari by Jabatan
-    $resJab = $this->withToken($this->adminToken)->getJson('/api/tendik?search=Pustakawan');
+    $resJab = $this->withToken($this->adminToken)->getJson('/api/tendik?search=Arsip+Khusus');
     $resJab->assertStatus(200);
     expect($resJab->json('data.data'))->toHaveCount(1);
 });
@@ -89,15 +89,15 @@ test('flowchart: tampilkan daftar tendik mendukung pencarian berdasarkan nama, n
 test('flowchart: tampilkan daftar tendik mendukung filter jenis tendik dan status', function () {
     $pendidikan = Pendidikan::first();
     $aktif = TenagaKependidikan::create([
-        'nip' => '198811102014021003',
-        'nama_tendik' => 'Agus Prasetyo, S.T.',
+        'nip' => '198811102014021888',
+        'nama_tendik' => 'Agus Prasetyo Test, S.T.',
         'jabatan_tendik' => 'Teknisi Jaringan & Server',
         'id_pendidikan' => $pendidikan->id_pendidikan,
     ]);
 
     $nonaktif = TenagaKependidikan::create([
-        'nip' => '198907192016022004',
-        'nama_tendik' => 'Tendik Diarsipkan',
+        'nip' => '198907192016022888',
+        'nama_tendik' => 'Tendik Diarsipkan Test',
         'jabatan_tendik' => 'Laboran Komputer',
         'id_pendidikan' => $pendidikan->id_pendidikan,
     ]);
@@ -124,8 +124,8 @@ test('flowchart: tampilkan daftar tendik mendukung filter jenis tendik dan statu
 
 test('flowchart: aksi tambah tendik berhasil disimpan ke database dan menampilkan pesan berhasil', function () {
     $payload = [
-        'nip' => '199205142018012002',
-        'nama' => 'Dewi Lestari, S.E.',
+        'nip' => '199705142018012999',
+        'nama' => 'Dewi Lestari Baru, S.E.',
         'jenis_tendik' => 'Tenaga Administrasi Akademik',
         'kualifikasi' => 'S1',
         'sertifikasi' => 'Sertifikasi Tata Kelola Administrasi PT',
@@ -138,15 +138,15 @@ test('flowchart: aksi tambah tendik berhasil disimpan ke database dan menampilka
             'success' => true,
             'message' => 'Data tenaga kependidikan berhasil ditambahkan.',
             'data' => [
-                'nip' => '199205142018012002',
-                'nama_tendik' => 'Dewi Lestari, S.E.',
+                'nip' => '199705142018012999',
+                'nama_tendik' => 'Dewi Lestari Baru, S.E.',
                 'jabatan_tendik' => 'Tenaga Administrasi Akademik',
             ],
         ]);
 
     $this->assertDatabaseHas('tenaga_kependidikan', [
-        'nip' => '199205142018012002',
-        'nama_tendik' => 'Dewi Lestari, S.E.',
+        'nip' => '199705142018012999',
+        'nama_tendik' => 'Dewi Lestari Baru, S.E.',
         'jabatan_tendik' => 'Tenaga Administrasi Akademik',
     ]);
 });
@@ -181,8 +181,8 @@ test('flowchart: tambah tendik gagal validasi jika NIP duplikat', function () {
 test('screen: detail tendik memuat profil lengkap beserta riwayat sertifikasi kompetensi', function () {
     $pendidikan = Pendidikan::first();
     $tendik = TenagaKependidikan::create([
-        'nip' => '199304052019031001',
-        'nama_tendik' => 'Eko Wahyudi, A.Md.',
+        'nip' => '199304052019031999',
+        'nama_tendik' => 'Eko Wahyudi Test, A.Md.',
         'jabatan_tendik' => 'Laboran Perangkat Keras & IoT',
         'id_pendidikan' => $pendidikan->id_pendidikan,
         'sertifikasi' => 'Sertifikasi IoT Hardware',
@@ -191,7 +191,7 @@ test('screen: detail tendik memuat profil lengkap beserta riwayat sertifikasi ko
     Sertifikasi::create([
         'id_tendik' => $tendik->id_tendik,
         'jenis_sertifikasi' => 'Embedded Systems & IoT Hardware',
-        'nomor_sertifikat' => 'IOT-IND-2023-301',
+        'nomor_sertifikat' => 'IOT-IND-2023-999',
         'lembaga_penerbit' => 'LSP Elektronika & Komputer Indonesia',
         'tahun_sertifikasi' => 2023,
         'status_sertifikasi' => 'Aktif',
@@ -204,8 +204,8 @@ test('screen: detail tendik memuat profil lengkap beserta riwayat sertifikasi ko
             'success' => true,
             'data' => [
                 'id_tendik' => $tendik->id_tendik,
-                'nip' => '199304052019031001',
-                'nama_tendik' => 'Eko Wahyudi, A.Md.',
+                'nip' => '199304052019031999',
+                'nama_tendik' => 'Eko Wahyudi Test, A.Md.',
             ],
         ])
         ->assertJsonStructure([
@@ -230,8 +230,8 @@ test('screen: detail tendik memuat profil lengkap beserta riwayat sertifikasi ko
 test('flowchart: aksi ubah data tendik berhasil mengupdate database dan menampilkan pesan berhasil', function () {
     $pendidikan = Pendidikan::first();
     $tendik = TenagaKependidikan::create([
-        'nip' => '198907192016022004',
-        'nama_tendik' => 'Nurul Hidayah',
+        'nip' => '198907192016022999',
+        'nama_tendik' => 'Nurul Hidayah Test',
         'jabatan_tendik' => 'Staf Tata Usaha',
         'id_pendidikan' => $pendidikan->id_pendidikan,
     ]);
