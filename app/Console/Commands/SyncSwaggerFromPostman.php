@@ -148,7 +148,7 @@ class SyncSwaggerFromPostman extends Command
             }
         }
 
-        $paths = array_merge($suppPaths, $paths);
+        $paths = array_merge($paths, $suppPaths);
 
         $openapi['tags'] = array_map(function ($t) {
             return [
@@ -682,23 +682,89 @@ class SyncSwaggerFromPostman extends Command
                     'responses' => [
                         '200' => [
                             'description' => 'Data sertifikasi berhasil diambil.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 200,
+                                        'message' => 'Data sertifikasi berhasil diambil.',
+                                        'data' => [
+                                            'current_page' => 1,
+                                            'data' => [
+                                                [
+                                                    'id_sertifikasi' => 1,
+                                                    'id_dosen' => 1,
+                                                    'id_tendik' => null,
+                                                    'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                                    'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                                    'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                                    'nomor_sk' => 'SK-SERTIF-2023-01',
+                                                    'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                                    'lembaga_penerbit' => 'Kemendikbudristek',
+                                                    'tahun_sertifikasi' => '2023-08-20',
+                                                    'tanggal_kedaluwarsa' => '2028-12-31',
+                                                    'status_sertifikasi' => 'Aktif',
+                                                    'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                                    'dosen' => [
+                                                        'id_dosen' => 1,
+                                                        'nama_dosen' => 'Dr. Budi Santoso, M.Kom.',
+                                                        'nidn' => '0012345678',
+                                                    ],
+                                                    'evidence' => [
+                                                        [
+                                                            'id_evidence' => 1,
+                                                            'id_sertifikasi' => 1,
+                                                            'nama_file' => 'Bukti Sertifikat Serdos.pdf',
+                                                            'url_evidence' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                                            'status_validasi' => 'Menunggu Validasi',
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                            'total' => 1,
+                                            'per_page' => 10,
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                     ],
                 ],
                 'post' => [
                     'tags' => ['Sertifikasi'],
                     'summary' => 'Tambah Data Sertifikasi Baru',
-                    'description' => 'Menambahkan data sertifikasi baru (Dosen atau Tendik) dan secara otomatis menyinkronkan ke profil Dosen/Tendik bersangkutan.',
+                    'description' => 'Menambahkan data sertifikasi baru (Dosen atau Tendik) dengan menyertakan tautan url_sertifikasi atau mengunggah berkas sertifikat, dan secara otomatis menyinkronkan ke profil Dosen/Tendik bersangkutan.',
                     'operationId' => 'storeSertifikasi',
                     'security' => [['bearerAuth' => []]],
                     'requestBody' => [
                         'required' => true,
                         'content' => [
-                            'multipart/form-data' => [
+                            'application/json' => [
                                 'schema' => [
                                     'type' => 'object',
                                     'required' => ['jenis_sertifikasi', 'tahun_sertifikasi', 'url_sertifikasi'],
+                                    'properties' => [
+                                        'id_dosen' => ['type' => 'integer', 'nullable' => true, 'example' => 1, 'description' => 'ID Dosen jika sertifikasi milik dosen'],
+                                        'id_tendik' => ['type' => 'integer', 'nullable' => true, 'description' => 'ID Tendik jika sertifikasi milik tendik'],
+                                        'jenis_sertifikasi' => ['type' => 'string', 'example' => 'Sertifikat Pendidik (Serdos)'],
+                                        'bidang_studi' => ['type' => 'string', 'example' => 'Teknik Informatika / Rekayasa Perangkat Lunak'],
+                                        'nomor_registrasi_pendidik' => ['type' => 'string', 'nullable' => true, 'example' => 'REG-DIKTI-2023-8871'],
+                                        'nomor_sk' => ['type' => 'string', 'nullable' => true, 'example' => 'SK-SERTIF-2023-01'],
+                                        'nomor_sertifikat' => ['type' => 'string', 'nullable' => true, 'example' => 'CERT-KOMP-2023-45'],
+                                        'lembaga_penerbit' => ['type' => 'string', 'nullable' => true, 'example' => 'Kemendikbudristek / BNSP'],
+                                        'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
+                                        'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2028-12-31'],
+                                        'status_sertifikasi' => ['type' => 'string', 'example' => 'Aktif'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing', 'description' => 'Tautan URL dokumen/berkas sertifikasi (Google Drive, Cloud Storage, dsb.)'],
+                                        'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing'],
+                                    ],
+                                ],
+                            ],
+                            'multipart/form-data' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'required' => ['jenis_sertifikasi', 'tahun_sertifikasi'],
                                     'properties' => [
                                         'id_dosen' => ['type' => 'integer', 'nullable' => true, 'example' => 1],
                                         'id_tendik' => ['type' => 'integer', 'nullable' => true],
@@ -711,9 +777,10 @@ class SyncSwaggerFromPostman extends Command
                                         'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
                                         'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2028-12-31'],
                                         'status_sertifikasi' => ['type' => 'string', 'example' => 'Aktif'],
-                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/sertif-kompetensi/view', 'description' => 'URL Berkas Sertifikasi (Google Drive/Cloud)'],
-                                        'evidence_file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Berkas fisik bukti sertifikat (PDF/JPG/PNG max 10MB)'],
-                                        'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/xxx/view'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing', 'description' => 'Tautan URL dokumen sertifikasi'],
+                                        'evidence_file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Unggah berkas fisik bukti sertifikat (PDF/JPG/PNG max 10MB)'],
+                                        'file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Alias unggah berkas fisik'],
+                                        'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing'],
                                     ],
                                 ],
                             ],
@@ -722,7 +789,31 @@ class SyncSwaggerFromPostman extends Command
                     'responses' => [
                         '201' => [
                             'description' => 'Data sertifikasi berhasil ditambahkan.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 201,
+                                        'message' => 'Data sertifikasi berhasil ditambahkan.',
+                                        'data' => [
+                                            'id_sertifikasi' => 1,
+                                            'id_dosen' => 1,
+                                            'id_tendik' => null,
+                                            'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                            'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                            'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                            'nomor_sk' => 'SK-SERTIF-2023-01',
+                                            'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                            'lembaga_penerbit' => 'Kemendikbudristek',
+                                            'tahun_sertifikasi' => '2023-08-20',
+                                            'tanggal_kedaluwarsa' => '2028-12-31',
+                                            'status_sertifikasi' => 'Aktif',
+                                            'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                         '422' => [
                             'description' => 'Validasi input gagal.',
@@ -744,7 +835,31 @@ class SyncSwaggerFromPostman extends Command
                     'responses' => [
                         '200' => [
                             'description' => 'Detail sertifikasi berhasil diambil.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 200,
+                                        'message' => 'Detail sertifikasi berhasil diambil.',
+                                        'data' => [
+                                            'id_sertifikasi' => 1,
+                                            'id_dosen' => 1,
+                                            'id_tendik' => null,
+                                            'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                            'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                            'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                            'nomor_sk' => 'SK-SERTIF-2023-01',
+                                            'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                            'lembaga_penerbit' => 'Kemendikbudristek',
+                                            'tahun_sertifikasi' => '2023-08-20',
+                                            'tanggal_kedaluwarsa' => '2028-12-31',
+                                            'status_sertifikasi' => 'Aktif',
+                                            'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                         '404' => ['description' => 'Data sertifikasi tidak ditemukan.'],
                     ],
@@ -776,7 +891,7 @@ class SyncSwaggerFromPostman extends Command
                                         'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
                                         'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true],
                                         'status_sertifikasi' => ['type' => 'string'],
-                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/sertif-kompetensi/view'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing'],
                                     ],
                                 ],
                             ],
@@ -785,7 +900,31 @@ class SyncSwaggerFromPostman extends Command
                     'responses' => [
                         '200' => [
                             'description' => 'Data sertifikasi berhasil diperbarui.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 200,
+                                        'message' => 'Data sertifikasi berhasil diperbarui.',
+                                        'data' => [
+                                            'id_sertifikasi' => 1,
+                                            'id_dosen' => 1,
+                                            'id_tendik' => null,
+                                            'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                            'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                            'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                            'nomor_sk' => 'SK-SERTIF-2023-01',
+                                            'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                            'lembaga_penerbit' => 'Kemendikbudristek',
+                                            'tahun_sertifikasi' => '2023-08-20',
+                                            'tanggal_kedaluwarsa' => '2028-12-31',
+                                            'status_sertifikasi' => 'Aktif',
+                                            'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                         '422' => ['description' => 'Validasi gagal.'],
                     ],
@@ -1023,4 +1162,3 @@ class SyncSwaggerFromPostman extends Command
         ];
     }
 }
-
