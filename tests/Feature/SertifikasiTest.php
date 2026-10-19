@@ -7,6 +7,8 @@ use App\Models\TenagaKependidikan;
 use Database\Seeders\DatabaseSeeder;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -266,4 +268,30 @@ test('endpoint sync-profil: dapat memicu sinkronisasi massal seluruh profil Dose
                 'total_tendik_disinkron',
             ],
         ]);
+});
+
+test('api sertifikasi: upload file bukti otomatis men-generate url_sertifikasi dari storage', function () {
+    Storage::fake('public');
+    $dosen = Dosen::first();
+
+    $file = UploadedFile::fake()->create('sertifikat-kompetensi.pdf', 500, 'application/pdf');
+
+    $response = $this->withToken($this->adminToken)->post('/api/sertifikasi', [
+        'id_dosen' => $dosen->id_dosen,
+        'jenis_sertifikasi' => 'Sertifikat Kompetensi Oracle Certified Professional',
+        'tahun_sertifikasi' => 2024,
+        'evidence_file' => $file,
+    ], ['Accept' => 'application/json']);
+
+    $response->assertStatus(201);
+    $urlSertifikasi = $response->json('data.url_sertifikasi');
+
+    expect($urlSertifikasi)->not->toBeEmpty()
+        ->and($urlSertifikasi)->toContain('/storage/evidence/sertifikasi/');
+
+    $this->assertDatabaseHas('sertifikasi', [
+        'id_dosen' => $dosen->id_dosen,
+        'jenis_sertifikasi' => 'Sertifikat Kompetensi Oracle Certified Professional',
+        'url_sertifikasi' => $urlSertifikasi,
+    ]);
 });

@@ -3161,6 +3161,178 @@
                     "response": []
                 }
             ]
+        },
+        {
+            "name": "9. Sertifikasi",
+            "item": [
+                {
+                    "name": "9.1 GET Semua Sertifikasi",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/sertifikasi?per_page=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sertifikasi"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "disabled": false
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "9.2 POST Tambah Data Sertifikasi",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"id_dosen\": 1,\n    \"jenis_sertifikasi\": \"Sertifikat Pendidik (Serdos)\",\n    \"bidang_studi\": \"Teknik Informatika / Rekayasa Perangkat Lunak\",\n    \"nomor_registrasi_pendidik\": \"REG-DIKTI-2023-8871\",\n    \"nomor_sk\": \"SK-SERTIF-2023-01\",\n    \"nomor_sertifikat\": \"CERT-KOMP-2023-45\",\n    \"lembaga_penerbit\": \"Kemendikbudristek\",\n    \"tahun_sertifikasi\": \"2023-08-20\",\n    \"tanggal_kedaluwarsa\": \"2028-12-31\",\n    \"status_sertifikasi\": \"Aktif\",\n    \"url_sertifikasi\": \"https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sertifikasi",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sertifikasi"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "9.3 GET Detail Sertifikasi",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/sertifikasi/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sertifikasi",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "9.4 PUT Update Data Sertifikasi",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"url_sertifikasi\": \"https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing\",\n    \"status_sertifikasi\": \"Aktif\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sertifikasi/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sertifikasi",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "9.5 DELETE Hapus Data Sertifikasi",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/sertifikasi/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sertifikasi",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "9.6 POST Sinkronisasi Profil Sertifikasi",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/sertifikasi/sync-profil",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sertifikasi",
+                                "sync-profil"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
         }
     ]
 }

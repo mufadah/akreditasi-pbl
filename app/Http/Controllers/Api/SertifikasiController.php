@@ -65,9 +65,13 @@ class SertifikasiController extends Controller
             ],
             'tanggal_kedaluwarsa' => ['nullable', 'date'],
             'status_sertifikasi' => ['sometimes', 'string', 'max:50'],
-            'url_sertifikasi' => [...$req, 'string', 'max:2048'],
+            'url_sertifikasi' => $isUpdate
+                ? ['sometimes', 'nullable', 'string', 'max:2048']
+                : ['required_without_all:evidence_file,file,file_sertifikasi', 'nullable', 'string', 'max:2048'],
             'evidence_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
-            'url_drive' => ['nullable', 'string', 'max:255'],
+            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'file_sertifikasi' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'url_drive' => ['nullable', 'string', 'max:2048'],
         ];
     }
 
@@ -213,23 +217,26 @@ class SertifikasiController extends Controller
 
         try {
             $sertifikasi = DB::transaction(function () use ($request, $validated) {
+                $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
+                $pathFile = null;
+                $namaFile = null;
+
+                if ($file) {
+                    $namaFile = $file->getClientOriginalName();
+                    $pathFile = $file->store('evidence/sertifikasi', 'public');
+                    if (empty($validated['url_sertifikasi'])) {
+                        $validated['url_sertifikasi'] = url('storage/'.$pathFile);
+                    }
+                }
+
                 $sertifikasi = Sertifikasi::create(
-                    collect($validated)->except(['evidence_file', 'url_drive'])->toArray()
+                    collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray()
                 );
 
                 // Lampirkan dokumen evidence jika ada (Fitur 9 Flowchart)
                 // Baik melalui upload file, url_drive, maupun url_sertifikasi
                 $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
-                if ($request->hasFile('evidence_file') || ! empty($urlBukti)) {
-                    $pathFile = null;
-                    $namaFile = null;
-
-                    if ($request->hasFile('evidence_file')) {
-                        $file = $request->file('evidence_file');
-                        $namaFile = $file->getClientOriginalName();
-                        $pathFile = $file->store('evidence/sertifikasi', 'public');
-                    }
-
+                if ($pathFile || ! empty($urlBukti)) {
                     Evidence::create([
                         'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                         'jenis_dokumen' => 'Sertifikat',
@@ -288,25 +295,42 @@ class SertifikasiController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($sertifikasi, $validated) {
+            DB::transaction(function () use ($request, $sertifikasi, $validated) {
+                $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
+                $pathFile = null;
+                $namaFile = null;
+
+                if ($file) {
+                    $namaFile = $file->getClientOriginalName();
+                    $pathFile = $file->store('evidence/sertifikasi', 'public');
+                    if (empty($validated['url_sertifikasi'])) {
+                        $validated['url_sertifikasi'] = url('storage/'.$pathFile);
+                    }
+                }
+
                 $sertifikasi->update(
-                    collect($validated)->except(['evidence_file', 'url_drive'])->toArray()
+                    collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray()
                 );
 
                 $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
-                if ($urlBukti) {
+                if ($pathFile || ! empty($urlBukti)) {
                     $evidence = $sertifikasi->evidence()->first();
                     if ($evidence) {
-                        $evidence->update([
-                            'url_evidence' => $urlBukti,
+                        $evidenceData = [
+                            'url_evidence' => $urlBukti ?: $evidence->url_evidence,
                             'url_drive' => $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti,
-                        ]);
+                        ];
+                        if ($pathFile) {
+                            $evidenceData['path_file'] = $pathFile;
+                            $evidenceData['nama_file'] = $namaFile;
+                        }
+                        $evidence->update($evidenceData);
                     } else {
                         Evidence::create([
                             'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                             'jenis_dokumen' => 'Sertifikat',
-                            'nama_file' => $sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi',
-                            'path_file' => null,
+                            'nama_file' => $namaFile ?? ($sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi'),
+                            'path_file' => $pathFile,
                             'url_drive' => $validated['url_drive'] ?? $urlBukti,
                             'url_evidence' => $urlBukti,
                             'tanggal_upload' => now()->toDateString(),
