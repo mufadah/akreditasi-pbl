@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\BidangKeahlian;
-use App\Models\Dosen;
 use App\Models\JabatanAkademik;
 use App\Models\JenisKegiatan;
 use App\Models\JenisKerjaSama;
@@ -11,7 +10,6 @@ use App\Models\JenisLuaran;
 use App\Models\Pendidikan;
 use App\Models\TahunAkademik;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -48,6 +46,18 @@ class DatabaseSeeder extends Seeder
                 'program_studi' => 'Teknik Telekomunikasi',
                 'tahun_lulus' => 2018,
             ],
+            [
+                'jenjang' => 'S3',
+                'universitas' => 'Institut Teknologi Bandung',
+                'program_studi' => 'Teknik Elektro dan Informatika',
+                'tahun_lulus' => 2019,
+            ],
+            [
+                'jenjang' => 'S3',
+                'universitas' => 'Universitas Gadjah Mada',
+                'program_studi' => 'Ilmu Komputer',
+                'tahun_lulus' => 2018,
+            ],
         ];
 
         foreach ($dataPendidikan as $p) {
@@ -62,7 +72,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // 3. Bidang Keahlian
-        foreach (['Artificial Intelligence', 'Internet of Things', 'Cybersecurity', 'Software Engineering', 'Cloud Computing'] as $bk) {
+        foreach (['Artificial Intelligence', 'Internet of Things', 'Cybersecurity', 'Software Engineering', 'Cloud Computing', 'Data Science', 'Computer Networks'] as $bk) {
             BidangKeahlian::firstOrCreate(['nama_bidang' => $bk]);
         }
 
@@ -84,11 +94,13 @@ class DatabaseSeeder extends Seeder
         JenisLuaran::firstOrCreate(['nama_jenis_luaran' => 'Produk Teknologi / Prototipe', 'indeks' => 'TKT']);
 
         // 7. Tahun Akademik
-        TahunAkademik::firstOrCreate(['tahun_akademik' => 2025]);
-        TahunAkademik::firstOrCreate(['tahun_akademik' => 2026]);
+        foreach ([2022, 2023, 2024, 2025, 2026] as $thn) {
+            TahunAkademik::firstOrCreate(['tahun_akademik' => $thn]);
+        }
 
-        // 8. Master Data Baru & Semua Seeder Terhubung
+        // 8. Jalankan Semua Seeder Terstruktur untuk Seluruh Model
         $this->call([
+            UserSeeder::class,
             JenisKerjaSamaSeeder::class,
             JenisKegiatanSeeder::class,
             JenisLuaranSeeder::class,
@@ -96,33 +108,19 @@ class DatabaseSeeder extends Seeder
             JenisPkmSeeder::class,
             KonfigurasiMetrikSeeder::class,
             TenagaKependidikanSeeder::class,
+            DosenSeeder::class,
+            SertifikasiSeeder::class,
+            MitraSeeder::class,
+            KerjaSamaSeeder::class,
+            KegiatanSeeder::class,
+            LuaranSeeder::class,
+            BukuSeeder::class,
+            HkiSeeder::class,
+            EvidenceSeeder::class,
+            AssessmentHasilSeeder::class,
+            AuditLogSeeder::class,
+            NotifikasiSeeder::class,
+            LegacyTridharmaSeeder::class,
         ]);
-
-        // 9. Data Akademik Dosen Terkait Akun K1 (Tabel dosen, bukan users)
-        $jabatan = JabatanAkademik::first();
-        $pendidikan = Pendidikan::first();
-        if ($jabatan && $pendidikan) {
-            $existing = Dosen::withTrashed()->where('nidn', '0012345678')->orWhere('email', 'dosen@example.com')->first();
-            if ($existing) {
-                if ($existing->trashed()) {
-                    $existing->restore();
-                }
-                $existing->update([
-                    'email' => 'dosen@example.com',
-                    'id_jabatan' => $jabatan->id_jabatan,
-                    'id_pendidikan' => $pendidikan->id_pendidikan,
-                    'status_dosen' => 'DTPS',
-                ]);
-            } else {
-                Dosen::create([
-                    'nidn' => '0012345678',
-                    'email' => 'dosen@example.com',
-                    'id_jabatan' => $jabatan->id_jabatan,
-                    'id_pendidikan' => $pendidikan->id_pendidikan,
-                    'nama_dosen' => 'Dosen K1 SSO',
-                    'status_dosen' => 'DTPS',
-                ]);
-            }
-        }
     }
 }
