@@ -60,11 +60,11 @@ class KegiatanController extends Controller
             'anggota.*.jenis_anggota' => ['required_with:anggota', 'string', 'in:dosen,mahasiswa,Dosen,Mahasiswa'],
             'anggota.*.id_dosen' => [
                 'nullable',
-                Rule::requiredIf(fn () => strtolower(request()->input('anggota.*.jenis_anggota', '')) === 'dosen'),
+                'required_if:anggota.*.jenis_anggota,dosen,Dosen',
                 'integer',
                 Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at'),
             ],
-            'anggota.*.id_mahasiswa' => ['nullable', 'integer'],
+            'anggota.*.id_mahasiswa' => ['nullable'],
             'anggota.*.peran' => ['required_with:anggota', 'string', 'max:50'],
 
             // Validasi pendanaan kegiatan (opsional/nested)
