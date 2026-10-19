@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Dosen;
+use App\Models\Evidence;
 use App\Models\Sertifikasi;
 use App\Models\TenagaKependidikan;
 use Database\Seeders\DatabaseSeeder;
@@ -218,25 +219,31 @@ test('crud sertifikasi: menyimpan url_sertifikasi dan otomatis membuatkan eviden
     // 2. Update url_sertifikasi
     $resUpdate = $this->withToken($this->adminToken)->putJson("/api/sertifikasi/{$idSertif}", [
         'url_sertifikasi' => $urlUpdate,
+        'tahun_sertifikasi' => 2024,
     ]);
 
     $resUpdate->assertStatus(200)
-        ->assertJsonPath('data.url_sertifikasi', $urlUpdate);
+        ->assertJsonPath('data.url_sertifikasi', $urlUpdate)
+        ->assertJsonPath('data.tahun_sertifikasi', '2024-01-01');
 
     // Cek bahwa record evidence ikut tersinkronisasi
     $this->assertDatabaseHas('evidence', [
         'id_sertifikasi' => $idSertif,
         'url_evidence' => $urlUpdate,
     ]);
+    $this->assertDatabaseHas('sertifikasi', [
+        'id_sertifikasi' => $idSertif,
+        'tahun_sertifikasi' => '2024-01-01',
+    ]);
 
     // 3. Tolak hapus jika evidence sudah divalidasi 'Valid' (Luaran Masih Dipakai)
-    \App\Models\Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Valid']);
+    Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Valid']);
     $resDelFail = $this->withToken($this->adminToken)->deleteJson("/api/sertifikasi/{$idSertif}");
     $resDelFail->assertStatus(422)
         ->assertJsonPath('message', 'Luaran Masih Dipakai: Data sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence yang telah divalidasi.');
 
     // 4. Jika diubah kembali menjadi 'Menunggu Validasi', dapat dihapus
-    \App\Models\Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Menunggu Validasi']);
+    Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Menunggu Validasi']);
     $resDelOk = $this->withToken($this->adminToken)->deleteJson("/api/sertifikasi/{$idSertif}");
     $resDelOk->assertStatus(200);
 

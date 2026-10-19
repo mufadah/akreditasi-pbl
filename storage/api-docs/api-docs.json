@@ -300,9 +300,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "parameters": [
@@ -450,9 +447,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "requestBody": {
@@ -575,9 +569,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "parameters": [
@@ -617,9 +608,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "parameters": [
@@ -718,9 +706,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "parameters": [
@@ -762,9 +747,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -792,9 +774,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -822,9 +801,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -852,9 +828,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -882,9 +855,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -912,9 +882,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -942,9 +909,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -970,9 +934,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -1000,9 +961,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "parameters": [
@@ -1039,9 +997,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -1068,9 +1023,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "parameters": [
@@ -1107,9 +1059,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -1137,9 +1086,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "responses": {
@@ -1166,9 +1112,6 @@
                 "security": [
                     {
                         "bearerAuth": []
-                    },
-                    {
-                        "apiKeyAuth": []
                     }
                 ],
                 "parameters": [
@@ -6877,12 +6820,6 @@
                 "scheme": "bearer",
                 "bearerFormat": "JWT",
                 "description": "Masukkan token JWT Anda yang diperoleh setelah login."
-            },
-            "apiKeyAuth": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "X-API-KEY",
-                "description": "API Key untuk interoperabilitas machine-to-machine (K1 & K3). Nilai default: k2-secret-key-akreditasi."
             }
         },
         "schemas": {

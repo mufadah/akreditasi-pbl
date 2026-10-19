@@ -71,6 +71,17 @@ class SertifikasiController extends Controller
         ];
     }
 
+    private function normalizeTahunSertifikasi(int|string $value): string
+    {
+        $value = (string) $value;
+
+        if (preg_match('/^\d{4}$/', $value) === 1) {
+            return $value.'-01-01';
+        }
+
+        return $value;
+    }
+
     /**
      * Ambil daftar sertifikasi dengan filter pencarian dan paginasi.
      * Mendukung filter: search, tipe_pemilik (dosen/tendik), status_masa_berlaku,
@@ -194,6 +205,7 @@ class SertifikasiController extends Controller
         }
 
         $validated = $validator->validated();
+        $validated['tahun_sertifikasi'] = $this->normalizeTahunSertifikasi($validated['tahun_sertifikasi']);
 
         if (empty($validated['status_sertifikasi'])) {
             $validated['status_sertifikasi'] = 'Aktif';
@@ -271,6 +283,9 @@ class SertifikasiController extends Controller
         }
 
         $validated = $validator->validated();
+        if (array_key_exists('tahun_sertifikasi', $validated)) {
+            $validated['tahun_sertifikasi'] = $this->normalizeTahunSertifikasi($validated['tahun_sertifikasi']);
+        }
 
         try {
             DB::transaction(function () use ($sertifikasi, $validated) {
