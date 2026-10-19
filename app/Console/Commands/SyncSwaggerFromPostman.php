@@ -104,12 +104,6 @@ class SyncSwaggerFromPostman extends Command
                         'bearerFormat' => 'JWT',
                         'description' => 'Masukkan token JWT Anda yang diperoleh setelah login.',
                     ],
-                    'apiKeyAuth' => [
-                        'type' => 'apiKey',
-                        'in' => 'header',
-                        'name' => 'X-API-KEY',
-                        'description' => 'API Key untuk interoperabilitas machine-to-machine (K1 & K3). Nilai default: k2-secret-key-akreditasi.',
-                    ],
                 ],
                 'schemas' => [
                     'StandardResponse' => [
@@ -670,7 +664,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Sertifikasi (Dosen & Tendik)',
                     'description' => 'Mengambil daftar data sertifikasi dengan paginasi dan filter lengkap (tipe pemilik dosen vs tendik, status masa berlaku aktif/kedaluwarsa/segera berakhir, tahun, dan pencarian teks luas).',
                     'operationId' => 'getSertifikasiList',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'search', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string'], 'description' => 'Pencarian jenis sertifikasi, no. sertifikat, no. sk, penerbit, atau nama/NIDN/NIP pemilik'],
                         ['name' => 'tipe_pemilik', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['dosen', 'tendik']], 'description' => 'Filter berdasarkan pemilik sertifikasi: "dosen" atau "tendik"'],
@@ -697,7 +691,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Tambah Data Sertifikasi Baru',
                     'description' => 'Menambahkan data sertifikasi baru (Dosen atau Tendik) dan secara otomatis menyinkronkan ke profil Dosen/Tendik bersangkutan.',
                     'operationId' => 'storeSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'requestBody' => [
                         'required' => true,
                         'content' => [
@@ -743,7 +737,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Detail Sertifikasi',
                     'description' => 'Mengambil detail satu data sertifikasi beserta relasi pemilik (dosen/tendik) dan dokumen evidence pendukung.',
                     'operationId' => 'showSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
                     ],
@@ -760,7 +754,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Perbarui Data Sertifikasi',
                     'description' => 'Memperbarui data sertifikasi dan secara otomatis menyinkronkan perubahan ke profil Dosen/Tendik bersangkutan.',
                     'operationId' => 'updateSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
                     ],
@@ -801,7 +795,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Hapus Data Sertifikasi',
                     'description' => 'Menghapus data sertifikasi dan otomatis menyinkronkan profil Dosen/Tendik. Ditolak jika sertifikasi masih terikat pada dokumen evidence.',
                     'operationId' => 'destroySertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
                     ],
@@ -820,7 +814,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Sinkronisasi Massal Sertifikasi ke Profil Dosen & Tendik',
                     'description' => 'Memicu sinkronisasi menyeluruh daftar sertifikasi ke kolom `sertifikasi` pada profil master Dosen dan Tendik di database.',
                     'operationId' => 'syncProfilSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Sinkronisasi sertifikasi ke profil Dosen & Tendik berhasil.',
@@ -835,7 +829,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Monitoring Reminder Kedaluwarsa Kerja Sama',
                     'description' => 'Mengambil daftar dokumen kerja sama yang telah kedaluwarsa atau akan kedaluwarsa dalam 30 hari ke depan.',
                     'operationId' => 'reminderKedaluwarsaKerjaSama',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar reminder masa berlaku kerja sama berhasil diambil.',
@@ -850,7 +844,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Trigger Sinkronisasi Status Kedaluwarsa & Notifikasi Otomatis',
                     'description' => 'Memperbarui status dokumen kerja sama yang lewat masa berlaku menjadi "Kedaluwarsa" dan mengirimkan notifikasi in-app otomatis kepada Administrator dan Kaprodi.',
                     'operationId' => 'checkKedaluwarsaKerjaSama',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Pemeriksaan status kedaluwarsa dan notifikasi berhasil.',
@@ -865,7 +859,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Jalankan Engine Assessment SDM & Gap Analysis K3',
                     'description' => 'Melakukan kalkulasi komputasi gap analysis per kriteria LAM INFOKOM K2 berdasarkan data riil vs target K3 dan menghasilkan rekomendasi taktis.',
                     'operationId' => 'runAssessmentGapAnalysis',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Assessment dan kalkulasi gap analysis berhasil dieksekusi.',
@@ -880,7 +874,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Riwayat Hasil Assessment & Rekomendasi',
                     'description' => 'Mengambil riwayat hasil komputasi assessment SDM dan rekomendasi perbaikan indikator.',
                     'operationId' => 'getAssessmentHasil',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Riwayat hasil assessment berhasil diambil.',
@@ -895,7 +889,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Sinkronisasi Indikator Standar LAM INFOKOM dari K3',
                     'description' => 'Mengambil daftar indikator dan kriteria akreditasi standar dari modul K3.',
                     'operationId' => 'getIndikatorK3',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar indikator K3 berhasil diambil.',
@@ -910,7 +904,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Konfigurasi Metrik Akreditasi',
                     'description' => 'Mengambil seluruh konfigurasi metrik, bobot, dan ambang batas indikator akreditasi.',
                     'operationId' => 'getKonfigurasiMetrikList',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar konfigurasi metrik berhasil diambil.',
@@ -923,7 +917,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Tambah Konfigurasi Metrik',
                     'description' => 'Menyimpan konfigurasi indikator baru.',
                     'operationId' => 'storeKonfigurasiMetrik',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '201' => [
                             'description' => 'Konfigurasi metrik berhasil disimpan.',
@@ -938,7 +932,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Notifikasi In-App Pengguna',
                     'description' => 'Mengambil daftar notifikasi pengguna dengan filter unread_only.',
                     'operationId' => 'getNotifikasiList',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'unread_only', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'boolean'], 'description' => 'Filter hanya notifikasi yang belum dibaca'],
                     ],
@@ -954,7 +948,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Kirim Notifikasi In-App Baru',
                     'description' => 'Mengirim notifikasi ke user atau role tertentu.',
                     'operationId' => 'sendNotifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '201' => [
                             'description' => 'Notifikasi berhasil dikirim.',
@@ -968,7 +962,7 @@ class SyncSwaggerFromPostman extends Command
                     'tags' => ['Notifikasi & Audit Log'],
                     'summary' => 'Tandai Notifikasi Telah Dibaca',
                     'operationId' => 'markNotifikasiAsRead',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                     ],
@@ -985,7 +979,7 @@ class SyncSwaggerFromPostman extends Command
                     'tags' => ['Notifikasi & Audit Log'],
                     'summary' => 'Tandai Seluruh Notifikasi Telah Dibaca',
                     'operationId' => 'markAllNotifikasiAsRead',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Seluruh notifikasi ditandai telah dibaca.',
@@ -1000,7 +994,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Riwayat Audit Trail Log',
                     'description' => 'Mengambil catatan audit log forensik aktivitas mutasi data.',
                     'operationId' => 'getAuditLogs',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar audit log berhasil diambil.',
@@ -1014,7 +1008,7 @@ class SyncSwaggerFromPostman extends Command
                     'tags' => ['Notifikasi & Audit Log'],
                     'summary' => 'Detail Forensik Audit Log',
                     'operationId' => 'showAuditLog',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                     ],
