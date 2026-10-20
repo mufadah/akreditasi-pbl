@@ -87,6 +87,86 @@ class SertifikasiController extends Controller
     }
 
     /**
+     * Normalisasi alias input parameter request (misal: tenaga_kependidikan_id -> id_tendik, penerbit -> lembaga_penerbit).
+     */
+    private function normalizeRequestData(Request $request): array
+    {
+        $data = $request->all();
+
+        // 1. Alias ID Tenaga Kependidikan
+        if (empty($data['id_tendik'])) {
+            if (! empty($data['tenaga_kependidikan_id'])) {
+                $data['id_tendik'] = $data['tenaga_kependidikan_id'];
+            } elseif (! empty($data['tendik_id'])) {
+                $data['id_tendik'] = $data['tendik_id'];
+            } elseif (! empty($data['id_tenaga_kependidikan'])) {
+                $data['id_tendik'] = $data['id_tenaga_kependidikan'];
+            }
+        }
+        if (isset($data['id_tendik']) && is_numeric($data['id_tendik'])) {
+            $data['id_tendik'] = (int) $data['id_tendik'];
+        }
+
+        // 2. Alias ID Dosen
+        if (empty($data['id_dosen'])) {
+            if (! empty($data['dosen_id'])) {
+                $data['id_dosen'] = $data['dosen_id'];
+            }
+        }
+        if (isset($data['id_dosen']) && is_numeric($data['id_dosen'])) {
+            $data['id_dosen'] = (int) $data['id_dosen'];
+        }
+
+        // 3. Alias Lembaga Penerbit
+        if (empty($data['lembaga_penerbit'])) {
+            if (! empty($data['penerbit'])) {
+                $data['lembaga_penerbit'] = $data['penerbit'];
+            }
+        }
+
+        // 4. Alias Jenis Sertifikasi / Nama Sertifikasi
+        if (empty($data['jenis_sertifikasi'])) {
+            if (! empty($data['nama_sertifikasi'])) {
+                $data['jenis_sertifikasi'] = $data['nama_sertifikasi'];
+            }
+        }
+
+        // 5. Alias Nomor Sertifikat
+        if (empty($data['nomor_sertifikat'])) {
+            if (! empty($data['no_sertifikat'])) {
+                $data['nomor_sertifikat'] = $data['no_sertifikat'];
+            }
+        }
+
+        // 6. Alias Nomor SK
+        if (empty($data['nomor_sk'])) {
+            if (! empty($data['no_sk'])) {
+                $data['nomor_sk'] = $data['no_sk'];
+            }
+        }
+
+        // 7. Alias Nomor Registrasi Pendidik
+        if (empty($data['nomor_registrasi_pendidik'])) {
+            if (! empty($data['no_registrasi_pendidik'])) {
+                $data['nomor_registrasi_pendidik'] = $data['no_registrasi_pendidik'];
+            }
+        }
+
+        // 8. Alias URL Sertifikasi
+        if (empty($data['url_sertifikasi'])) {
+            if (! empty($data['link_sertifikasi'])) {
+                $data['url_sertifikasi'] = $data['link_sertifikasi'];
+            } elseif (! empty($data['url_drive'])) {
+                $data['url_sertifikasi'] = $data['url_drive'];
+            } elseif (! empty($data['url'])) {
+                $data['url_sertifikasi'] = $data['url'];
+            }
+        }
+
+        return $data;
+    }
+
+    /**
      * Ambil daftar sertifikasi dengan filter pencarian dan paginasi.
      * Mendukung filter: search, tipe_pemilik (dosen/tendik), status_masa_berlaku,
      * tahun_sertifikasi, tahun_mulai, tahun_selesai, id_dosen, id_tendik, dan status_sertifikasi.
@@ -202,7 +282,8 @@ class SertifikasiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), $this->rules());
+        $data = $this->normalizeRequestData($request);
+        $validator = Validator::make($data, $this->rules());
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
@@ -216,7 +297,9 @@ class SertifikasiController extends Controller
         }
 
         try {
-            $sertifikasi = DB::transaction(function () use ($request, $validated) {
+            $hasColumn = Sertifikasi::hasUrlSertifikasiColumn();
+
+            $sertifikasi = DB::transaction(function () use ($request, $validated, $hasColumn) {
                 $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
                 $pathFile = null;
                 $namaFile = null;
@@ -229,13 +312,21 @@ class SertifikasiController extends Controller
                     }
                 }
 
-                $sertifikasi = Sertifikasi::create(
-                    collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray()
-                );
+                $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
+
+                $createData = collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray();
+                if (! $hasColumn) {
+                    unset($createData['url_sertifikasi']);
+                }
+
+                $sertifikasi = Sertifikasi::create($createData);
+
+                if (! empty($urlBukti)) {
+                    $sertifikasi->setAttribute('url_sertifikasi', $urlBukti);
+                }
 
                 // Lampirkan dokumen evidence jika ada (Fitur 9 Flowchart)
                 // Baik melalui upload file, url_drive, maupun url_sertifikasi
-                $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
                 if ($pathFile || ! empty($urlBukti)) {
                     Evidence::create([
                         'id_sertifikasi' => $sertifikasi->id_sertifikasi,
@@ -283,7 +374,8 @@ class SertifikasiController extends Controller
             return $this->respond(false, 404, 'Data sertifikasi tidak ditemukan.');
         }
 
-        $validator = Validator::make($request->all(), $this->rules(true));
+        $data = $this->normalizeRequestData($request);
+        $validator = Validator::make($data, $this->rules(true));
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
@@ -295,7 +387,9 @@ class SertifikasiController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($request, $sertifikasi, $validated) {
+            $hasColumn = Sertifikasi::hasUrlSertifikasiColumn();
+
+            DB::transaction(function () use ($request, $sertifikasi, $validated, $hasColumn) {
                 $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
                 $pathFile = null;
                 $namaFile = null;
@@ -308,11 +402,19 @@ class SertifikasiController extends Controller
                     }
                 }
 
-                $sertifikasi->update(
-                    collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray()
-                );
-
                 $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
+
+                $updateData = collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray();
+                if (! $hasColumn) {
+                    unset($updateData['url_sertifikasi']);
+                }
+
+                $sertifikasi->update($updateData);
+
+                if (! empty($urlBukti)) {
+                    $sertifikasi->setAttribute('url_sertifikasi', $urlBukti);
+                }
+
                 if ($pathFile || ! empty($urlBukti)) {
                     $evidence = $sertifikasi->evidence()->first();
                     if ($evidence) {

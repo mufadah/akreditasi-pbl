@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 class Sertifikasi extends Model
 {
     protected $table = 'sertifikasi';
+
     protected $primaryKey = 'id_sertifikasi';
 
     protected $fillable = [
@@ -26,15 +29,67 @@ class Sertifikasi extends Model
 
     protected $attributes = [
         'status_sertifikasi' => 'Aktif',
-        'url_sertifikasi' => '',
     ];
 
     protected function casts(): array
     {
         return [
+            'id_dosen' => 'integer',
+            'id_tendik' => 'integer',
             'tahun_sertifikasi' => 'date:Y-m-d',
             'tanggal_kedaluwarsa' => 'date:Y-m-d',
         ];
+    }
+
+    /**
+     * Pastikan kolom url_sertifikasi ada di tabel database MySQL,
+     * atau lakukan auto-migration jika tabel belum memilikinya.
+     */
+    public static function hasUrlSertifikasiColumn(): bool
+    {
+        static $hasColumn = null;
+        if ($hasColumn !== null) {
+            return $hasColumn;
+        }
+
+        try {
+            if (Schema::hasTable('sertifikasi')) {
+                if (! Schema::hasColumn('sertifikasi', 'url_sertifikasi')) {
+                    Schema::table('sertifikasi', function (Blueprint $table) {
+                        $table->string('url_sertifikasi', 2048)->default('')->after('status_sertifikasi');
+                    });
+                }
+                $hasColumn = Schema::hasColumn('sertifikasi', 'url_sertifikasi');
+            } else {
+                $hasColumn = false;
+            }
+        } catch (\Throwable $e) {
+            try {
+                $hasColumn = Schema::hasColumn('sertifikasi', 'url_sertifikasi');
+            } catch (\Throwable $ignored) {
+                $hasColumn = false;
+            }
+        }
+
+        return (bool) $hasColumn;
+    }
+
+    /**
+     * Accessor untuk url_sertifikasi dengan fallback ke tabel evidence jika kolom DB belum tersedia.
+     */
+    public function getUrlSertifikasiAttribute($value): ?string
+    {
+        if ($value !== null && $value !== '') {
+            return $value;
+        }
+
+        if ($this->relationLoaded('evidence')) {
+            $evidence = $this->evidence->first();
+
+            return $evidence?->url_evidence ?? $evidence?->url_drive ?? $value;
+        }
+
+        return $value;
     }
 
     /**
@@ -45,7 +100,8 @@ class Sertifikasi extends Model
     {
         if ($value !== null && $value !== '') {
             if (is_numeric($value) && strlen((string) $value) === 4) {
-                $this->attributes['tahun_sertifikasi'] = $value . '-01-01';
+                $this->attributes['tahun_sertifikasi'] = $value.'-01-01';
+
                 return;
             }
         }
@@ -54,6 +110,12 @@ class Sertifikasi extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (Sertifikasi $sertifikasi) {
+            if (! static::hasUrlSertifikasiColumn()) {
+                unset($sertifikasi->attributes['url_sertifikasi']);
+            }
+        });
+
         static::saved(function (Sertifikasi $sertifikasi) {
             $origDosen = $sertifikasi->getOriginal('id_dosen');
             $origTendik = $sertifikasi->getOriginal('id_tendik');
@@ -144,4 +206,3 @@ class Sertifikasi extends Model
         return $this->hasMany(Evidence::class, 'id_sertifikasi', 'id_sertifikasi');
     }
 }
-
