@@ -295,3 +295,35 @@ test('api sertifikasi: upload file bukti otomatis men-generate url_sertifikasi d
         'url_sertifikasi' => $urlSertifikasi,
     ]);
 });
+
+test('api sertifikasi: dapat memproses alias tenaga_kependidikan_id dan penerbit secara otomatis', function () {
+    $tendik = TenagaKependidikan::first();
+
+    $payload = [
+        'tenaga_kependidikan_id' => (string) $tendik->id_tendik,
+        'jenis_sertifikasi' => 'apalah',
+        'nama_sertifikasi' => 'password',
+        'penerbit' => 'Erlangga',
+        'nomor_sertifikat' => '13',
+        'tahun_sertifikasi' => '2000',
+        'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=drive_link',
+    ];
+
+    $response = $this->withToken($this->adminToken)->postJson('/api/sertifikasi', $payload);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.id_tendik', $tendik->id_tendik)
+        ->assertJsonPath('data.lembaga_penerbit', 'Erlangga')
+        ->assertJsonPath('data.jenis_sertifikasi', 'apalah')
+        ->assertJsonPath('data.nomor_sertifikat', '13')
+        ->assertJsonPath('data.tahun_sertifikasi', '2000-01-01')
+        ->assertJsonPath('data.url_sertifikasi', 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=drive_link');
+
+    $this->assertDatabaseHas('sertifikasi', [
+        'id_tendik' => $tendik->id_tendik,
+        'lembaga_penerbit' => 'Erlangga',
+        'jenis_sertifikasi' => 'apalah',
+        'nomor_sertifikat' => '13',
+        'tahun_sertifikasi' => '2000-01-01',
+    ]);
+});
