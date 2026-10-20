@@ -104,12 +104,6 @@ class SyncSwaggerFromPostman extends Command
                         'bearerFormat' => 'JWT',
                         'description' => 'Masukkan token JWT Anda yang diperoleh setelah login.',
                     ],
-                    'apiKeyAuth' => [
-                        'type' => 'apiKey',
-                        'in' => 'header',
-                        'name' => 'X-API-KEY',
-                        'description' => 'API Key untuk interoperabilitas machine-to-machine (K1 & K3). Nilai default: k2-secret-key-akreditasi.',
-                    ],
                 ],
                 'schemas' => [
                     'StandardResponse' => [
@@ -154,7 +148,7 @@ class SyncSwaggerFromPostman extends Command
             }
         }
 
-        $paths = array_merge($suppPaths, $paths);
+        $paths = array_merge($paths, $suppPaths);
 
         $openapi['tags'] = array_map(function ($t) {
             return [
@@ -670,7 +664,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Sertifikasi (Dosen & Tendik)',
                     'description' => 'Mengambil daftar data sertifikasi dengan paginasi dan filter lengkap (tipe pemilik dosen vs tendik, status masa berlaku aktif/kedaluwarsa/segera berakhir, tahun, dan pencarian teks luas).',
                     'operationId' => 'getSertifikasiList',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'search', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string'], 'description' => 'Pencarian jenis sertifikasi, no. sertifikat, no. sk, penerbit, atau nama/NIDN/NIP pemilik'],
                         ['name' => 'tipe_pemilik', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['dosen', 'tendik']], 'description' => 'Filter berdasarkan pemilik sertifikasi: "dosen" atau "tendik"'],
@@ -688,23 +682,89 @@ class SyncSwaggerFromPostman extends Command
                     'responses' => [
                         '200' => [
                             'description' => 'Data sertifikasi berhasil diambil.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 200,
+                                        'message' => 'Data sertifikasi berhasil diambil.',
+                                        'data' => [
+                                            'current_page' => 1,
+                                            'data' => [
+                                                [
+                                                    'id_sertifikasi' => 1,
+                                                    'id_dosen' => 1,
+                                                    'id_tendik' => null,
+                                                    'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                                    'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                                    'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                                    'nomor_sk' => 'SK-SERTIF-2023-01',
+                                                    'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                                    'lembaga_penerbit' => 'Kemendikbudristek',
+                                                    'tahun_sertifikasi' => '2023-08-20',
+                                                    'tanggal_kedaluwarsa' => '2028-12-31',
+                                                    'status_sertifikasi' => 'Aktif',
+                                                    'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                                    'dosen' => [
+                                                        'id_dosen' => 1,
+                                                        'nama_dosen' => 'Dr. Budi Santoso, M.Kom.',
+                                                        'nidn' => '0012345678',
+                                                    ],
+                                                    'evidence' => [
+                                                        [
+                                                            'id_evidence' => 1,
+                                                            'id_sertifikasi' => 1,
+                                                            'nama_file' => 'Bukti Sertifikat Serdos.pdf',
+                                                            'url_evidence' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                                            'status_validasi' => 'Menunggu Validasi',
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                            'total' => 1,
+                                            'per_page' => 10,
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                     ],
                 ],
                 'post' => [
                     'tags' => ['Sertifikasi'],
                     'summary' => 'Tambah Data Sertifikasi Baru',
-                    'description' => 'Menambahkan data sertifikasi baru (Dosen atau Tendik) dan secara otomatis menyinkronkan ke profil Dosen/Tendik bersangkutan.',
+                    'description' => 'Menambahkan data sertifikasi baru (Dosen atau Tendik) dengan menyertakan tautan url_sertifikasi atau mengunggah berkas sertifikat, dan secara otomatis menyinkronkan ke profil Dosen/Tendik bersangkutan.',
                     'operationId' => 'storeSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'requestBody' => [
                         'required' => true,
                         'content' => [
-                            'multipart/form-data' => [
+                            'application/json' => [
                                 'schema' => [
                                     'type' => 'object',
                                     'required' => ['jenis_sertifikasi', 'tahun_sertifikasi', 'url_sertifikasi'],
+                                    'properties' => [
+                                        'id_dosen' => ['type' => 'integer', 'nullable' => true, 'example' => 1, 'description' => 'ID Dosen jika sertifikasi milik dosen'],
+                                        'id_tendik' => ['type' => 'integer', 'nullable' => true, 'description' => 'ID Tendik jika sertifikasi milik tendik'],
+                                        'jenis_sertifikasi' => ['type' => 'string', 'example' => 'Sertifikat Pendidik (Serdos)'],
+                                        'bidang_studi' => ['type' => 'string', 'example' => 'Teknik Informatika / Rekayasa Perangkat Lunak'],
+                                        'nomor_registrasi_pendidik' => ['type' => 'string', 'nullable' => true, 'example' => 'REG-DIKTI-2023-8871'],
+                                        'nomor_sk' => ['type' => 'string', 'nullable' => true, 'example' => 'SK-SERTIF-2023-01'],
+                                        'nomor_sertifikat' => ['type' => 'string', 'nullable' => true, 'example' => 'CERT-KOMP-2023-45'],
+                                        'lembaga_penerbit' => ['type' => 'string', 'nullable' => true, 'example' => 'Kemendikbudristek / BNSP'],
+                                        'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
+                                        'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2028-12-31'],
+                                        'status_sertifikasi' => ['type' => 'string', 'example' => 'Aktif'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing', 'description' => 'Tautan URL dokumen/berkas sertifikasi (Google Drive, Cloud Storage, dsb.)'],
+                                        'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing'],
+                                    ],
+                                ],
+                            ],
+                            'multipart/form-data' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'required' => ['jenis_sertifikasi', 'tahun_sertifikasi'],
                                     'properties' => [
                                         'id_dosen' => ['type' => 'integer', 'nullable' => true, 'example' => 1],
                                         'id_tendik' => ['type' => 'integer', 'nullable' => true],
@@ -717,9 +777,10 @@ class SyncSwaggerFromPostman extends Command
                                         'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
                                         'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2028-12-31'],
                                         'status_sertifikasi' => ['type' => 'string', 'example' => 'Aktif'],
-                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/sertif-kompetensi/view', 'description' => 'URL Berkas Sertifikasi (Google Drive/Cloud)'],
-                                        'evidence_file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Berkas fisik bukti sertifikat (PDF/JPG/PNG max 10MB)'],
-                                        'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/xxx/view'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing', 'description' => 'Tautan URL dokumen sertifikasi'],
+                                        'evidence_file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Unggah berkas fisik bukti sertifikat (PDF/JPG/PNG max 10MB)'],
+                                        'file' => ['type' => 'string', 'format' => 'binary', 'nullable' => true, 'description' => 'Alias unggah berkas fisik'],
+                                        'url_drive' => ['type' => 'string', 'nullable' => true, 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing'],
                                     ],
                                 ],
                             ],
@@ -728,7 +789,31 @@ class SyncSwaggerFromPostman extends Command
                     'responses' => [
                         '201' => [
                             'description' => 'Data sertifikasi berhasil ditambahkan.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 201,
+                                        'message' => 'Data sertifikasi berhasil ditambahkan.',
+                                        'data' => [
+                                            'id_sertifikasi' => 1,
+                                            'id_dosen' => 1,
+                                            'id_tendik' => null,
+                                            'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                            'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                            'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                            'nomor_sk' => 'SK-SERTIF-2023-01',
+                                            'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                            'lembaga_penerbit' => 'Kemendikbudristek',
+                                            'tahun_sertifikasi' => '2023-08-20',
+                                            'tanggal_kedaluwarsa' => '2028-12-31',
+                                            'status_sertifikasi' => 'Aktif',
+                                            'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                         '422' => [
                             'description' => 'Validasi input gagal.',
@@ -743,14 +828,38 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Detail Sertifikasi',
                     'description' => 'Mengambil detail satu data sertifikasi beserta relasi pemilik (dosen/tendik) dan dokumen evidence pendukung.',
                     'operationId' => 'showSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
                     ],
                     'responses' => [
                         '200' => [
                             'description' => 'Detail sertifikasi berhasil diambil.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 200,
+                                        'message' => 'Detail sertifikasi berhasil diambil.',
+                                        'data' => [
+                                            'id_sertifikasi' => 1,
+                                            'id_dosen' => 1,
+                                            'id_tendik' => null,
+                                            'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                            'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                            'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                            'nomor_sk' => 'SK-SERTIF-2023-01',
+                                            'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                            'lembaga_penerbit' => 'Kemendikbudristek',
+                                            'tahun_sertifikasi' => '2023-08-20',
+                                            'tanggal_kedaluwarsa' => '2028-12-31',
+                                            'status_sertifikasi' => 'Aktif',
+                                            'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                         '404' => ['description' => 'Data sertifikasi tidak ditemukan.'],
                     ],
@@ -760,7 +869,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Perbarui Data Sertifikasi',
                     'description' => 'Memperbarui data sertifikasi dan secara otomatis menyinkronkan perubahan ke profil Dosen/Tendik bersangkutan.',
                     'operationId' => 'updateSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
                     ],
@@ -782,7 +891,7 @@ class SyncSwaggerFromPostman extends Command
                                         'tahun_sertifikasi' => ['type' => 'string', 'example' => '2023-08-20', 'description' => 'Tanggal atau tahun sertifikasi (YYYY atau YYYY-MM-DD)'],
                                         'tanggal_kedaluwarsa' => ['type' => 'string', 'format' => 'date', 'nullable' => true],
                                         'status_sertifikasi' => ['type' => 'string'],
-                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/sertif-kompetensi/view'],
+                                        'url_sertifikasi' => ['type' => 'string', 'example' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing'],
                                     ],
                                 ],
                             ],
@@ -791,7 +900,31 @@ class SyncSwaggerFromPostman extends Command
                     'responses' => [
                         '200' => [
                             'description' => 'Data sertifikasi berhasil diperbarui.',
-                            'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse']]],
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => ['$ref' => '#/components/schemas/StandardResponse'],
+                                    'example' => [
+                                        'success' => true,
+                                        'code' => 200,
+                                        'message' => 'Data sertifikasi berhasil diperbarui.',
+                                        'data' => [
+                                            'id_sertifikasi' => 1,
+                                            'id_dosen' => 1,
+                                            'id_tendik' => null,
+                                            'jenis_sertifikasi' => 'Sertifikat Pendidik (Serdos)',
+                                            'bidang_studi' => 'Teknik Informatika / Rekayasa Perangkat Lunak',
+                                            'nomor_registrasi_pendidik' => 'REG-DIKTI-2023-8871',
+                                            'nomor_sk' => 'SK-SERTIF-2023-01',
+                                            'nomor_sertifikat' => 'CERT-KOMP-2023-45',
+                                            'lembaga_penerbit' => 'Kemendikbudristek',
+                                            'tahun_sertifikasi' => '2023-08-20',
+                                            'tanggal_kedaluwarsa' => '2028-12-31',
+                                            'status_sertifikasi' => 'Aktif',
+                                            'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=sharing',
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                         '422' => ['description' => 'Validasi gagal.'],
                     ],
@@ -801,7 +934,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Hapus Data Sertifikasi',
                     'description' => 'Menghapus data sertifikasi dan otomatis menyinkronkan profil Dosen/Tendik. Ditolak jika sertifikasi masih terikat pada dokumen evidence.',
                     'operationId' => 'destroySertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'ID sertifikasi'],
                     ],
@@ -820,7 +953,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Sinkronisasi Massal Sertifikasi ke Profil Dosen & Tendik',
                     'description' => 'Memicu sinkronisasi menyeluruh daftar sertifikasi ke kolom `sertifikasi` pada profil master Dosen dan Tendik di database.',
                     'operationId' => 'syncProfilSertifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Sinkronisasi sertifikasi ke profil Dosen & Tendik berhasil.',
@@ -835,7 +968,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Monitoring Reminder Kedaluwarsa Kerja Sama',
                     'description' => 'Mengambil daftar dokumen kerja sama yang telah kedaluwarsa atau akan kedaluwarsa dalam 30 hari ke depan.',
                     'operationId' => 'reminderKedaluwarsaKerjaSama',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar reminder masa berlaku kerja sama berhasil diambil.',
@@ -850,7 +983,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Trigger Sinkronisasi Status Kedaluwarsa & Notifikasi Otomatis',
                     'description' => 'Memperbarui status dokumen kerja sama yang lewat masa berlaku menjadi "Kedaluwarsa" dan mengirimkan notifikasi in-app otomatis kepada Administrator dan Kaprodi.',
                     'operationId' => 'checkKedaluwarsaKerjaSama',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Pemeriksaan status kedaluwarsa dan notifikasi berhasil.',
@@ -865,7 +998,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Jalankan Engine Assessment SDM & Gap Analysis K3',
                     'description' => 'Melakukan kalkulasi komputasi gap analysis per kriteria LAM INFOKOM K2 berdasarkan data riil vs target K3 dan menghasilkan rekomendasi taktis.',
                     'operationId' => 'runAssessmentGapAnalysis',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Assessment dan kalkulasi gap analysis berhasil dieksekusi.',
@@ -880,7 +1013,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Riwayat Hasil Assessment & Rekomendasi',
                     'description' => 'Mengambil riwayat hasil komputasi assessment SDM dan rekomendasi perbaikan indikator.',
                     'operationId' => 'getAssessmentHasil',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Riwayat hasil assessment berhasil diambil.',
@@ -895,7 +1028,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Sinkronisasi Indikator Standar LAM INFOKOM dari K3',
                     'description' => 'Mengambil daftar indikator dan kriteria akreditasi standar dari modul K3.',
                     'operationId' => 'getIndikatorK3',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar indikator K3 berhasil diambil.',
@@ -910,7 +1043,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Konfigurasi Metrik Akreditasi',
                     'description' => 'Mengambil seluruh konfigurasi metrik, bobot, dan ambang batas indikator akreditasi.',
                     'operationId' => 'getKonfigurasiMetrikList',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar konfigurasi metrik berhasil diambil.',
@@ -923,7 +1056,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Tambah Konfigurasi Metrik',
                     'description' => 'Menyimpan konfigurasi indikator baru.',
                     'operationId' => 'storeKonfigurasiMetrik',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '201' => [
                             'description' => 'Konfigurasi metrik berhasil disimpan.',
@@ -938,7 +1071,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Daftar Notifikasi In-App Pengguna',
                     'description' => 'Mengambil daftar notifikasi pengguna dengan filter unread_only.',
                     'operationId' => 'getNotifikasiList',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'unread_only', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'boolean'], 'description' => 'Filter hanya notifikasi yang belum dibaca'],
                     ],
@@ -954,7 +1087,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Kirim Notifikasi In-App Baru',
                     'description' => 'Mengirim notifikasi ke user atau role tertentu.',
                     'operationId' => 'sendNotifikasi',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '201' => [
                             'description' => 'Notifikasi berhasil dikirim.',
@@ -968,7 +1101,7 @@ class SyncSwaggerFromPostman extends Command
                     'tags' => ['Notifikasi & Audit Log'],
                     'summary' => 'Tandai Notifikasi Telah Dibaca',
                     'operationId' => 'markNotifikasiAsRead',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                     ],
@@ -985,7 +1118,7 @@ class SyncSwaggerFromPostman extends Command
                     'tags' => ['Notifikasi & Audit Log'],
                     'summary' => 'Tandai Seluruh Notifikasi Telah Dibaca',
                     'operationId' => 'markAllNotifikasiAsRead',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Seluruh notifikasi ditandai telah dibaca.',
@@ -1000,7 +1133,7 @@ class SyncSwaggerFromPostman extends Command
                     'summary' => 'Riwayat Audit Trail Log',
                     'description' => 'Mengambil catatan audit log forensik aktivitas mutasi data.',
                     'operationId' => 'getAuditLogs',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'responses' => [
                         '200' => [
                             'description' => 'Daftar audit log berhasil diambil.',
@@ -1014,7 +1147,7 @@ class SyncSwaggerFromPostman extends Command
                     'tags' => ['Notifikasi & Audit Log'],
                     'summary' => 'Detail Forensik Audit Log',
                     'operationId' => 'showAuditLog',
-                    'security' => [['bearerAuth' => []], ['apiKeyAuth' => []]],
+                    'security' => [['bearerAuth' => []]],
                     'parameters' => [
                         ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
                     ],
@@ -1029,4 +1162,3 @@ class SyncSwaggerFromPostman extends Command
         ];
     }
 }
-

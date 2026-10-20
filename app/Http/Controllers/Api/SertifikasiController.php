@@ -66,10 +66,110 @@ class SertifikasiController extends Controller
             ],
             'tanggal_kedaluwarsa' => ['nullable', 'date'],
             'status_sertifikasi' => ['sometimes', 'string', 'max:50'],
-            'url_sertifikasi' => [...$req, 'string', 'max:2048'],
+            'url_sertifikasi' => $isUpdate
+                ? ['sometimes', 'nullable', 'string', 'max:2048']
+                : ['required_without_all:evidence_file,file,file_sertifikasi', 'nullable', 'string', 'max:2048'],
             'evidence_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
-            'url_drive' => ['nullable', 'string', 'max:255'],
+            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'file_sertifikasi' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'url_drive' => ['nullable', 'string', 'max:2048'],
         ];
+    }
+
+    private function normalizeTahunSertifikasi(int|string $value): string
+    {
+        $value = (string) $value;
+
+        if (preg_match('/^\d{4}$/', $value) === 1) {
+            return $value.'-01-01';
+        }
+
+        return $value;
+    }
+
+    /**
+     * Normalisasi alias input parameter request (misal: tenaga_kependidikan_id -> id_tendik, penerbit -> lembaga_penerbit).
+     */
+    private function normalizeRequestData(Request $request): array
+    {
+        $data = $request->all();
+
+        // 1. Alias ID Tenaga Kependidikan
+        if (empty($data['id_tendik'])) {
+            if (! empty($data['tenaga_kependidikan_id'])) {
+                $data['id_tendik'] = $data['tenaga_kependidikan_id'];
+            } elseif (! empty($data['tendik_id'])) {
+                $data['id_tendik'] = $data['tendik_id'];
+            } elseif (! empty($data['id_tenaga_kependidikan'])) {
+                $data['id_tendik'] = $data['id_tenaga_kependidikan'];
+            }
+        }
+        if (isset($data['id_tendik']) && is_numeric($data['id_tendik'])) {
+            $data['id_tendik'] = (int) $data['id_tendik'];
+        }
+
+        // 2. Alias ID Dosen
+        if (empty($data['id_dosen'])) {
+            if (! empty($data['dosen_id'])) {
+                $data['id_dosen'] = $data['dosen_id'];
+            }
+        }
+        if (isset($data['id_dosen']) && is_numeric($data['id_dosen'])) {
+            $data['id_dosen'] = (int) $data['id_dosen'];
+        }
+
+        // 3. Alias Lembaga Penerbit
+        if (empty($data['lembaga_penerbit'])) {
+            if (! empty($data['penerbit'])) {
+                $data['lembaga_penerbit'] = $data['penerbit'];
+            }
+        }
+
+        // 4. Alias Jenis Sertifikasi / Nama Sertifikasi
+        if (empty($data['jenis_sertifikasi'])) {
+            if (! empty($data['nama_sertifikasi'])) {
+                $data['jenis_sertifikasi'] = $data['nama_sertifikasi'];
+            }
+        }
+
+        // 5. Alias Nomor Sertifikat
+        if (empty($data['nomor_sertifikat'])) {
+            if (! empty($data['no_sertifikat'])) {
+                $data['nomor_sertifikat'] = $data['no_sertifikat'];
+            }
+        }
+
+        // 6. Alias Nomor SK
+        if (empty($data['nomor_sk'])) {
+            if (! empty($data['no_sk'])) {
+                $data['nomor_sk'] = $data['no_sk'];
+            }
+        }
+
+        // 7. Alias Nomor Registrasi Pendidik
+        if (empty($data['nomor_registrasi_pendidik'])) {
+            if (! empty($data['no_registrasi_pendidik'])) {
+                $data['nomor_registrasi_pendidik'] = $data['no_registrasi_pendidik'];
+            }
+        }
+
+        // 8. Alias URL Sertifikasi
+        if (empty($data['url_sertifikasi'])) {
+            if (! empty($data['link_sertifikasi'])) {
+                $data['url_sertifikasi'] = $data['link_sertifikasi'];
+            } elseif (! empty($data['url_drive'])) {
+                $data['url_sertifikasi'] = $data['url_drive'];
+            } elseif (! empty($data['url'])) {
+                $data['url_sertifikasi'] = $data['url'];
+            }
+        }
+
+        // 9. Jika url_drive belum terisi namun url_sertifikasi ada
+        if (empty($data['url_drive']) && ! empty($data['url_sertifikasi'])) {
+            $data['url_drive'] = $data['url_sertifikasi'];
+        }
+
+        return $data;
     }
 
     /**
@@ -95,7 +195,7 @@ class SertifikasiController extends Controller
                             ->orWhere('nidn', 'like', "%{$search}%");
                     })
                     ->orWhereHas('tendik', function ($qt) use ($search) {
-                        $qt->where('nama_tendik', 'like', "%{$search}%")
+                        $qt->where('nama', 'like', "%{$search}%")
                             ->orWhere('nip', 'like', "%{$search}%");
                     });
             });
@@ -103,43 +203,35 @@ class SertifikasiController extends Controller
 
         // 2. Filter tipe pemilik (dosen vs tendik)
         if ($tipePemilik = $request->query('tipe_pemilik')) {
-            $tipeLower = strtolower($tipePemilik);
-            if ($tipeLower === 'dosen') {
-                $query->whereNotNull('id_dosen');
-            } elseif ($tipeLower === 'tendik') {
-                $query->whereNotNull('id_tendik');
+            if (strtolower($tipePemilik) === 'dosen') {
+                $query->whereNotNull('id_dosen')->whereNull('id_tendik');
+            } elseif (strtolower($tipePemilik) === 'tendik') {
+                $query->whereNotNull('id_tendik')->whereNull('id_dosen');
             }
         }
 
         // 3. Filter status masa berlaku (aktif, kedaluwarsa, segera_berakhir)
-        $today = now()->toDateString();
-        if ($statusMasaBerlaku = $request->query('status_masa_berlaku', $request->query('status'))) {
-            $statusVal = strtolower($statusMasaBerlaku);
-            if ($statusVal === 'aktif') {
+        if ($statusMasa = $request->query('status_masa_berlaku')) {
+            $today = now()->toDateString();
+            $thresholdDays = (int) $request->query('hari_kedaluwarsa', 30);
+            $thresholdDate = now()->addDays($thresholdDays)->toDateString();
+
+            if ($statusMasa === 'aktif') {
                 $query->where(function ($q) use ($today) {
                     $q->whereNull('tanggal_kedaluwarsa')
                         ->orWhere('tanggal_kedaluwarsa', '>=', $today);
-                })->where(function ($q) {
-                    $q->whereNull('status_sertifikasi')
-                        ->orWhere('status_sertifikasi', '!=', 'Kedaluwarsa');
                 });
-            } elseif (in_array($statusVal, ['kedaluwarsa', 'expired'])) {
-                $query->where(function ($q) use ($today) {
-                    $q->where(function ($sq) use ($today) {
-                        $sq->whereNotNull('tanggal_kedaluwarsa')
-                            ->where('tanggal_kedaluwarsa', '<', $today);
-                    })->orWhere('status_sertifikasi', 'Kedaluwarsa');
-                });
-            } elseif (in_array($statusVal, ['segera_berakhir', 'expiring_soon'])) {
-                $hari = $request->integer('hari_kedaluwarsa', 30);
-                $targetDate = now()->addDays($hari)->toDateString();
+            } elseif ($statusMasa === 'kedaluwarsa') {
                 $query->whereNotNull('tanggal_kedaluwarsa')
-                    ->whereBetween('tanggal_kedaluwarsa', [$today, $targetDate]);
+                    ->where('tanggal_kedaluwarsa', '<', $today);
+            } elseif ($statusMasa === 'segera_berakhir') {
+                $query->whereNotNull('tanggal_kedaluwarsa')
+                    ->whereBetween('tanggal_kedaluwarsa', [$today, $thresholdDate]);
             }
         }
 
-        // 4. Filter tahun dan rentang tahun sertifikasi
-        if ($tahun = $request->query('tahun_sertifikasi', $request->query('tahun'))) {
+        // 4. Filter tahun sertifikasi spesifik atau rentang tahun
+        if ($tahun = $request->query('tahun_sertifikasi')) {
             if (is_numeric($tahun) && strlen((string) $tahun) === 4) {
                 $query->whereYear('tahun_sertifikasi', $tahun);
             } else {
@@ -188,50 +280,54 @@ class SertifikasiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // Normalisasi: dukung url_drive maupun url_sertifikasi secara fleksibel
-        if ($request->filled('url_drive') && ! $request->filled('url_sertifikasi')) {
-            $request->merge(['url_sertifikasi' => $request->input('url_drive')]);
-        } elseif ($request->filled('url_sertifikasi') && ! $request->filled('url_drive')) {
-            $request->merge(['url_drive' => $request->input('url_sertifikasi')]);
-        }
-
-        $validator = Validator::make($request->all(), $this->rules());
+        $data = $this->normalizeRequestData($request);
+        $validator = Validator::make($data, $this->rules());
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
         }
 
         $validated = $validator->validated();
+        $validated['tahun_sertifikasi'] = $this->normalizeTahunSertifikasi($validated['tahun_sertifikasi']);
 
         if (empty($validated['status_sertifikasi'])) {
             $validated['status_sertifikasi'] = 'Aktif';
         }
 
         try {
-            $sertifikasi = DB::transaction(function () use ($request, $validated) {
-                $sertifikasiData = collect($validated)->except(['evidence_file', 'url_drive'])->toArray();
-                if (empty($sertifikasiData['url_sertifikasi']) && ! empty($validated['url_drive'])) {
-                    $sertifikasiData['url_sertifikasi'] = $validated['url_drive'];
-                }
-                if (! Schema::hasColumn('sertifikasi', 'url_sertifikasi')) {
-                    unset($sertifikasiData['url_sertifikasi']);
+            $hasColumn = method_exists(Sertifikasi::class, 'hasUrlSertifikasiColumn')
+                ? Sertifikasi::hasUrlSertifikasiColumn()
+                : Schema::hasColumn('sertifikasi', 'url_sertifikasi');
+
+            $sertifikasi = DB::transaction(function () use ($request, $validated, $hasColumn) {
+                $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
+                $pathFile = null;
+                $namaFile = null;
+
+                if ($file) {
+                    $namaFile = $file->getClientOriginalName();
+                    $pathFile = $file->store('evidence/sertifikasi', 'public');
+                    if (empty($validated['url_sertifikasi'])) {
+                        $validated['url_sertifikasi'] = url('storage/'.$pathFile);
+                    }
                 }
 
-                $sertifikasi = Sertifikasi::create($sertifikasiData);
+                $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
+
+                $createData = collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray();
+                if (! $hasColumn) {
+                    unset($createData['url_sertifikasi']);
+                }
+
+                $sertifikasi = Sertifikasi::create($createData);
+
+                if (! empty($urlBukti)) {
+                    $sertifikasi->setAttribute('url_sertifikasi', $urlBukti);
+                }
 
                 // Lampirkan dokumen evidence jika ada (Fitur 9 Flowchart)
                 // Baik melalui upload file, url_drive, maupun url_sertifikasi
-                $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
-                if ($request->hasFile('evidence_file') || ! empty($urlBukti)) {
-                    $pathFile = null;
-                    $namaFile = null;
-
-                    if ($request->hasFile('evidence_file')) {
-                        $file = $request->file('evidence_file');
-                        $namaFile = $file->getClientOriginalName();
-                        $pathFile = $file->store('evidence/sertifikasi', 'public');
-                    }
-
+                if ($pathFile || ! empty($urlBukti)) {
                     $evidenceData = [
                         'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                         'jenis_dokumen' => 'Sertifikat',
@@ -288,57 +384,75 @@ class SertifikasiController extends Controller
             return $this->respond(false, 404, 'Data sertifikasi tidak ditemukan.');
         }
 
-        // Normalisasi: dukung url_drive maupun url_sertifikasi secara fleksibel
-        if ($request->filled('url_drive') && ! $request->filled('url_sertifikasi')) {
-            $request->merge(['url_sertifikasi' => $request->input('url_drive')]);
-        } elseif ($request->filled('url_sertifikasi') && ! $request->filled('url_drive')) {
-            $request->merge(['url_drive' => $request->input('url_sertifikasi')]);
-        }
-
-        $validator = Validator::make($request->all(), $this->rules(true));
+        $data = $this->normalizeRequestData($request);
+        $validator = Validator::make($data, $this->rules(true));
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
         }
 
         $validated = $validator->validated();
+        if (array_key_exists('tahun_sertifikasi', $validated)) {
+            $validated['tahun_sertifikasi'] = $this->normalizeTahunSertifikasi($validated['tahun_sertifikasi']);
+        }
 
         try {
-            DB::transaction(function () use ($sertifikasi, $validated) {
-                $sertifikasiData = collect($validated)->except(['evidence_file', 'url_drive'])->toArray();
-                if (empty($sertifikasiData['url_sertifikasi']) && ! empty($validated['url_drive'])) {
-                    $sertifikasiData['url_sertifikasi'] = $validated['url_drive'];
-                }
-                if (! Schema::hasColumn('sertifikasi', 'url_sertifikasi')) {
-                    unset($sertifikasiData['url_sertifikasi']);
-                }
+            $hasColumn = method_exists(Sertifikasi::class, 'hasUrlSertifikasiColumn')
+                ? Sertifikasi::hasUrlSertifikasiColumn()
+                : Schema::hasColumn('sertifikasi', 'url_sertifikasi');
 
-                $sertifikasi->update($sertifikasiData);
+            DB::transaction(function () use ($request, $sertifikasi, $validated, $hasColumn) {
+                $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
+                $pathFile = null;
+                $namaFile = null;
+
+                if ($file) {
+                    $namaFile = $file->getClientOriginalName();
+                    $pathFile = $file->store('evidence/sertifikasi', 'public');
+                    if (empty($validated['url_sertifikasi'])) {
+                        $validated['url_sertifikasi'] = url('storage/'.$pathFile);
+                    }
+                }
 
                 $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
-                if ($urlBukti) {
+
+                $updateData = collect($validated)->except(['evidence_file', 'file', 'file_sertifikasi', 'url_drive'])->toArray();
+                if (! $hasColumn) {
+                    unset($updateData['url_sertifikasi']);
+                }
+
+                $sertifikasi->update($updateData);
+
+                if (! empty($urlBukti)) {
+                    $sertifikasi->setAttribute('url_sertifikasi', $urlBukti);
+                }
+
+                if ($pathFile || ! empty($urlBukti)) {
                     $evidence = $sertifikasi->evidence()->first();
                     if ($evidence) {
-                        $updateData = [];
-                        if (Schema::hasColumn('evidence', 'url_drive')) {
-                            $updateData['url_drive'] = $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti;
-                        }
+                        $evidenceData = [];
                         if (Schema::hasColumn('evidence', 'url_evidence')) {
-                            $updateData['url_evidence'] = $urlBukti;
+                            $evidenceData['url_evidence'] = $urlBukti ?: $evidence->url_evidence;
                         }
-                        if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($evidence->path_file)) {
-                            $updateData['nama_file'] = $urlBukti;
+                        if (Schema::hasColumn('evidence', 'url_drive')) {
+                            $evidenceData['url_drive'] = $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti;
+                        }
+                        if ($pathFile) {
+                            $evidenceData['path_file'] = $pathFile;
+                            $evidenceData['nama_file'] = $namaFile;
+                        } elseif (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($evidence->path_file)) {
+                            $evidenceData['nama_file'] = $urlBukti;
                         }
 
-                        if (! empty($updateData)) {
-                            $evidence->update($updateData);
+                        if (! empty($evidenceData)) {
+                            $evidence->update($evidenceData);
                         }
                     } else {
                         $evidenceData = [
                             'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                             'jenis_dokumen' => 'Sertifikat',
-                            'nama_file' => $sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi',
-                            'path_file' => null,
+                            'nama_file' => $namaFile ?? ($sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi'),
+                            'path_file' => $pathFile,
                             'tanggal_upload' => now()->toDateString(),
                             'status_validasi' => 'Menunggu Validasi',
                         ];

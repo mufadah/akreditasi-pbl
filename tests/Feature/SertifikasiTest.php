@@ -1,11 +1,14 @@
 <?php
 
 use App\Models\Dosen;
+use App\Models\Evidence;
 use App\Models\Sertifikasi;
 use App\Models\TenagaKependidikan;
 use Database\Seeders\DatabaseSeeder;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -218,25 +221,31 @@ test('crud sertifikasi: menyimpan url_sertifikasi dan otomatis membuatkan eviden
     // 2. Update url_sertifikasi
     $resUpdate = $this->withToken($this->adminToken)->putJson("/api/sertifikasi/{$idSertif}", [
         'url_sertifikasi' => $urlUpdate,
+        'tahun_sertifikasi' => 2024,
     ]);
 
     $resUpdate->assertStatus(200)
-        ->assertJsonPath('data.url_sertifikasi', $urlUpdate);
+        ->assertJsonPath('data.url_sertifikasi', $urlUpdate)
+        ->assertJsonPath('data.tahun_sertifikasi', '2024-01-01');
 
     // Cek bahwa record evidence ikut tersinkronisasi
     $this->assertDatabaseHas('evidence', [
         'id_sertifikasi' => $idSertif,
         'url_evidence' => $urlUpdate,
     ]);
+    $this->assertDatabaseHas('sertifikasi', [
+        'id_sertifikasi' => $idSertif,
+        'tahun_sertifikasi' => '2024-01-01',
+    ]);
 
     // 3. Tolak hapus jika evidence sudah divalidasi 'Valid' (Luaran Masih Dipakai)
-    \App\Models\Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Valid']);
+    Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Valid']);
     $resDelFail = $this->withToken($this->adminToken)->deleteJson("/api/sertifikasi/{$idSertif}");
     $resDelFail->assertStatus(422)
         ->assertJsonPath('message', 'Luaran Masih Dipakai: Data sertifikasi tidak dapat dihapus karena masih terkait dengan dokumen evidence yang telah divalidasi.');
 
     // 4. Jika diubah kembali menjadi 'Menunggu Validasi', dapat dihapus
-    \App\Models\Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Menunggu Validasi']);
+    Evidence::where('id_sertifikasi', $idSertif)->update(['status_validasi' => 'Menunggu Validasi']);
     $resDelOk = $this->withToken($this->adminToken)->deleteJson("/api/sertifikasi/{$idSertif}");
     $resDelOk->assertStatus(200);
 
@@ -259,4 +268,62 @@ test('endpoint sync-profil: dapat memicu sinkronisasi massal seluruh profil Dose
                 'total_tendik_disinkron',
             ],
         ]);
+});
+
+test('api sertifikasi: upload file bukti otomatis men-generate url_sertifikasi dari storage', function () {
+    Storage::fake('public');
+    $dosen = Dosen::first();
+
+    $file = UploadedFile::fake()->create('sertifikat-kompetensi.pdf', 500, 'application/pdf');
+
+    $response = $this->withToken($this->adminToken)->post('/api/sertifikasi', [
+        'id_dosen' => $dosen->id_dosen,
+        'jenis_sertifikasi' => 'Sertifikat Kompetensi Oracle Certified Professional',
+        'tahun_sertifikasi' => 2024,
+        'evidence_file' => $file,
+    ], ['Accept' => 'application/json']);
+
+    $response->assertStatus(201);
+    $urlSertifikasi = $response->json('data.url_sertifikasi');
+
+    expect($urlSertifikasi)->not->toBeEmpty()
+        ->and($urlSertifikasi)->toContain('/storage/evidence/sertifikasi/');
+
+    $this->assertDatabaseHas('sertifikasi', [
+        'id_dosen' => $dosen->id_dosen,
+        'jenis_sertifikasi' => 'Sertifikat Kompetensi Oracle Certified Professional',
+        'url_sertifikasi' => $urlSertifikasi,
+    ]);
+});
+
+test('api sertifikasi: dapat memproses alias tenaga_kependidikan_id dan penerbit secara otomatis', function () {
+    $tendik = TenagaKependidikan::first();
+
+    $payload = [
+        'tenaga_kependidikan_id' => (string) $tendik->id_tendik,
+        'jenis_sertifikasi' => 'apalah',
+        'nama_sertifikasi' => 'password',
+        'penerbit' => 'Erlangga',
+        'nomor_sertifikat' => '13',
+        'tahun_sertifikasi' => '2000',
+        'url_sertifikasi' => 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=drive_link',
+    ];
+
+    $response = $this->withToken($this->adminToken)->postJson('/api/sertifikasi', $payload);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.id_tendik', $tendik->id_tendik)
+        ->assertJsonPath('data.lembaga_penerbit', 'Erlangga')
+        ->assertJsonPath('data.jenis_sertifikasi', 'apalah')
+        ->assertJsonPath('data.nomor_sertifikat', '13')
+        ->assertJsonPath('data.tahun_sertifikasi', '2000-01-01')
+        ->assertJsonPath('data.url_sertifikasi', 'https://drive.google.com/file/d/1C-vDl0JDYJRJXnlhP4-onXRwUTBf6h1c/view?usp=drive_link');
+
+    $this->assertDatabaseHas('sertifikasi', [
+        'id_tendik' => $tendik->id_tendik,
+        'lembaga_penerbit' => 'Erlangga',
+        'jenis_sertifikasi' => 'apalah',
+        'nomor_sertifikat' => '13',
+        'tahun_sertifikasi' => '2000-01-01',
+    ]);
 });
