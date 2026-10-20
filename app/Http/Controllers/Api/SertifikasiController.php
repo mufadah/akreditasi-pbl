@@ -8,6 +8,7 @@ use App\Models\Sertifikasi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -163,6 +164,11 @@ class SertifikasiController extends Controller
             }
         }
 
+        // 9. Jika url_drive belum terisi namun url_sertifikasi ada
+        if (empty($data['url_drive']) && ! empty($data['url_sertifikasi'])) {
+            $data['url_drive'] = $data['url_sertifikasi'];
+        }
+
         return $data;
     }
 
@@ -189,7 +195,7 @@ class SertifikasiController extends Controller
                             ->orWhere('nidn', 'like', "%{$search}%");
                     })
                     ->orWhereHas('tendik', function ($qt) use ($search) {
-                        $qt->where('nama_tendik', 'like', "%{$search}%")
+                        $qt->where('nama', 'like', "%{$search}%")
                             ->orWhere('nip', 'like', "%{$search}%");
                     });
             });
@@ -197,43 +203,35 @@ class SertifikasiController extends Controller
 
         // 2. Filter tipe pemilik (dosen vs tendik)
         if ($tipePemilik = $request->query('tipe_pemilik')) {
-            $tipeLower = strtolower($tipePemilik);
-            if ($tipeLower === 'dosen') {
-                $query->whereNotNull('id_dosen');
-            } elseif ($tipeLower === 'tendik') {
-                $query->whereNotNull('id_tendik');
+            if (strtolower($tipePemilik) === 'dosen') {
+                $query->whereNotNull('id_dosen')->whereNull('id_tendik');
+            } elseif (strtolower($tipePemilik) === 'tendik') {
+                $query->whereNotNull('id_tendik')->whereNull('id_dosen');
             }
         }
 
         // 3. Filter status masa berlaku (aktif, kedaluwarsa, segera_berakhir)
-        $today = now()->toDateString();
-        if ($statusMasaBerlaku = $request->query('status_masa_berlaku', $request->query('status'))) {
-            $statusVal = strtolower($statusMasaBerlaku);
-            if ($statusVal === 'aktif') {
+        if ($statusMasa = $request->query('status_masa_berlaku')) {
+            $today = now()->toDateString();
+            $thresholdDays = (int) $request->query('hari_kedaluwarsa', 30);
+            $thresholdDate = now()->addDays($thresholdDays)->toDateString();
+
+            if ($statusMasa === 'aktif') {
                 $query->where(function ($q) use ($today) {
                     $q->whereNull('tanggal_kedaluwarsa')
                         ->orWhere('tanggal_kedaluwarsa', '>=', $today);
-                })->where(function ($q) {
-                    $q->whereNull('status_sertifikasi')
-                        ->orWhere('status_sertifikasi', '!=', 'Kedaluwarsa');
                 });
-            } elseif (in_array($statusVal, ['kedaluwarsa', 'expired'])) {
-                $query->where(function ($q) use ($today) {
-                    $q->where(function ($sq) use ($today) {
-                        $sq->whereNotNull('tanggal_kedaluwarsa')
-                            ->where('tanggal_kedaluwarsa', '<', $today);
-                    })->orWhere('status_sertifikasi', 'Kedaluwarsa');
-                });
-            } elseif (in_array($statusVal, ['segera_berakhir', 'expiring_soon'])) {
-                $hari = $request->integer('hari_kedaluwarsa', 30);
-                $targetDate = now()->addDays($hari)->toDateString();
+            } elseif ($statusMasa === 'kedaluwarsa') {
                 $query->whereNotNull('tanggal_kedaluwarsa')
-                    ->whereBetween('tanggal_kedaluwarsa', [$today, $targetDate]);
+                    ->where('tanggal_kedaluwarsa', '<', $today);
+            } elseif ($statusMasa === 'segera_berakhir') {
+                $query->whereNotNull('tanggal_kedaluwarsa')
+                    ->whereBetween('tanggal_kedaluwarsa', [$today, $thresholdDate]);
             }
         }
 
-        // 4. Filter tahun dan rentang tahun sertifikasi
-        if ($tahun = $request->query('tahun_sertifikasi', $request->query('tahun'))) {
+        // 4. Filter tahun sertifikasi spesifik atau rentang tahun
+        if ($tahun = $request->query('tahun_sertifikasi')) {
             if (is_numeric($tahun) && strlen((string) $tahun) === 4) {
                 $query->whereYear('tahun_sertifikasi', $tahun);
             } else {
@@ -297,7 +295,9 @@ class SertifikasiController extends Controller
         }
 
         try {
-            $hasColumn = Sertifikasi::hasUrlSertifikasiColumn();
+            $hasColumn = method_exists(Sertifikasi::class, 'hasUrlSertifikasiColumn')
+                ? Sertifikasi::hasUrlSertifikasiColumn()
+                : Schema::hasColumn('sertifikasi', 'url_sertifikasi');
 
             $sertifikasi = DB::transaction(function () use ($request, $validated, $hasColumn) {
                 $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
@@ -328,16 +328,26 @@ class SertifikasiController extends Controller
                 // Lampirkan dokumen evidence jika ada (Fitur 9 Flowchart)
                 // Baik melalui upload file, url_drive, maupun url_sertifikasi
                 if ($pathFile || ! empty($urlBukti)) {
-                    Evidence::create([
+                    $evidenceData = [
                         'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                         'jenis_dokumen' => 'Sertifikat',
                         'nama_file' => $namaFile ?? ($sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi'),
                         'path_file' => $pathFile,
-                        'url_drive' => $validated['url_drive'] ?? $urlBukti,
-                        'url_evidence' => $urlBukti,
                         'tanggal_upload' => now()->toDateString(),
                         'status_validasi' => 'Menunggu Validasi',
-                    ]);
+                    ];
+
+                    if (Schema::hasColumn('evidence', 'url_drive')) {
+                        $evidenceData['url_drive'] = $validated['url_drive'] ?? $urlBukti;
+                    }
+                    if (Schema::hasColumn('evidence', 'url_evidence')) {
+                        $evidenceData['url_evidence'] = $urlBukti;
+                    }
+                    if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($pathFile) && ! empty($urlBukti)) {
+                        $evidenceData['nama_file'] = $urlBukti;
+                    }
+
+                    Evidence::create($evidenceData);
                 }
 
                 return $sertifikasi;
@@ -387,7 +397,9 @@ class SertifikasiController extends Controller
         }
 
         try {
-            $hasColumn = Sertifikasi::hasUrlSertifikasiColumn();
+            $hasColumn = method_exists(Sertifikasi::class, 'hasUrlSertifikasiColumn')
+                ? Sertifikasi::hasUrlSertifikasiColumn()
+                : Schema::hasColumn('sertifikasi', 'url_sertifikasi');
 
             DB::transaction(function () use ($request, $sertifikasi, $validated, $hasColumn) {
                 $file = $request->file('evidence_file') ?? $request->file('file') ?? $request->file('file_sertifikasi');
@@ -418,26 +430,44 @@ class SertifikasiController extends Controller
                 if ($pathFile || ! empty($urlBukti)) {
                     $evidence = $sertifikasi->evidence()->first();
                     if ($evidence) {
-                        $evidenceData = [
-                            'url_evidence' => $urlBukti ?: $evidence->url_evidence,
-                            'url_drive' => $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti,
-                        ];
+                        $evidenceData = [];
+                        if (Schema::hasColumn('evidence', 'url_evidence')) {
+                            $evidenceData['url_evidence'] = $urlBukti ?: $evidence->url_evidence;
+                        }
+                        if (Schema::hasColumn('evidence', 'url_drive')) {
+                            $evidenceData['url_drive'] = $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti;
+                        }
                         if ($pathFile) {
                             $evidenceData['path_file'] = $pathFile;
                             $evidenceData['nama_file'] = $namaFile;
+                        } elseif (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($evidence->path_file)) {
+                            $evidenceData['nama_file'] = $urlBukti;
                         }
-                        $evidence->update($evidenceData);
+
+                        if (! empty($evidenceData)) {
+                            $evidence->update($evidenceData);
+                        }
                     } else {
-                        Evidence::create([
+                        $evidenceData = [
                             'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                             'jenis_dokumen' => 'Sertifikat',
                             'nama_file' => $namaFile ?? ($sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi'),
                             'path_file' => $pathFile,
-                            'url_drive' => $validated['url_drive'] ?? $urlBukti,
-                            'url_evidence' => $urlBukti,
                             'tanggal_upload' => now()->toDateString(),
                             'status_validasi' => 'Menunggu Validasi',
-                        ]);
+                        ];
+
+                        if (Schema::hasColumn('evidence', 'url_drive')) {
+                            $evidenceData['url_drive'] = $validated['url_drive'] ?? $urlBukti;
+                        }
+                        if (Schema::hasColumn('evidence', 'url_evidence')) {
+                            $evidenceData['url_evidence'] = $urlBukti;
+                        }
+                        if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && ! empty($urlBukti)) {
+                            $evidenceData['nama_file'] = $urlBukti;
+                        }
+
+                        Evidence::create($evidenceData);
                     }
                 }
             });
