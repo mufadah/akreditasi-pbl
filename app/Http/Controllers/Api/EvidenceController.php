@@ -10,6 +10,7 @@ use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -149,7 +150,11 @@ class EvidenceController extends Controller
             $urlDrive = $originalName;
 
             // Cek duplikasi link jika berupa URL
-            $isDuplicate = Evidence::where('nama_file', $originalName)->orWhere('url_drive', $originalName)->exists();
+            $dupQuery = Evidence::where('nama_file', $originalName);
+            if (Schema::hasColumn('evidence', 'url_drive')) {
+                $dupQuery->orWhere('url_drive', $originalName);
+            }
+            $isDuplicate = $dupQuery->exists();
             if ($isDuplicate && ! $request->boolean('konfirmasi_lanjut')) {
                 return $this->respond(false, 409, 'Peringatan: Link ini sudah pernah digunakan sebelumnya. Kirim parameter "konfirmasi_lanjut": true jika ingin tetap menyimpan.', [
                     'is_duplicate' => true,
@@ -159,10 +164,9 @@ class EvidenceController extends Controller
 
         try {
             $evidence = DB::transaction(function () use ($validated, $storedPath, $originalName, $urlDrive, $idKerjaSama) {
-                return Evidence::create([
-                    'nama_file' => $originalName ?? 'Dokumen Evidence',
+                $createData = [
+                    'nama_file' => $originalName ?? ($urlDrive ?: 'Dokumen Evidence'),
                     'path_file' => $storedPath,
-                    'url_drive' => $urlDrive,
                     'jenis_dokumen' => $validated['jenis_dokumen'],
                     'tanggal_upload' => $validated['tanggal_upload'] ?? now()->toDateString(),
                     'status_validasi' => $validated['status_validasi'] ?? 'Menunggu Validasi',
@@ -174,7 +178,19 @@ class EvidenceController extends Controller
                     'kode_indikator' => $validated['kode_indikator'] ?? null,
                     'id_kerja_sama' => $idKerjaSama,
                     'id_kerjasama' => $idKerjaSama,
-                ]);
+                ];
+
+                if (Schema::hasColumn('evidence', 'url_drive')) {
+                    $createData['url_drive'] = $urlDrive;
+                }
+                if (Schema::hasColumn('evidence', 'url_evidence')) {
+                    $createData['url_evidence'] = $urlDrive;
+                }
+                if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($storedPath) && ! empty($urlDrive)) {
+                    $createData['nama_file'] = $urlDrive;
+                }
+
+                return Evidence::create($createData);
             });
 
             AuditLogService::log('CREATE', 'Evidence', $evidence->id_evidence, null, $evidence->toArray());

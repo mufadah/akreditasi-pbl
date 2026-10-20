@@ -8,6 +8,7 @@ use App\Models\Sertifikasi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -187,6 +188,13 @@ class SertifikasiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Normalisasi: dukung url_drive maupun url_sertifikasi secara fleksibel
+        if ($request->filled('url_drive') && ! $request->filled('url_sertifikasi')) {
+            $request->merge(['url_sertifikasi' => $request->input('url_drive')]);
+        } elseif ($request->filled('url_sertifikasi') && ! $request->filled('url_drive')) {
+            $request->merge(['url_drive' => $request->input('url_sertifikasi')]);
+        }
+
         $validator = Validator::make($request->all(), $this->rules());
 
         if ($validator->fails()) {
@@ -201,9 +209,15 @@ class SertifikasiController extends Controller
 
         try {
             $sertifikasi = DB::transaction(function () use ($request, $validated) {
-                $sertifikasi = Sertifikasi::create(
-                    collect($validated)->except(['evidence_file', 'url_drive'])->toArray()
-                );
+                $sertifikasiData = collect($validated)->except(['evidence_file', 'url_drive'])->toArray();
+                if (empty($sertifikasiData['url_sertifikasi']) && ! empty($validated['url_drive'])) {
+                    $sertifikasiData['url_sertifikasi'] = $validated['url_drive'];
+                }
+                if (! Schema::hasColumn('sertifikasi', 'url_sertifikasi')) {
+                    unset($sertifikasiData['url_sertifikasi']);
+                }
+
+                $sertifikasi = Sertifikasi::create($sertifikasiData);
 
                 // Lampirkan dokumen evidence jika ada (Fitur 9 Flowchart)
                 // Baik melalui upload file, url_drive, maupun url_sertifikasi
@@ -218,16 +232,26 @@ class SertifikasiController extends Controller
                         $pathFile = $file->store('evidence/sertifikasi', 'public');
                     }
 
-                    Evidence::create([
+                    $evidenceData = [
                         'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                         'jenis_dokumen' => 'Sertifikat',
                         'nama_file' => $namaFile ?? ($sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi'),
                         'path_file' => $pathFile,
-                        'url_drive' => $validated['url_drive'] ?? $urlBukti,
-                        'url_evidence' => $urlBukti,
                         'tanggal_upload' => now()->toDateString(),
                         'status_validasi' => 'Menunggu Validasi',
-                    ]);
+                    ];
+
+                    if (Schema::hasColumn('evidence', 'url_drive')) {
+                        $evidenceData['url_drive'] = $validated['url_drive'] ?? $urlBukti;
+                    }
+                    if (Schema::hasColumn('evidence', 'url_evidence')) {
+                        $evidenceData['url_evidence'] = $urlBukti;
+                    }
+                    if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($pathFile) && ! empty($urlBukti)) {
+                        $evidenceData['nama_file'] = $urlBukti;
+                    }
+
+                    Evidence::create($evidenceData);
                 }
 
                 return $sertifikasi;
@@ -264,6 +288,13 @@ class SertifikasiController extends Controller
             return $this->respond(false, 404, 'Data sertifikasi tidak ditemukan.');
         }
 
+        // Normalisasi: dukung url_drive maupun url_sertifikasi secara fleksibel
+        if ($request->filled('url_drive') && ! $request->filled('url_sertifikasi')) {
+            $request->merge(['url_sertifikasi' => $request->input('url_drive')]);
+        } elseif ($request->filled('url_sertifikasi') && ! $request->filled('url_drive')) {
+            $request->merge(['url_drive' => $request->input('url_sertifikasi')]);
+        }
+
         $validator = Validator::make($request->all(), $this->rules(true));
 
         if ($validator->fails()) {
@@ -274,29 +305,55 @@ class SertifikasiController extends Controller
 
         try {
             DB::transaction(function () use ($sertifikasi, $validated) {
-                $sertifikasi->update(
-                    collect($validated)->except(['evidence_file', 'url_drive'])->toArray()
-                );
+                $sertifikasiData = collect($validated)->except(['evidence_file', 'url_drive'])->toArray();
+                if (empty($sertifikasiData['url_sertifikasi']) && ! empty($validated['url_drive'])) {
+                    $sertifikasiData['url_sertifikasi'] = $validated['url_drive'];
+                }
+                if (! Schema::hasColumn('sertifikasi', 'url_sertifikasi')) {
+                    unset($sertifikasiData['url_sertifikasi']);
+                }
+
+                $sertifikasi->update($sertifikasiData);
 
                 $urlBukti = ! empty($validated['url_sertifikasi']) ? $validated['url_sertifikasi'] : ($validated['url_drive'] ?? null);
                 if ($urlBukti) {
                     $evidence = $sertifikasi->evidence()->first();
                     if ($evidence) {
-                        $evidence->update([
-                            'url_evidence' => $urlBukti,
-                            'url_drive' => $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti,
-                        ]);
+                        $updateData = [];
+                        if (Schema::hasColumn('evidence', 'url_drive')) {
+                            $updateData['url_drive'] = $validated['url_drive'] ?? $evidence->url_drive ?? $urlBukti;
+                        }
+                        if (Schema::hasColumn('evidence', 'url_evidence')) {
+                            $updateData['url_evidence'] = $urlBukti;
+                        }
+                        if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($evidence->path_file)) {
+                            $updateData['nama_file'] = $urlBukti;
+                        }
+
+                        if (! empty($updateData)) {
+                            $evidence->update($updateData);
+                        }
                     } else {
-                        Evidence::create([
+                        $evidenceData = [
                             'id_sertifikasi' => $sertifikasi->id_sertifikasi,
                             'jenis_dokumen' => 'Sertifikat',
                             'nama_file' => $sertifikasi->jenis_sertifikasi ?: 'Bukti Sertifikasi',
                             'path_file' => null,
-                            'url_drive' => $validated['url_drive'] ?? $urlBukti,
-                            'url_evidence' => $urlBukti,
                             'tanggal_upload' => now()->toDateString(),
                             'status_validasi' => 'Menunggu Validasi',
-                        ]);
+                        ];
+
+                        if (Schema::hasColumn('evidence', 'url_drive')) {
+                            $evidenceData['url_drive'] = $validated['url_drive'] ?? $urlBukti;
+                        }
+                        if (Schema::hasColumn('evidence', 'url_evidence')) {
+                            $evidenceData['url_evidence'] = $urlBukti;
+                        }
+                        if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && ! empty($urlBukti)) {
+                            $evidenceData['nama_file'] = $urlBukti;
+                        }
+
+                        Evidence::create($evidenceData);
                     }
                 }
             });
