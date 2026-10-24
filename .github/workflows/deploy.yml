@@ -49,7 +49,4 @@ jobs:
           php artisan route:cache
           php artisan view:cache
 
-          echo "Setting folder permissions..."
-          chmod -R 775 storage bootstrap/cache
-
           echo "Deployment completed successfully."
