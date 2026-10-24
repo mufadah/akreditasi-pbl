@@ -233,7 +233,9 @@ class DosenController extends Controller
         // Cek keterkaitan jika status hendak diubah ke NONAKTIF
         if ($request->filled('status_dosen')) {
             $statusUpper = strtoupper((string) $request->input('status_dosen'));
-            $input['status_dosen'] = in_array($statusUpper, ['DTT', 'NONAKTIF']) ? $statusUpper : 'DTPS';
+            $input['status_dosen'] = in_array($statusUpper, ['DTT', 'TIDAK TETAP', 'NONAKTIF'])
+                ? ($statusUpper === 'TIDAK TETAP' ? 'DTT' : $statusUpper)
+                : 'DTPS';
 
             if ($input['status_dosen'] === 'NONAKTIF') {
                 if ($this->isDosenUsedInTridharma($id)) {
