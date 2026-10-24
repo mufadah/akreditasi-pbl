@@ -247,6 +247,29 @@ test('flowchart: aksi ubah data dosen berhasil mengupdate database dan menampilk
 // 5. AKSI: CEK KETERKAITAN KE PENELITIAN DAN PKM (DATA SEDANG DIGUNAKAN?)
 // ==============================================================================
 
+test('flowchart: status Tidak Tetap saat update tersimpan sebagai DTT', function () {
+    $dosen = Dosen::create([
+        'id_jabatan' => 1,
+        'id_pendidikan' => 1,
+        'nidn' => '3344556688',
+        'nama_dosen' => 'Dosen Status Tetap',
+        'email' => 'status.tidak.tetap@polines.ac.id',
+        'status_dosen' => 'DTPS',
+    ]);
+
+    $response = $this->withToken($this->adminToken)->putJson("/api/dosen/{$dosen->id_dosen}", [
+        'status_dosen' => 'Tidak Tetap',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.status_dosen', 'DTT');
+
+    $this->assertDatabaseHas('dosen', [
+        'id_dosen' => $dosen->id_dosen,
+        'status_dosen' => 'DTT',
+    ]);
+});
+
 test('flowchart: dosen yang sedang digunakan di kegiatan Penelitian ditolak dinonaktifkan dengan pesan Dosen Masih Aktif', function () {
     $dosen = Dosen::create([
         'id_jabatan' => 2,
