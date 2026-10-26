@@ -62,17 +62,15 @@ class RoleMiddleware
             }
         }
 
-        // 5. Jika role belum terdeteksi namun request memiliki Bearer Token, jalankan JwtAuthenticate
-        if (! $userRole && $request->bearerToken()) {
+        // 5. Jika role belum terdeteksi, delegasikan autentikasi ke JwtAuthenticate (mendukung Bearer token, API Key, & Dev Bypass)
+        if (! $userRole) {
             $jwtAuth = app(JwtAuthenticate::class);
             $authResponse = $jwtAuth->handle($request, fn ($req) => response()->json(['ok' => true]));
 
-            if ($authResponse->getStatusCode() !== 200) {
-                return $authResponse;
+            if ($authResponse->getStatusCode() === 200) {
+                $user = $request->user() ?: auth()->user();
+                $userRole = $user?->role ?? $request->attributes->get('jwt_role');
             }
-
-            $user = $request->user() ?: auth()->user();
-            $userRole = $user?->role ?? $request->attributes->get('jwt_role');
         }
 
         // Jika user sama sekali tidak terautentikasi

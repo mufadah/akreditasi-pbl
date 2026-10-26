@@ -117,6 +117,13 @@
 </head>
 
 <body @if(config('l5-swagger.defaults.ui.display.dark_mode')) id="dark-mode" @endif>
+<div style="background: linear-gradient(135deg, #0f766e 0%, #047857 100%); color: #ffffff; padding: 10px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 9999; position: sticky; top: 0;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 18px;">⚡</span>
+        <span><strong>Swagger Dev Mode Aktif:</strong> Autentikasi otomatis di-bypass sebagai <code>ADMINISTRATOR</code>. Anda bisa langsung klik <em>Try it out</em> & <em>Execute</em> di endpoint mana pun tanpa perlu login SSO atau mengisi token!</span>
+    </div>
+    <span style="background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;">BYPASS SSO K1: AKTIF</span>
+</div>
 <div id="swagger-ui"></div>
 
 <script src="{{ l5_swagger_asset($documentation, 'swagger-ui-bundle.js') }}"></script>
@@ -141,6 +148,7 @@
 
             requestInterceptor: function(request) {
                 request.headers['X-CSRF-TOKEN'] = '{{ csrf_token() }}';
+                request.headers['X-Swagger-Request'] = 'true';
                 return request;
             },
 
