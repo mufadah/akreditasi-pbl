@@ -14,10 +14,10 @@ class MitraController extends Controller
     {
         $query = Mitra::query();
 
-        // Filter pencarian nama instansi, email, atau alamat
+        // Filter pencarian nama instansi/mitra, email, atau alamat
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('nama_instansi', 'like', "%{$search}%")
+                $q->where('nama_mitra', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('alamat', 'like', "%{$search}%");
             });
@@ -35,16 +35,34 @@ class MitraController extends Controller
     // Tambah data mitra baru
     public function store(Request $request): JsonResponse
     {
-        // Validasi input data mitra
+        // Validasi input data mitra (mendukung nama_instansi maupun nama_mitra)
         $validated = $request->validate([
-            'nama_instansi' => 'required|string|max:255',
+            'nama_instansi' => 'nullable|string|max:255',
+            'nama_mitra' => 'nullable|string|max:255',
+            'jenis_mitra' => 'nullable|string|max:100',
             'alamat' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'telepon' => 'nullable|string|max:50',
         ]);
 
-        // Simpan ke database
-        $mitra = Mitra::create($validated);
+        $namaMitra = $validated['nama_mitra'] ?? ($validated['nama_instansi'] ?? null);
+        if (! $namaMitra) {
+            return response()->json([
+                'message' => 'The nama_instansi field is required.',
+                'errors' => [
+                    'nama_instansi' => ['Nama instansi / nama mitra wajib diisi.'],
+                ],
+            ], 422);
+        }
+
+        // Simpan ke database sesuai struktur kolom schema mitra
+        $mitra = Mitra::create([
+            'nama_mitra' => $namaMitra,
+            'jenis_mitra' => $validated['jenis_mitra'] ?? 'Instansi',
+            'alamat' => $validated['alamat'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'telepon' => $validated['telepon'] ?? null,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -53,10 +71,10 @@ class MitraController extends Controller
         ], 201);
     }
 
-    // Ambil detail satu mitra beserta relasi PKM dan kerja sama
+    // Ambil detail satu mitra beserta relasi kerja sama
     public function show(int $id): JsonResponse
     {
-        $mitra = Mitra::with(['pkm', 'kerjaSama'])->find($id);
+        $mitra = Mitra::with(['kerjaSama'])->find($id);
 
         // Cek data ada atau tidak
         if (! $mitra) {
@@ -87,14 +105,28 @@ class MitraController extends Controller
 
         // Validasi input data mitra untuk update
         $validated = $request->validate([
-            'nama_instansi' => 'sometimes|required|string|max:255',
+            'nama_instansi' => 'nullable|string|max:255',
+            'nama_mitra' => 'nullable|string|max:255',
+            'jenis_mitra' => 'nullable|string|max:100',
             'alamat' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'telepon' => 'nullable|string|max:50',
         ]);
 
+        $updateData = [];
+        $namaMitra = $validated['nama_mitra'] ?? ($validated['nama_instansi'] ?? null);
+        if ($namaMitra !== null) {
+            $updateData['nama_mitra'] = $namaMitra;
+        }
+
+        foreach (['jenis_mitra', 'alamat', 'email', 'telepon'] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $updateData[$field] = $validated[$field];
+            }
+        }
+
         // Update data di database
-        $mitra->update($validated);
+        $mitra->update($updateData);
 
         return response()->json([
             'success' => true,
@@ -116,11 +148,11 @@ class MitraController extends Controller
             ], 404);
         }
 
-        // Cek apakah mitra masih dipakai di data PKM atau kerja sama (Flowchart Fitur 6)
-        if ($mitra->pkm()->exists() || $mitra->kerjaSama()->exists()) {
+        // Cek apakah mitra masih dipakai di data kerja sama (Flowchart Fitur 6)
+        if ($mitra->kerjaSama()->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Mitra Masih Bekerja sama: Mitra tidak dapat dihapus karena masih terkait dengan data PKM atau kerja sama.',
+                'message' => 'Mitra Masih Bekerja sama: Mitra tidak dapat dihapus karena masih terkait dengan data kerja sama.',
             ], 422);
         }
 
