@@ -8,8 +8,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Mitra extends Model
 {
     protected $table = 'mitra';
+
     protected $primaryKey = 'id_mitra';
+
     protected $guarded = ['id_mitra'];
+
+    protected $appends = ['nama_instansi'];
+
+    /**
+     * Accessor alias untuk backward compatibility dengan Swagger / Postman (nama_instansi <-> nama_mitra).
+     */
+    public function getNamaInstansiAttribute(): ?string
+    {
+        return $this->attributes['nama_mitra'] ?? null;
+    }
 
     public function kerjaSama(): HasMany
     {

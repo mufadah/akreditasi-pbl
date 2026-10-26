@@ -62,3 +62,37 @@ test('referer from swagger documentation bypasses jwt auth', function () {
     $response->assertStatus(200)
         ->assertJson(['success' => true]);
 });
+
+test('post mitra with swagger payload succeeds', function () {
+    $payload = [
+        'nama_instansi' => 'PT Telekomunikasi Selular (Telkomsel)',
+        'alamat' => 'Telkom Landmark Tower, Jl. Jend. Gatot Subroto Kav. 52 Jakarta',
+        'email' => 'partnership@telkomsel.co.id',
+        'telepon' => '021-5240811',
+    ];
+
+    $response = $this->withHeader('X-Swagger-Request', 'true')
+        ->postJson('/api/mitra', $payload);
+
+    $response->assertStatus(201)
+        ->assertJson([
+            'success' => true,
+            'data' => [
+                'nama_mitra' => 'PT Telekomunikasi Selular (Telkomsel)',
+                'nama_instansi' => 'PT Telekomunikasi Selular (Telkomsel)',
+            ],
+        ]);
+
+    $id = $response->json('data.id_mitra');
+
+    $show = $this->withHeader('X-Swagger-Request', 'true')
+        ->getJson("/api/mitra/{$id}");
+
+    $show->assertStatus(200)
+        ->assertJson([
+            'success' => true,
+            'data' => [
+                'nama_mitra' => 'PT Telekomunikasi Selular (Telkomsel)',
+            ],
+        ]);
+});
