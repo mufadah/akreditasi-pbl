@@ -1,6 +1,13 @@
 <?php
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+use App\Models\Evidence;
+use App\Models\Kegiatan;
+use App\Models\KerjaSama;
+use App\Models\Luaran;
+use Firebase\JWT\JWT;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 test('the application returns a successful response', function () {
     $response = $this->get('/');
@@ -11,10 +18,10 @@ test('the application returns a successful response', function () {
 test('models and seeders can be queried without SQL error', function () {
     $this->seed();
 
-    $kerjaSama = \App\Models\KerjaSama::first();
-    $evidence = \App\Models\Evidence::first();
-    $kegiatan = \App\Models\Kegiatan::first();
-    $luaran = \App\Models\Luaran::first();
+    $kerjaSama = KerjaSama::first();
+    $evidence = Evidence::first();
+    $kegiatan = Kegiatan::first();
+    $luaran = Luaran::first();
 
     expect(true)->toBeTrue();
 });
@@ -30,7 +37,7 @@ test('api v1 dashboard returns successful response for all tabs', function () {
         'permissions' => ['*'],
         'exp' => time() + 3600,
     ];
-    $token = \Firebase\JWT\JWT::encode($payload, $secret, 'HS256');
+    $token = JWT::encode($payload, $secret, 'HS256');
 
     foreach (['ringkasan', 'produktivitas', 'rasio_jabatan', 'tren'] as $tab) {
         $dash = $this->withHeader('Authorization', "Bearer {$token}")
@@ -38,4 +45,20 @@ test('api v1 dashboard returns successful response for all tabs', function () {
 
         $dash->assertStatus(200);
     }
+});
+
+test('swagger request bypasses jwt auth and returns successful response', function () {
+    $response = $this->withHeader('X-Swagger-Request', 'true')
+        ->getJson('/api/v1/dosen/statistik');
+
+    $response->assertStatus(200)
+        ->assertJson(['success' => true]);
+});
+
+test('referer from swagger documentation bypasses jwt auth', function () {
+    $response = $this->withHeader('Referer', 'http://localhost:8000/api/documentation')
+        ->getJson('/api/v1/dosen/statistik');
+
+    $response->assertStatus(200)
+        ->assertJson(['success' => true]);
 });

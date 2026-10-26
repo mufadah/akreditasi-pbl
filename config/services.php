@@ -47,4 +47,10 @@ return [
         'key' => env('K3_API_KEY', ''),
     ],
 
+    'k2' => [
+        'api_key' => env('K2_API_KEY', 'k2-secret-key-akreditasi'),
+        'swagger_bypass_auth' => env('SWAGGER_BYPASS_AUTH', true),
+        'bypass_auth' => env('BYPASS_AUTH', false),
+    ],
+
 ];
