@@ -12,7 +12,11 @@ class ImportPdaDosenCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'pda:import-dosen';
+    protected $signature = 'pda:import-dosen
+                            {--prodi=Teknologi Rekayasa Komputer : Filter berdasarkan nama program studi}
+                            {--homebase-only : Hanya impor dosen homebase tanpa dosen luar prodi/jurusan yang mengajar}
+                            {--scan-pengajar : Pindai ulang riwayat pengajaran seluruh dosen secara live dari portal PDA}
+                            {--all : Impor seluruh dosen dari semua program studi Polines}';
 
     /**
      * The console command description.
@@ -26,12 +30,29 @@ class ImportPdaDosenCommand extends Command
      */
     public function handle(PdaSyncService $pdaSyncService): int
     {
-        $this->info('Memulai impor master data dosen dari dataset PDA Polines...');
+        $all = (bool) $this->option('all');
+        $homebaseOnly = (bool) $this->option('homebase-only');
+        $scanPengajar = (bool) $this->option('scan-pengajar');
+        $prodi = $all ? null : (string) ($this->option('prodi') ?: 'Teknologi Rekayasa Komputer');
 
-        $result = $pdaSyncService->importDosenMasterList();
+        $isTrk = $prodi !== null && str_contains(strtolower($prodi), 'rekayasa komputer');
+        $includePengajar = $isTrk && ! $homebaseOnly;
+
+        $targetText = $all ? 'seluruh program studi Polines' : "program studi [{$prodi}]";
+        if ($includePengajar) {
+            $targetText .= ' beserta dosen luar prodi/jurusan pengampu TRK';
+        }
+
+        $this->info("Memulai impor master data dosen untuk {$targetText} dari portal PDA Polines...");
+
+        $result = $pdaSyncService->importDosenMasterList(
+            prodi: $prodi,
+            includePengajarLuar: $includePengajar,
+            liveScan: $scanPengajar
+        );
 
         if ($result['total_dataset'] === 0) {
-            $this->warn('Dataset dosen PDA tidak ditemukan di database/data/dosen_polines.json');
+            $this->warn("Data dosen PDA tidak ditemukan atau gagal diambil untuk {$targetText}.");
 
             return self::FAILURE;
         }

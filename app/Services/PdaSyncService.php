@@ -10,6 +10,7 @@ use App\Models\JenisLuaran;
 use App\Models\Kegiatan;
 use App\Models\Luaran;
 use App\Models\Pendidikan;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -92,13 +93,32 @@ class PdaSyncService
      *
      * @return array{total_dataset: int, created: int, updated: int, skipped: int}
      */
-    public function importDosenMasterList(): array
+    public function importDosenMasterList(?string $prodi = null, bool $includePengajarLuar = true, bool $liveScan = false): array
     {
-        $this->ensureSlugMappingLoaded();
-        $list = $this->slugMapping['list'] ?? [];
+        if ($prodi !== null && $prodi !== '') {
+            $list = $this->fetchLecturersListFromPda($prodi);
+            foreach ($list as &$item) {
+                $item['status_dosen'] = 'DTPS';
+            }
+            unset($item);
 
-        if (empty($list)) {
-            $list = $this->fetchLecturersListFromPda();
+            $isTrk = str_contains(strtolower($prodi), 'rekayasa komputer');
+            if ($isTrk && $includePengajarLuar) {
+                $pengajarLuar = $this->fetchOutsideTrkTeachingLecturers($liveScan);
+                $list = array_merge($list, $pengajarLuar);
+            }
+        } else {
+            $this->ensureSlugMappingLoaded();
+            $list = $this->slugMapping['list'] ?? [];
+
+            if (empty($list)) {
+                $list = $this->fetchLecturersListFromPda();
+            }
+
+            foreach ($list as &$item) {
+                $item['status_dosen'] = 'DTPS';
+            }
+            unset($item);
         }
 
         if (empty($list)) {
@@ -154,6 +174,8 @@ class PdaSyncService
                 ->when($rawNip !== '', fn ($q) => $q->orWhere('nuptk', $rawNip))
                 ->first();
 
+            $targetStatus = $item['status_dosen'] ?? ($existing ? $existing->status_dosen : 'DTPS');
+
             $data = [
                 'nama_dosen' => $formattedName,
                 'nidn' => $nidn,
@@ -161,7 +183,7 @@ class PdaSyncService
                 'email' => $existing ? $existing->email : $email,
                 'id_jabatan' => $existing ? $existing->id_jabatan : $defaultJabatan->id_jabatan,
                 'id_pendidikan' => $existing ? $existing->id_pendidikan : $idPendidikan,
-                'status_dosen' => 'DTPS',
+                'status_dosen' => $targetStatus,
             ];
 
             if ($existing) {
@@ -226,14 +248,14 @@ class PdaSyncService
     }
 
     /**
-     * Ambil seluruh direktori dosen langsung dari PDA secara live.
+     * Ambil seluruh direktori dosen langsung dari PDA secara live (opsional filter prodi).
      *
      * @return array<int, array<string, mixed>>
      */
-    public function fetchLecturersListFromPda(): array
+    public function fetchLecturersListFromPda(?string $prodi = null): array
     {
         try {
-            $firstPage = $this->fetchLecturerPage(1);
+            $firstPage = $this->fetchLecturerPage(1, $prodi);
             if (! $firstPage) {
                 return [];
             }
@@ -242,7 +264,7 @@ class PdaSyncService
             $allDosen = $firstPage['data'] ?? [];
 
             for ($page = 2; $page <= $lastPage; $page++) {
-                $p = $this->fetchLecturerPage($page);
+                $p = $this->fetchLecturerPage($page, $prodi);
                 if ($p && ! empty($p['data'])) {
                     $allDosen = array_merge($allDosen, $p['data']);
                 }
@@ -257,14 +279,147 @@ class PdaSyncService
     }
 
     /**
+     * Ambil daftar dosen dari luar prodi TRK yang memiliki penugasan mengajar di kelas TRK (kode kelas TI-).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOutsideTrkTeachingLecturers(bool $liveScan = false): array
+    {
+        // ponytail: daftar slug terverifikasi pengajar kelas TRK (TI-) dari prodi/jurusan lain
+        $fallbackSlugs = [
+            'afandi-nur-aziz-thohari',
+            'aisyatul-karima',
+            'amran-yobioktabera',
+            'arif-fitra-setyawan',
+            'filda-hulwani-dewi',
+            'idhawati-hestiningsih',
+            'iswanti',
+            'muttabik-fathul-lathief',
+            'netty-nurdiyani',
+            'nur-hidayati',
+            'sirli-fahriah',
+            'slamet-handoko',
+            'sukamto',
+        ];
+
+        try {
+            $response = Http::withOptions(['version' => 2.0])
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Referer' => 'https://pda.polines.ac.id/dosen',
+                    'X-Requested-With' => 'XMLHttpRequest',
+                ])->timeout(10)->get('https://pda.polines.ac.id/internal/dosen/list?limit=500');
+
+            if (! $response->successful()) {
+                return $this->formatLecturersFromSlugs($fallbackSlugs);
+            }
+
+            $allDosen = $response->json('data') ?? [];
+            $dosenBySlug = [];
+            $candidates = [];
+
+            foreach ($allDosen as $d) {
+                $slug = (string) ($d['slug'] ?? '');
+                if ($slug === '') {
+                    continue;
+                }
+                $dosenBySlug[$slug] = $d;
+
+                $prodi = (string) ($d['effective_homebase_prodi_nama'] ?? $d['homebase_prodi_nama'] ?? '');
+                if (! str_contains(strtolower($prodi), 'rekayasa komputer')) {
+                    $candidates[] = $slug;
+                }
+            }
+
+            $matchedSlugs = $fallbackSlugs;
+
+            if ($liveScan) {
+                $chunks = array_chunk($candidates, 40);
+                $liveMatched = [];
+
+                foreach ($chunks as $chunk) {
+                    $responses = Http::pool(fn ($pool) => array_map(fn ($s) => $pool->as($s)->withOptions(['version' => 2.0])
+                        ->withHeaders(['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'])
+                        ->timeout(10)->get("{$this->pdaBaseUrl}/{$s}"), $chunk)
+                    );
+
+                    foreach ($responses as $slug => $resp) {
+                        if ($resp instanceof Response && $resp->successful()) {
+                            if (preg_match('/data-page="([^"]+)"/', $resp->body(), $m)) {
+                                $pData = json_decode(html_entity_decode($m[1]), true);
+                                $pengajaran = $pData['props']['pengajaranTerbaru'] ?? [];
+                                foreach ($pengajaran as $p) {
+                                    if (str_starts_with((string) ($p['kelas'] ?? ''), 'TI-')) {
+                                        $liveMatched[] = $slug;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (! empty($liveMatched)) {
+                    $matchedSlugs = array_values(array_unique($liveMatched));
+                }
+            }
+
+            $results = [];
+            foreach ($matchedSlugs as $slug) {
+                $raw = $dosenBySlug[$slug] ?? null;
+                if ($raw) {
+                    $results[] = [
+                        'Nama_dosen' => $raw['nama'] ?? '',
+                        'gelar_depan' => $raw['gelar_depan'] ?? '',
+                        'gelar_belakang' => $raw['gelar_belakang'] ?? '',
+                        'NIDN' => $raw['nidn'] ?? '',
+                        'NIP' => $raw['nip'] ?? '',
+                        'slug' => $slug,
+                        'status_dosen' => 'Tidak Tetap',
+                    ];
+                }
+            }
+
+            return ! empty($results) ? $results : $this->formatLecturersFromSlugs($fallbackSlugs);
+        } catch (\Throwable $e) {
+            Log::warning('Gagal memindai dosen pengajar luar TRK: '.$e->getMessage());
+
+            return $this->formatLecturersFromSlugs($fallbackSlugs);
+        }
+    }
+
+    /**
+     * Format fallback daftar dosen pengajar dari slug.
+     *
+     * @param  array<int, string>  $slugs
+     * @return array<int, array<string, mixed>>
+     */
+    protected function formatLecturersFromSlugs(array $slugs): array
+    {
+        return array_map(fn ($slug) => [
+            'Nama_dosen' => ucwords(str_replace('-', ' ', $slug)),
+            'gelar_depan' => '',
+            'gelar_belakang' => '',
+            'NIDN' => '',
+            'NIP' => '',
+            'slug' => $slug,
+            'status_dosen' => 'Tidak Tetap',
+        ], $slugs);
+    }
+
+    /**
      * Ambil data satu halaman tabel dosen PDA Polines.
      *
      * @return array{total?: int, last_page?: int, data?: array<int, array<string, mixed>>}|null
      */
-    protected function fetchLecturerPage(int $page): ?array
+    protected function fetchLecturerPage(int $page, ?string $prodi = null): ?array
     {
         try {
             $url = "{$this->pdaBaseUrl}?mode=tabel&page={$page}";
+            if ($prodi !== null && $prodi !== '') {
+                $url .= '&prodi='.urlencode($prodi);
+            }
+
             $response = Http::withOptions(['version' => 2.0])
                 ->withHeaders([
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',

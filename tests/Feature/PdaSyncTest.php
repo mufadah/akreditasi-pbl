@@ -114,7 +114,7 @@ test('pda sync command runs successfully for specific lecturer', function () {
         ->assertSuccessful();
 });
 
-test('pda import-dosen command runs successfully', function () {
+test('pda import-dosen command runs successfully with homebase and outside lecturers', function () {
     Http::fake([
         'https://pda.polines.ac.id/dosen?mode=tabel*' => Http::response([
             'props' => [
@@ -134,8 +134,24 @@ test('pda import-dosen command runs successfully', function () {
                 ],
             ],
         ], 200),
+        'https://pda.polines.ac.id/internal/dosen/list*' => Http::response([
+            'data' => [
+                [
+                    'nama' => 'Dosen Luar MKU',
+                    'gelar_depan' => '',
+                    'gelar_belakang' => 'M.Pd.',
+                    'nidn' => '7777888899',
+                    'nip' => '198501012010011002',
+                    'slug' => 'filda-hulwani-dewi',
+                    'homebase_prodi_nama' => 'Teknik Informatika',
+                ],
+            ],
+        ], 200),
     ]);
 
     $this->artisan('pda:import-dosen')
         ->assertSuccessful();
+
+    expect(Dosen::where('nidn', '8888777766')->value('status_dosen'))->toBe('DTPS');
+    expect(Dosen::where('nidn', '7777888899')->value('status_dosen'))->toBe('Tidak Tetap');
 });
