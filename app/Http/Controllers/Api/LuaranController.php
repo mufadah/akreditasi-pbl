@@ -64,7 +64,9 @@ class LuaranController extends Controller
                 'tahun_terbit' => [...$req, 'integer', 'digits:4'],
                 'jenis_buku' => ['nullable', 'string', 'max:100'],
                 'bidang_ilmu' => ['nullable', 'string', 'max:100'],
-                'halaman_buku' => ['nullable', 'string', 'max:50'],
+                'halaman_buku' => ['nullable', 'integer', 'min:1'],
+                'tanggal_terbit' => ['nullable', 'date'],
+                'tautan_buku' => ['nullable', 'url', 'max:2048'],
             ];
         } elseif (str_contains($namaJenis, 'jurnal')) {
             $conditionalRules = [
@@ -74,8 +76,9 @@ class LuaranController extends Controller
                 'tanggal_terbit' => ['nullable', 'date'],
                 'doi' => ['nullable', 'string', 'max:255'],
                 'nomor_edisi' => ['nullable', 'string', 'max:50'],
-                'halaman_jurnal' => ['nullable', 'string', 'max:50'],
+                'halaman_jurnal' => ['nullable', 'integer', 'min:1'],
                 'indeksasi' => ['nullable', 'string', 'max:100'],
+                'tautan_jurnal' => ['nullable', 'url', 'max:2048'],
             ];
         } elseif (str_contains($namaJenis, 'prosiding')) {
             $conditionalRules = [
@@ -85,8 +88,9 @@ class LuaranController extends Controller
                 'penyelenggara' => ['nullable', 'string', 'max:255'],
                 'tanggal_seminar' => ['nullable', 'date'],
                 'lokasi_seminar' => ['nullable', 'string', 'max:255'],
-                'halaman_prosiding' => ['nullable', 'string', 'max:50'],
+                'halaman_prosiding' => ['nullable', 'integer', 'min:1'],
                 'doi_prosiding' => ['nullable', 'string', 'max:255'],
+                'tautan_prosiding' => ['nullable', 'url', 'max:2048'],
             ];
         } elseif (str_contains($namaJenis, 'hki')) {
             $conditionalRules = [
@@ -98,6 +102,7 @@ class LuaranController extends Controller
                 'tanggal_terbit_sertifikat_hki' => ['nullable', 'date'],
                 'pemegang_hki' => ['nullable', 'string', 'max:255'],
                 'status_hki' => ['nullable', 'string', 'max:100'],
+                'tautan_hki' => ['nullable', 'url', 'max:2048'],
             ];
         } elseif (str_contains($namaJenis, 'produk')) {
             $conditionalRules = [
@@ -107,7 +112,7 @@ class LuaranController extends Controller
                 'tingkat_kesiapanterapan' => ['nullable', 'string', 'max:100'],
                 'tanggal_pembuatan' => ['nullable', 'date'],
                 'deskripsi_produk' => ['nullable', 'string'],
-                'tautan_produk' => ['nullable', 'string', 'max:255'],
+                'tautan_produk' => ['nullable', 'url', 'max:2048'],
             ];
         } else {
             // Default rules jika jenis belum terspesifikasi spesifik

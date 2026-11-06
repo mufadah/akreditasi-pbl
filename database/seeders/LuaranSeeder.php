@@ -67,6 +67,7 @@ class LuaranSeeder extends Seeder
                 'nomor_edisi' => 'Issue 2',
                 'halaman_jurnal' => '14520-14532',
                 'indeksasi' => 'Scopus Q1',
+                'tautan_jurnal' => 'https://ieeexplore.ieee.org/document/1098234',
             ],
             // 2. Jurnal Nasional Terakreditasi SINTA
             [
@@ -81,6 +82,7 @@ class LuaranSeeder extends Seeder
                 'nomor_edisi' => 'No. 3',
                 'halaman_jurnal' => '210-218',
                 'indeksasi' => 'SINTA 2',
+                'tautan_jurnal' => 'https://journal.uns.ac.id/index.php/jnteti/article/view/8912',
             ],
             // 3. Prosiding Seminar Internasional IEEE
             [
@@ -95,6 +97,7 @@ class LuaranSeeder extends Seeder
                 'lokasi_seminar' => 'Yogyakarta, Indonesia',
                 'halaman_prosiding' => '88-93',
                 'doi_prosiding' => '10.1109/ICITISEE62419.2025.10744123',
+                'tautan_seminar' => 'https://ieeexplore.ieee.org/document/1098234',
             ],
             // 4. Hak Cipta / HKI
             [
@@ -109,6 +112,7 @@ class LuaranSeeder extends Seeder
                 'tanggal_terbit_sertifikat_hki' => '2025-09-15',
                 'pemegang_hki' => 'Politeknik Negeri Semarang',
                 'status_hki' => 'Granted / Terbit',
+                'tautan_hki' => 'https://e-hakcipta.dgip.go.id',
             ],
             // 5. Buku Ajar
             [
@@ -122,6 +126,7 @@ class LuaranSeeder extends Seeder
                 'jenis_buku' => 'Buku Ajar',
                 'bidang_ilmu' => 'Teknik Komputer & Jaringan',
                 'halaman_buku' => '198 halaman',
+                'tautan_buku' => 'https://books.google.com/books?id=example',
             ],
             // 6. Produk Teknologi / Prototipe
             [
