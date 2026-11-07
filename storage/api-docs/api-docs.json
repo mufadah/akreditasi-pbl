@@ -3653,7 +3653,8 @@
                                         "tanggal_seminar": "2025-10-22",
                                         "lokasi_seminar": "Semarang, Indonesia (Hybrid)",
                                         "halaman_prosiding": "78-83",
-                                        "doi_prosiding": "10.1109/iCAST52345.2025.10123456"
+                                        "doi_prosiding": "10.1109/iCAST52345.2025.10123456",
+                                        "tautan_seminar": "https://ieeexplore.ieee.org/document/10123456"
                                     }
                                 },
                                 "Tambah Luaran - Produk / Prototipe Teknologi": {
