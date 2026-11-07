@@ -86,13 +86,22 @@ class PdaPublikasiSyncService
                 $date = $this->publicationDate($item);
                 $publicationYear = $this->publicationYear($item, $date);
                 $doi = $this->stringValue($this->firstValue($item, ['doi', 'DOI']));
-                $url = $this->stringValue($this->firstValue($item, [
+                $urlFields = [
                     'url',
                     'tautan',
                     'link',
                     'url_publikasi',
                     'tautan_publikasi',
-                ]));
+                ];
+                if ($type['kind'] === 'proceedings') {
+                    $urlFields = [
+                        'tautan_prosiding',
+                        'url_prosiding',
+                        'link_prosiding',
+                        ...$urlFields,
+                    ];
+                }
+                $url = $this->stringValue($this->firstValue($item, $urlFields));
                 $data = [
                     'id_dosen' => $dosen->id_dosen,
                     'id_jenis_luaran' => $jenisLuaran->id_jenis_luaran,
@@ -114,7 +123,7 @@ class PdaPublikasiSyncService
                         'nama_prosiding' => $title,
                         'tanggal_seminar' => $date,
                         'doi_prosiding' => $doi !== '' ? $doi : null,
-                        'tautan_prosiding' => $url !== '' ? $url : null,
+                        'tautan_seminar' => $url !== '' ? $url : null,
                     ];
                 } else {
                     $data += [

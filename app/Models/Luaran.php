@@ -47,7 +47,7 @@ class Luaran extends Model
         'lokasi_seminar',
         'halaman_prosiding',
         'doi_prosiding',
-        'tautan_prosiding',
+        'tautan_seminar',
 
         // Field HKI
         'jenis_hki',

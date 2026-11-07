@@ -90,7 +90,7 @@ class LuaranController extends Controller
                 'lokasi_seminar' => ['nullable', 'string', 'max:255'],
                 'halaman_prosiding' => ['nullable', 'integer', 'min:1'],
                 'doi_prosiding' => ['nullable', 'string', 'max:255'],
-                'tautan_prosiding' => ['nullable', 'url', 'max:2048'],
+                'tautan_seminar' => ['nullable', 'url', 'max:2048'],
             ];
         } elseif (str_contains($namaJenis, 'hki')) {
             $conditionalRules = [

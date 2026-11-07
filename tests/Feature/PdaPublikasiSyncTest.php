@@ -4,6 +4,7 @@ use App\Models\Dosen;
 use App\Models\JenisLuaran;
 use App\Models\Luaran;
 use Database\Seeders\DatabaseSeeder;
+use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -143,6 +144,94 @@ test('pda publication sync matches authors by nidn and name and skips outsiders 
             'Publikasi Penulis NIDN',
             'Publikasi Penulis Nama',
         ])->count())->toBe(2);
+});
+
+test('pda publication sync maps proceedings link aliases to tautan_seminar', function () {
+    $dosen = Dosen::create([
+        'id_jabatan' => 1,
+        'id_pendidikan' => 1,
+        'nama_dosen' => 'Dosen Prosiding Test',
+        'nidn' => '0044556677',
+        'nuptk' => '198201012005011003',
+        'email' => 'prosiding-test@polines.ac.id',
+        'status_dosen' => 'DTPS',
+    ]);
+
+    $publications = [
+        [
+            'judul' => 'Prosiding PDA tautan',
+            'jenis_publikasi' => 'Prosiding',
+            'tautan_prosiding' => 'https://example.test/tautan',
+        ],
+        [
+            'judul' => 'Prosiding PDA url',
+            'jenis_publikasi' => 'Seminar',
+            'url_prosiding' => 'https://example.test/url',
+        ],
+        [
+            'judul' => 'Prosiding PDA link',
+            'jenis_publikasi' => 'Prosiding',
+            'link_prosiding' => 'https://example.test/link',
+        ],
+    ];
+
+    foreach ($publications as &$publication) {
+        $publication['authors'] = [['nip' => '198201012005011003']];
+    }
+    unset($publication);
+
+    Http::fake(function (Request $request) use ($publications) {
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+        return Http::response([
+            'data' => [
+                'data' => (int) ($query['page'] ?? 0) === 1 ? $publications : [],
+            ],
+        ]);
+    });
+
+    $this->artisan('pda:sync-publikasi --pages=2')
+        ->assertSuccessful();
+
+    expect($dosen->exists)->toBeTrue()
+        ->and(Luaran::query()->where('nama_prosiding', 'Prosiding PDA tautan')->value('tautan_seminar'))->toBe('https://example.test/tautan')
+        ->and(Luaran::query()->where('nama_prosiding', 'Prosiding PDA url')->value('tautan_seminar'))->toBe('https://example.test/url')
+        ->and(Luaran::query()->where('nama_prosiding', 'Prosiding PDA link')->value('tautan_seminar'))->toBe('https://example.test/link');
+});
+
+test('luaran API stores and updates the seminar link field', function () {
+    $dosen = Dosen::create([
+        'id_jabatan' => 1,
+        'id_pendidikan' => 1,
+        'nama_dosen' => 'Dosen API Prosiding Test',
+        'nidn' => '0055667788',
+        'nuptk' => '198301012005011004',
+        'email' => 'api-prosiding-test@polines.ac.id',
+        'status_dosen' => 'DTPS',
+    ]);
+    $jenisLuaran = JenisLuaran::query()->where('nama_jenis_luaran', 'like', '%Prosiding%')->firstOrFail();
+    $token = JWT::encode([
+        'sub' => $dosen->id_dosen,
+        'email' => $dosen->email,
+        'role' => 'DOSEN',
+        'exp' => time() + 3600,
+    ], config('jwt.secret', 'secret-key-default-tridharma-akreditasi-pbl-2026-min-32-bytes'), 'HS256');
+
+    $response = $this->withToken($token)->postJson('/api/luaran', [
+        'id_dosen' => $dosen->id_dosen,
+        'id_jenis_luaran' => $jenisLuaran->id_jenis_luaran,
+        'nama_seminar' => 'Seminar API Test',
+        'tautan_seminar' => 'https://example.test/seminar',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('data.tautan_seminar', 'https://example.test/seminar');
+
+    $luaranId = $response->json('data.id_luaran');
+    $this->withToken($token)->putJson("/api/luaran/{$luaranId}", [
+        'tautan_seminar' => 'https://example.test/seminar-updated',
+    ])->assertOk()
+        ->assertJsonPath('data.tautan_seminar', 'https://example.test/seminar-updated');
 });
 
 test('pda publication sync rejects invalid options and reports remote errors', function () {
