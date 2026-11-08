@@ -25,6 +25,7 @@ class Luaran extends Model
         'jenis_buku',
         'bidang_ilmu',
         'halaman_buku',
+        'tautan_buku',
 
         // Field Jurnal
         'nama_jurnal',
@@ -35,6 +36,7 @@ class Luaran extends Model
         'nomor_edisi',
         'halaman_jurnal',
         'indeksasi',
+        'tautan_jurnal',
 
         // Field Prosiding
         'nama_seminar',
@@ -45,6 +47,7 @@ class Luaran extends Model
         'lokasi_seminar',
         'halaman_prosiding',
         'doi_prosiding',
+        'tautan_seminar',
 
         // Field HKI
         'jenis_hki',
@@ -55,6 +58,7 @@ class Luaran extends Model
         'tanggal_terbit_sertifikat_hki',
         'pemegang_hki',
         'status_hki',
+        'tautan_hki',
 
         // Field Produk
         'nama_produk',
