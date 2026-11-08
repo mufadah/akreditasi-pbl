@@ -11,5 +11,6 @@ Artisan::command('inspire', function () {
 // Penjadwalan otomatis reminder kedaluwarsa kerja sama setiap hari pukul 01:00 WIB
 Schedule::command('kerjasama:check-kedaluwarsa')->dailyAt('01:00');
 
-// Penjadwalan otomatis sinkronisasi master data dosen dari PDA Polines setiap 2 minggu sekali (tanggal 1 dan 15 pukul 02:00 WIB)
-Schedule::command('pda:import-dosen')->twiceMonthly(1, 15, '02:00');
+// Impor master dosen berlangsung lebih dulu, lalu publikasi disinkronkan pukul 03:00 WIB.
+Schedule::command('pda:import-dosen')->timezone('Asia/Jakarta')->twiceMonthly(1, 15, '02:00');
+Schedule::command('pda:sync-publikasi --pages=5')->timezone('Asia/Jakarta')->twiceMonthly(1, 15, '03:00');

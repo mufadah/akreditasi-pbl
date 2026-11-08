@@ -2005,7 +2005,7 @@
                                 },
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"id_jenis_luaran\": 3,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_seminar\": \"International Conference on Applied Science and Technology (iCAST 2025)\",\n    \"nama_prosiding\": \"IEEE Xplore Conference Proceedings\",\n    \"isbn_prosiding\": \"978-1-6654-9876-5\",\n    \"penyelenggara\": \"Politeknik Negeri Semarang\",\n    \"tanggal_seminar\": \"2025-10-22\",\n    \"lokasi_seminar\": \"Semarang, Indonesia (Hybrid)\",\n    \"halaman_prosiding\": \"78-83\",\n    \"doi_prosiding\": \"10.1109/iCAST52345.2025.10123456\"\n}",
+                                    "raw": "{\n    \"id_jenis_luaran\": 3,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_seminar\": \"International Conference on Applied Science and Technology (iCAST 2025)\",\n    \"nama_prosiding\": \"IEEE Xplore Conference Proceedings\",\n    \"isbn_prosiding\": \"978-1-6654-9876-5\",\n    \"penyelenggara\": \"Politeknik Negeri Semarang\",\n    \"tanggal_seminar\": \"2025-10-22\",\n    \"lokasi_seminar\": \"Semarang, Indonesia (Hybrid)\",\n    \"halaman_prosiding\": \"78-83\",\n    \"doi_prosiding\": \"10.1109/iCAST52345.2025.10123456\",\n    \"tautan_seminar\": \"https://ieeexplore.ieee.org/document/10123456\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
