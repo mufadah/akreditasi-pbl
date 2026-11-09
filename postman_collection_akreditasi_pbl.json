@@ -1894,7 +1894,7 @@
                                 },
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"id_jenis_luaran\": 1,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_jurnal\": \"IEEE Transactions on Network and Service Management\",\n    \"issn\": \"1932-4537\",\n    \"volume\": \"22\",\n    \"nomor_edisi\": \"2\",\n    \"halaman_jurnal\": \"210-224\",\n    \"tanggal_terbit\": \"2025-06-18\",\n    \"doi\": \"10.1109/TNSM.2025.3214567\",\n    \"indeksasi\": \"Scopus Q1 / SJR 1.25\"\n}",
+                                    "raw": "{\n    \"id_jenis_luaran\": 1,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"nama_jurnal\": \"IEEE Transactions on Network and Service Management\",\n    \"issn\": \"1932-4537\",\n    \"volume\": \"22\",\n    \"nomor_edisi\": \"2\",\n    \"halaman_jurnal\": \"210-224\",\n    \"tanggal_terbit\": \"2025-06-18\",\n    \"doi\": \"10.1109/TNSM.2025.3214567\",\n    \"indeksasi\": \"Scopus Q1 / SJR 1.25\",\n    \"tautan_jurnal\": \"https://drive.google.com/file/d/xxx/view\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1931,7 +1931,7 @@
                                 },
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"id_jenis_luaran\": 5,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"judul_buku\": \"Arsitektur Keamanan Siber Industri 4.0: Teori dan Praktik Berbasis Lab\",\n    \"isbn\": \"978-623-1234-89-0\",\n    \"penerbit_buku\": \"Polines Press Publisher\",\n    \"tahun_terbit\": 2025,\n    \"jenis_buku\": \"Buku Ajar Perguruan Tinggi\",\n    \"bidang_ilmu\": \"Teknik Komputer & Jaringan\",\n    \"halaman_buku\": \"256 Halaman\"\n}",
+                                    "raw": "{\n    \"id_jenis_luaran\": 5,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"judul_buku\": \"Arsitektur Keamanan Siber Industri 4.0: Teori dan Praktik Berbasis Lab\",\n    \"isbn\": \"978-623-1234-89-0\",\n    \"penerbit_buku\": \"Polines Press Publisher\",\n    \"tahun_terbit\": 2025,\n    \"jenis_buku\": \"Buku Ajar Perguruan Tinggi\",\n    \"bidang_ilmu\": \"Teknik Komputer & Jaringan\",\n    \"halaman_buku\": \"256 Halaman\",\n    \"tautan_buku\": \"https://drive.google.com/file/d/xxx/view\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1968,7 +1968,7 @@
                                 },
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"id_jenis_luaran\": 4,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"judul_hak_cipta\": \"Program Komputer: Algoritma Deteksi Dini Serangan DDoS Berbasis Ensemble ResNet\",\n    \"jenis_hki\": \"Hak Cipta Program Komputer\",\n    \"nomor_pendaftaran_hki\": \"EC00202534567\",\n    \"nomor_sertifikat_hki\": \"000234567\",\n    \"tanggal_pendaftaran_hki\": \"2025-04-12\",\n    \"tanggal_terbit_sertifikat_hki\": \"2025-05-02\",\n    \"pemegang_hki\": \"Politeknik Negeri Semarang & Tim Peneliti\",\n    \"status_hki\": \"Granted (Tersertifikasi)\"\n}",
+                                    "raw": "{\n    \"id_jenis_luaran\": 4,\n    \"id_kegiatan\": 1,\n    \"id_dosen\": 1,\n    \"judul_hak_cipta\": \"Program Komputer: Algoritma Deteksi Dini Serangan DDoS Berbasis Ensemble ResNet\",\n    \"jenis_hki\": \"Hak Cipta Program Komputer\",\n    \"nomor_pendaftaran_hki\": \"EC00202534567\",\n    \"nomor_sertifikat_hki\": \"000234567\",\n    \"tanggal_pendaftaran_hki\": \"2025-04-12\",\n    \"tanggal_terbit_sertifikat_hki\": \"2025-05-02\",\n    \"pemegang_hki\": \"Politeknik Negeri Semarang & Tim Peneliti\",\n    \"status_hki\": \"Granted (Tersertifikasi)\",\n    \"tautan_hki\": \"https://drive.google.com/file/d/xxx/view\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
