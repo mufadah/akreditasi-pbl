@@ -64,7 +64,7 @@ class LuaranController extends Controller
                 'tahun_terbit' => [...$req, 'integer', 'digits:4'],
                 'jenis_buku' => ['nullable', 'string', 'max:100'],
                 'bidang_ilmu' => ['nullable', 'string', 'max:100'],
-                'halaman_buku' => ['nullable', 'integer', 'min:1'],
+                'halaman_buku' => ['nullable', 'string', 'min:1'],
                 'tanggal_terbit' => ['nullable', 'date'],
                 'tautan_buku' => ['nullable', 'url', 'max:2048'],
             ];
@@ -76,7 +76,7 @@ class LuaranController extends Controller
                 'tanggal_terbit' => ['nullable', 'date'],
                 'doi' => ['nullable', 'string', 'max:255'],
                 'nomor_edisi' => ['nullable', 'string', 'max:50'],
-                'halaman_jurnal' => ['nullable', 'integer', 'min:1'],
+                'halaman_jurnal' => ['nullable', 'string', 'min:1'],
                 'indeksasi' => ['nullable', 'string', 'max:100'],
                 'tautan_jurnal' => ['nullable', 'url', 'max:2048'],
             ];
@@ -88,7 +88,7 @@ class LuaranController extends Controller
                 'penyelenggara' => ['nullable', 'string', 'max:255'],
                 'tanggal_seminar' => ['nullable', 'date'],
                 'lokasi_seminar' => ['nullable', 'string', 'max:255'],
-                'halaman_prosiding' => ['nullable', 'integer', 'min:1'],
+                'halaman_prosiding' => ['nullable', 'string', 'min:1'],
                 'doi_prosiding' => ['nullable', 'string', 'max:255'],
                 'tautan_seminar' => ['nullable', 'url', 'max:2048'],
             ];
