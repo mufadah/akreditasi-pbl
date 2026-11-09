@@ -3589,6 +3589,10 @@
                                     "indeksasi": {
                                         "type": "string",
                                         "example": "Scopus Q1 / SJR 1.25"
+                                    },
+                                    "tautan_jurnal": {
+                                        "type": "string",
+                                        "example": "https://drive.google.com/file/d/xxx/view"
                                     }
                                 }
                             },
@@ -3606,7 +3610,8 @@
                                         "halaman_jurnal": "210-224",
                                         "tanggal_terbit": "2025-06-18",
                                         "doi": "10.1109/TNSM.2025.3214567",
-                                        "indeksasi": "Scopus Q1 / SJR 1.25"
+                                        "indeksasi": "Scopus Q1 / SJR 1.25",
+                                        "tautan_jurnal": "https://drive.google.com/file/d/xxx/view"
                                     }
                                 },
                                 "Tambah Luaran - Buku Ajar / Monograf": {
@@ -3621,7 +3626,8 @@
                                         "tahun_terbit": 2025,
                                         "jenis_buku": "Buku Ajar Perguruan Tinggi",
                                         "bidang_ilmu": "Teknik Komputer & Jaringan",
-                                        "halaman_buku": "256 Halaman"
+                                        "halaman_buku": "256 Halaman",
+                                        "tautan_buku": "https://drive.google.com/file/d/xxx/view"
                                     }
                                 },
                                 "Tambah Luaran - HKI / Hak Cipta": {
@@ -3637,7 +3643,8 @@
                                         "tanggal_pendaftaran_hki": "2025-04-12",
                                         "tanggal_terbit_sertifikat_hki": "2025-05-02",
                                         "pemegang_hki": "Politeknik Negeri Semarang & Tim Peneliti",
-                                        "status_hki": "Granted (Tersertifikasi)"
+                                        "status_hki": "Granted (Tersertifikasi)",
+                                        "tautan_hki": "https://drive.google.com/file/d/xxx/view"
                                     }
                                 },
                                 "Tambah Luaran - Prosiding Seminar": {
