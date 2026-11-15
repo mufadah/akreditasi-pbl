@@ -2279,7 +2279,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"id_mitra\": 1,\n    \"id_jenis_kerjasama\": 1,\n    \"id_dosen\": 1,\n    \"judul_kerja_sama\": \"Kerja Sama Kelas Industri, Riset Terapan Smart City, dan Magang Bersertifikat Industri PT Telkomsel\",\n    \"tingkat\": \"Nasional\",\n    \"bentuk_kegiatan\": \"Penyusunan Kurikulum, Magang Kampus Merdeka, dan Riset Bersama\",\n    \"tanggal_mulai\": \"2025-01-01\",\n    \"tanggal_selesai\": \"2028-12-31\",\n    \"nomor_dokumen\": \"045/KS/POLINES-TELKOMSEL/I/2025-Rev1\",\n    \"status\": \"Aktif\"\n}",
+                            "raw": "{\n    \"id_mitra\": 1,\n    \"id_jenis_kerjasama\": 1,\n    \"id_dosen\": 1,\n    \"judul_kerja_sama\": \"Kerja Sama Kelas Industri, Riset Terapan Smart City, dan Magang Bersertifikat Industri PT Telkomsel\",\n    \"tingkat\": \"Nasional\",\n    \"bentuk_kegiatan\": \"Penyusunan Kurikulum, Magang Kampus Merdeka, dan Riset Bersama\",\n    \"tanggal_mulai\": \"2025-01-01\",\n    \"tanggal_selesai\": \"2028-12-31\",\n    \"bukti_dokumen\": \"https://drive.google.com/file/d/1MoU-Telkomsel-2025/view\",\n    \"nomor_dokumen\": \"045/KS/POLINES-TELKOMSEL/I/2025-Rev1\",\n    \"jenis_dokumen\": \"MoA (Memorandum of Agreement)\",\n    \"status\": \"Aktif\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"

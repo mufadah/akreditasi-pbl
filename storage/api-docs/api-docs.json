@@ -3920,6 +3920,47 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Data kerja sama berhasil diambil.",
+                                    "data": {
+                                        "current_page": 1,
+                                        "data": [
+                                            {
+                                                "id_kerja_sama": 6,
+                                                "id_mitra": 1,
+                                                "id_jenis_kerjasama": 2,
+                                                "id_dosen": 1,
+                                                "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                                "tingkat": "Nasional",
+                                                "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                                "tanggal_mulai": "2026-01-15",
+                                                "tanggal_selesai": "2028-01-15",
+                                                "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                                "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                                "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                                "status": "Aktif",
+                                                "mitra": {
+                                                    "id_mitra": 1,
+                                                    "nama_mitra": "PT Contoh",
+                                                    "jenis_mitra": "Industri",
+                                                    "tingkat": "Nasional"
+                                                },
+                                                "jenis_kerja_sama": {
+                                                    "id_jenis_kerjasama": 2,
+                                                    "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                                },
+                                                "dosen": {
+                                                    "id_dosen": 1,
+                                                    "nama_dosen": "Dr. Contoh"
+                                                }
+                                            }
+                                        ],
+                                        "per_page": 10,
+                                        "total": 1
+                                    }
                                 }
                             }
                         }
@@ -3996,6 +4037,40 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 201,
+                                    "message": "Data kerja sama berhasil ditambahkan.",
+                                    "data": {
+                                        "id_kerja_sama": 6,
+                                        "id_mitra": 1,
+                                        "id_jenis_kerjasama": 2,
+                                        "id_dosen": 1,
+                                        "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                        "tingkat": "Nasional",
+                                        "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                        "tanggal_mulai": "2026-01-15",
+                                        "tanggal_selesai": "2028-01-15",
+                                        "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                        "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                        "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                        "status": "Aktif",
+                                        "mitra": {
+                                            "id_mitra": 1,
+                                            "nama_mitra": "PT Contoh",
+                                            "jenis_mitra": "Industri",
+                                            "tingkat": "Nasional"
+                                        },
+                                        "jenis_kerja_sama": {
+                                            "id_jenis_kerjasama": 2,
+                                            "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                        },
+                                        "dosen": {
+                                            "id_dosen": 1,
+                                            "nama_dosen": "Dr. Contoh"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4117,6 +4192,40 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Detail kerja sama berhasil diambil.",
+                                    "data": {
+                                        "id_kerja_sama": 6,
+                                        "id_mitra": 1,
+                                        "id_jenis_kerjasama": 2,
+                                        "id_dosen": 1,
+                                        "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                        "tingkat": "Nasional",
+                                        "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                        "tanggal_mulai": "2026-01-15",
+                                        "tanggal_selesai": "2028-01-15",
+                                        "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                        "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                        "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                        "status": "Aktif",
+                                        "mitra": {
+                                            "id_mitra": 1,
+                                            "nama_mitra": "PT Contoh",
+                                            "jenis_mitra": "Industri",
+                                            "tingkat": "Nasional"
+                                        },
+                                        "jenis_kerja_sama": {
+                                            "id_jenis_kerjasama": 2,
+                                            "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                        },
+                                        "dosen": {
+                                            "id_dosen": 1,
+                                            "nama_dosen": "Dr. Contoh"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4163,6 +4272,40 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Data kerja sama berhasil diperbarui.",
+                                    "data": {
+                                        "id_kerja_sama": 6,
+                                        "id_mitra": 1,
+                                        "id_jenis_kerjasama": 2,
+                                        "id_dosen": 1,
+                                        "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                        "tingkat": "Nasional",
+                                        "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                        "tanggal_mulai": "2026-01-15",
+                                        "tanggal_selesai": "2028-01-15",
+                                        "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                        "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                        "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                        "status": "Aktif",
+                                        "mitra": {
+                                            "id_mitra": 1,
+                                            "nama_mitra": "PT Contoh",
+                                            "jenis_mitra": "Industri",
+                                            "tingkat": "Nasional"
+                                        },
+                                        "jenis_kerja_sama": {
+                                            "id_jenis_kerjasama": 2,
+                                            "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                        },
+                                        "dosen": {
+                                            "id_dosen": 1,
+                                            "nama_dosen": "Dr. Contoh"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4244,9 +4387,17 @@
                                         "type": "string",
                                         "example": "2028-12-31"
                                     },
+                                    "bukti_dokumen": {
+                                        "type": "string",
+                                        "example": "https://drive.google.com/file/d/1MoU-Telkomsel-2025/view"
+                                    },
                                     "nomor_dokumen": {
                                         "type": "string",
                                         "example": "045/KS/POLINES-TELKOMSEL/I/2025-Rev1"
+                                    },
+                                    "jenis_dokumen": {
+                                        "type": "string",
+                                        "example": "MoA (Memorandum of Agreement)"
                                     },
                                     "status": {
                                         "type": "string",
@@ -4263,7 +4414,9 @@
                                 "bentuk_kegiatan": "Penyusunan Kurikulum, Magang Kampus Merdeka, dan Riset Bersama",
                                 "tanggal_mulai": "2025-01-01",
                                 "tanggal_selesai": "2028-12-31",
+                                "bukti_dokumen": "https://drive.google.com/file/d/1MoU-Telkomsel-2025/view",
                                 "nomor_dokumen": "045/KS/POLINES-TELKOMSEL/I/2025-Rev1",
+                                "jenis_dokumen": "MoA (Memorandum of Agreement)",
                                 "status": "Aktif"
                             }
                         }
@@ -4284,6 +4437,12 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Data kerja sama berhasil dihapus.",
+                                    "data": null
                                 }
                             }
                         }
