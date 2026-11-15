@@ -149,6 +149,7 @@ class SyncSwaggerFromPostman extends Command
         }
 
         $paths = array_merge($paths, $suppPaths);
+        $this->applyDosenDocumentation($paths);
 
         $openapi['tags'] = array_map(function ($t) {
             return [
@@ -173,6 +174,95 @@ class SyncSwaggerFromPostman extends Command
         $this->line('Swagger UI  : <comment>'.url('/api/documentation').'</comment>');
 
         return 0;
+    }
+
+    /**
+     * Keep the generated Dosen OpenAPI schemas aligned with its controller contract.
+     *
+     * @param  array<string, array<string, mixed>>  $paths
+     */
+    private function applyDosenDocumentation(array &$paths): void
+    {
+        $dosenProperties = [
+            'nidn' => ['type' => 'string', 'example' => '0015088501'],
+            'nama_dosen' => ['type' => 'string', 'example' => 'Dr. Ahmad Dahlan'],
+            'pendidikan_terakhir' => ['type' => 'string', 'nullable' => true, 'example' => 'S3'],
+            'jabatan_akademik' => [
+                'type' => 'object',
+                'nullable' => true,
+                'properties' => [
+                    'nama_jabatan' => ['type' => 'string', 'example' => 'Lektor Kepala'],
+                ],
+            ],
+            'sertifikasi_dosen' => ['type' => 'string', 'nullable' => true, 'example' => 'Tersertifikasi'],
+        ];
+
+        if (isset($paths['/api/dosen']['get'])) {
+            $paths['/api/dosen']['get']['responses']['200']['description'] = 'Daftar dosen berhasil diambil.';
+            $paths['/api/dosen']['get']['responses']['200']['content']['application/json']['schema'] = [
+                'type' => 'object',
+                'properties' => [
+                    'success' => ['type' => 'boolean', 'example' => true],
+                    'data' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'data' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => $dosenProperties,
+                                ],
+                            ],
+                            'current_page' => ['type' => 'integer', 'example' => 1],
+                            'per_page' => ['type' => 'integer', 'example' => 10],
+                            'total' => ['type' => 'integer', 'example' => 25],
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        $requestBodyOperations = [
+            ['/api/dosen', 'post'],
+            ['/api/dosen/{id}', 'put'],
+        ];
+        foreach ($requestBodyOperations as [$path, $method]) {
+            foreach (['pendidikan_terakhir', 'jabatan_akademik', 'sertifikasi_dosen'] as $property) {
+                if (isset($paths[$path][$method]['requestBody']['content']['application/json']['schema']['properties'][$property])) {
+                    $paths[$path][$method]['requestBody']['content']['application/json']['schema']['properties'][$property]['nullable'] = true;
+                }
+            }
+        }
+
+        if (isset($paths['/api/dosen/{id}']['get'])) {
+            $paths['/api/dosen/{id}']['get']['responses']['200']['description'] = 'Detail dosen berhasil diambil.';
+            $paths['/api/dosen/{id}']['get']['responses']['200']['content']['application/json']['schema'] = [
+                'type' => 'object',
+                'properties' => [
+                    'success' => ['type' => 'boolean', 'example' => true],
+                    'data' => [
+                        'type' => 'object',
+                        'properties' => $dosenProperties,
+                    ],
+                ],
+            ];
+        }
+
+        if (isset($paths['/api/dosen/export']['get'])) {
+            $paths['/api/dosen/export']['get']['summary'] = 'Export seluruh data master dosen ke format Excel (.xlsx)';
+            $paths['/api/dosen/export']['get']['description'] = 'Unduh seluruh data master dosen sebagai file Excel.';
+            $paths['/api/dosen/export']['get']['responses']['200'] = [
+                'description' => 'File Excel seluruh data master dosen.',
+                'content' => [
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => [
+                        'schema' => [
+                            'type' => 'string',
+                            'format' => 'binary',
+                        ],
+                    ],
+                ],
+            ];
+        }
     }
 
     private function parseItems(array $items, array $folders, array &$tags, array &$paths): void

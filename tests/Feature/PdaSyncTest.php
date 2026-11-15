@@ -34,17 +34,27 @@ test('pda sync service inserts portfolio and ignores duplicates', function () {
         'https://pda.polines.ac.id/dosen/achmad-fahrul-aji*' => Http::response([
             'props' => [
                 'fullName' => 'Achmad Fahrul Aji S.ST., M.T.',
+                'jabatan' => 'Lektor',
+                'pendidikanFormals' => [
+                    ['jenjang' => 'S3'],
+                ],
+                'sertifikasi_dosen' => 'Tersertifikasi',
                 'allPenelitian' => [
                     [
                         'judul' => 'Sistem AI untuk Akreditasi Polines',
+                        'tahun_pelaksanaan' => (int) now()->format('Y'),
+                        'tanggal_pelaksanaan' => now()->toDateString(),
+                    ],
+                    [
+                        'judul' => 'Penelitian Historis yang Tidak Disinkronkan',
                         'tahun_pelaksanaan' => 2024,
-                        'tahun_usulan' => 2024,
                     ],
                 ],
                 'allPengabdians' => [
                     [
                         'judul' => 'Pelatihan IoT UMKM Semarang',
-                        'tahun' => 2023,
+                        'tahun' => (int) now()->format('Y'),
+                        'tanggal' => now()->toDateString(),
                         'lokasi' => 'Semarang',
                     ],
                 ],
@@ -52,12 +62,23 @@ test('pda sync service inserts portfolio and ignores duplicates', function () {
                     [
                         'judul' => 'Deep Learning in Accreditation Evaluation',
                         'jenis_publikasi' => 'Jurnal Internasional Terindeks Scopus',
+                        'tanggal_terbit' => now()->toDateString(),
+                    ],
+                    [
+                        'judul' => 'Publikasi Dengan Tahun Akademik Aktif',
+                        'jenis_publikasi' => 'Jurnal Nasional',
+                        'tahun_terbit' => (int) now()->format('Y'),
+                    ],
+                    [
+                        'judul' => 'Publikasi Tanpa Periode yang Tidak Disinkronkan',
+                        'jenis_publikasi' => 'Jurnal Nasional',
                     ],
                 ],
                 'allHakis' => [
                     [
                         'judul' => 'Perangkat Lunak Evaluasi Mutu Otomatis',
                         'jenis' => 'Hak Cipta',
+                        'tanggal_pendaftaran' => now()->toDateString(),
                     ],
                 ],
             ],
@@ -73,11 +94,21 @@ test('pda sync service inserts portfolio and ignores duplicates', function () {
     expect($result['success'])->toBeTrue();
     expect($result['synced']['penelitian'])->toBe(1);
     expect($result['synced']['pengabdian'])->toBe(1);
-    expect($result['synced']['publikasi'])->toBe(1);
+    expect($result['synced']['publikasi'])->toBe(2);
     expect($result['synced']['hki'])->toBe(1);
 
     expect(Kegiatan::count())->toBe($initialKegiatanCount + 2);
-    expect(Luaran::count())->toBe($initialLuaranCount + 2);
+    expect(Luaran::count())->toBe($initialLuaranCount + 3);
+    expect(Kegiatan::where('judul_kegiatan', 'Penelitian Historis yang Tidak Disinkronkan')->exists())->toBeFalse();
+    expect(Luaran::where('nama_jurnal', 'Publikasi Tanpa Periode yang Tidak Disinkronkan')->exists())->toBeFalse();
+    expect(Luaran::where('nama_jurnal', 'Publikasi Dengan Tahun Akademik Aktif')->exists())->toBeTrue();
+    $this->assertDatabaseHas('dosen_histories', [
+        'id_dosen' => $dosen->id_dosen,
+        'sumber_data' => 'PDA',
+        'pendidikan_terakhir' => 'S3',
+        'jabatan_akademik' => 'Lektor',
+        'sertifikasi_dosen' => 'Tersertifikasi',
+    ]);
 
     // Jalankan sinkronisasi kedua untuk membuktikan idempotency (tidak duplikat)
     $secondResult = $service->syncDosen($dosen->id_dosen);
@@ -85,7 +116,8 @@ test('pda sync service inserts portfolio and ignores duplicates', function () {
     expect($secondResult['synced']['penelitian'])->toBe(0);
     expect($secondResult['synced']['pengabdian'])->toBe(0);
     expect(Kegiatan::count())->toBe($initialKegiatanCount + 2);
-    expect(Luaran::count())->toBe($initialLuaranCount + 2);
+    expect($secondResult['synced']['publikasi'])->toBe(0);
+    expect(Luaran::count())->toBe($initialLuaranCount + 3);
 });
 
 test('pda sync command runs successfully for specific lecturer', function () {
@@ -154,4 +186,8 @@ test('pda import-dosen command runs successfully with homebase and outside lectu
 
     expect(Dosen::where('nidn', '8888777766')->value('status_dosen'))->toBe('DTPS');
     expect(Dosen::where('nidn', '7777888899')->value('status_dosen'))->toBe('Tidak Tetap');
+    $this->assertDatabaseHas('dosen_histories', [
+        'id_dosen' => Dosen::where('nidn', '8888777766')->value('id_dosen'),
+        'sumber_data' => 'PDA',
+    ]);
 });

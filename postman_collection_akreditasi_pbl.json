@@ -1315,7 +1315,7 @@
                                 },
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"id_jabatan\": 1,\n    \"id_pendidikan\": 1,\n    \"nidn\": \"0015088501\",\n    \"nama_dosen\": \"Dr. Ir. Ahmad Dahlan, M.T.\",\n    \"email\": \"ahmad.dahlan@polines.ac.id\",\n    \"status_dosen\": \"DTPS\",\n    \"sertifikasi\": \"Pendidik Profesional (Kemenristekdikti)\",\n    \"bidang_keahlian_ids\": [\n        1,\n        2,\n        4\n    ]\n}",
+                                    "raw": "{\n    \"id_jabatan\": 1,\n    \"id_pendidikan\": 1,\n    \"nidn\": \"0015088501\",\n    \"nama_dosen\": \"Dr. Ir. Ahmad Dahlan, M.T.\",\n    \"email\": \"ahmad.dahlan@polines.ac.id\",\n    \"status_dosen\": \"DTPS\",\n    \"sertifikasi\": \"Pendidik Profesional (Kemenristekdikti)\",\n    \"pendidikan_terakhir\": \"S3 Ilmu Komputer\",\n    \"jabatan_akademik\": \"Lektor Kepala\",\n    \"sertifikasi_dosen\": \"Tersertifikasi\",\n    \"bidang_keahlian_ids\": [\n        1,\n        2,\n        4\n    ]\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1377,7 +1377,7 @@
                                 },
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"id_jabatan\": 2,\n    \"id_pendidikan\": 3,\n    \"nidn\": \"0015088501\",\n    \"nama_dosen\": \"Prof. Dr. Ir. Ahmad Dahlan, M.T., IPU\",\n    \"email\": \"ahmad.dahlan@polines.ac.id\",\n    \"status_dosen\": \"DTPS\",\n    \"sertifikasi\": \"Sertifikasi Asesor Kompetensi BNSP & Pendidik\",\n    \"bidang_keahlian_ids\": [\n        1,\n        2,\n        3,\n        4\n    ]\n}",
+                                    "raw": "{\n    \"id_jabatan\": 2,\n    \"id_pendidikan\": 3,\n    \"nidn\": \"0015088501\",\n    \"nama_dosen\": \"Prof. Dr. Ir. Ahmad Dahlan, M.T., IPU\",\n    \"email\": \"ahmad.dahlan@polines.ac.id\",\n    \"status_dosen\": \"DTPS\",\n    \"sertifikasi\": \"Sertifikasi Asesor Kompetensi BNSP & Pendidik\",\n    \"pendidikan_terakhir\": \"S3 Ilmu Komputer\",\n    \"jabatan_akademik\": \"Lektor Kepala\",\n    \"sertifikasi_dosen\": \"Tersertifikasi\",\n    \"bidang_keahlian_ids\": [\n        1,\n        2,\n        3,\n        4\n    ]\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1466,6 +1466,30 @@
                                         "dosen",
                                         "1",
                                         "restore"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "2.1.8 GET Export Excel Dosen",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/dosen/export",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "dosen",
+                                        "export"
                                     ]
                                 }
                             },
