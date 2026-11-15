@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\DosenExport;
 use App\Models\AnggotaKegiatan;
 use App\Models\BidangKeahlian;
 use App\Models\Dosen;
@@ -9,6 +10,7 @@ use Database\Seeders\DatabaseSeeder;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Maatwebsite\Excel\Facades\Excel;
 
 uses(RefreshDatabase::class);
 
@@ -165,6 +167,83 @@ test('flowchart: tambah dosen gagal validasi jika NIDN duplikat', function () {
             'success' => false,
             'message' => 'Validasi gagal.',
         ]);
+});
+
+test('manual academic changes are historized and summary fields are returned without history rows', function () {
+    $response = $this->withToken($this->adminToken)->postJson('/api/dosen', [
+        'nidn' => '0066554433',
+        'nama_dosen' => 'Dosen Dengan Riwayat Akademik',
+        'jabatan_akademik' => 'Lektor',
+        'pendidikan_terakhir' => 'S3',
+        'sertifikasi_dosen' => 'Tersertifikasi',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('data.jabatan_akademik.nama_jabatan', 'Lektor')
+        ->assertJsonPath('data.pendidikan_terakhir', 'S3')
+        ->assertJsonPath('data.sertifikasi_dosen', 'Tersertifikasi');
+
+    $dosen = Dosen::where('nidn', '0066554433')->firstOrFail();
+    $this->assertDatabaseHas('dosen_histories', [
+        'id_dosen' => $dosen->id_dosen,
+        'sumber_data' => 'MANUAL',
+        'pendidikan_terakhir' => 'S3',
+        'jabatan_akademik' => 'Lektor',
+        'sertifikasi_dosen' => 'Tersertifikasi',
+    ]);
+
+    $this->withToken($this->adminToken)->putJson("/api/dosen/{$dosen->id_dosen}", [
+        'jabatan_akademik' => 'Asisten Ahli',
+        'pendidikan_terakhir' => 'S2',
+        'sertifikasi_dosen' => 'Belum Tersertifikasi',
+    ])->assertOk()
+        ->assertJsonPath('data.jabatan_akademik.nama_jabatan', 'Asisten Ahli')
+        ->assertJsonPath('data.pendidikan_terakhir', 'S2')
+        ->assertJsonPath('data.sertifikasi_dosen', 'Belum Tersertifikasi');
+
+    $this->assertDatabaseCount('dosen_histories', 2);
+
+    $indexResponse = $this->withToken($this->adminToken)->getJson('/api/dosen?search=0066554433');
+    $indexResponse->assertOk()
+        ->assertJsonPath('data.data.0.pendidikan_terakhir', 'S2')
+        ->assertJsonPath('data.data.0.jabatan_akademik.nama_jabatan', 'Asisten Ahli')
+        ->assertJsonPath('data.data.0.sertifikasi_dosen', 'Belum Tersertifikasi');
+    $this->assertArrayNotHasKey('dosen_histories', $indexResponse->json('data.data.0'));
+
+    $showResponse = $this->withToken($this->adminToken)->getJson("/api/dosen/{$dosen->id_dosen}");
+    $showResponse->assertOk()
+        ->assertJsonPath('data.pendidikan_terakhir', 'S2')
+        ->assertJsonPath('data.jabatan_akademik.nama_jabatan', 'Asisten Ahli')
+        ->assertJsonPath('data.sertifikasi_dosen', 'Belum Tersertifikasi');
+    $this->assertArrayNotHasKey('dosen_histories', $showResponse->json('data'));
+});
+
+test('dosen export downloads an xlsx file', function () {
+    Excel::fake();
+    $dosen = Dosen::with(['jabatanAkademik', 'pendidikan'])->firstOrFail();
+
+    $response = $this->withToken($this->adminToken)->get('/api/dosen/export');
+
+    $response->assertOk();
+    Excel::assertDownloaded('dosen.xlsx', function (DosenExport $export) use ($dosen): bool {
+        expect($export->headings())->toBe([
+            'NIDN',
+            'Nama',
+            'Jabatan Akademik',
+            'Pendidikan Terakhir',
+            'Serdos',
+            'Status',
+        ])->and($export->map($dosen))->toBe([
+            $dosen->nidn,
+            $dosen->nama_dosen,
+            $dosen->jabatanAkademik?->nama_jabatan,
+            $dosen->pendidikan?->jenjang,
+            $dosen->sertifikasi,
+            $dosen->status_dosen,
+        ]);
+
+        return true;
+    });
 });
 
 // ==============================================================================

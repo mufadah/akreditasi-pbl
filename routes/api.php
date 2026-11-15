@@ -1,7 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AktivitasKerjaSamaController;
-use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AssessmentController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\DosenController;
 use App\Http\Controllers\Api\EvidenceController;
@@ -11,13 +12,12 @@ use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
+use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
-use App\Http\Controllers\Api\AssessmentController;
-use App\Http\Controllers\Api\AuditLogController;
-use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
@@ -52,6 +52,7 @@ Route::middleware(['auth.jwt'])->group(function () {
 
 // 1. CRUD Master Dosen (Diproteksi Granular oleh Permission JWT SSO K1)
 Route::middleware(['auth.jwt'])->group(function () {
+    Route::get('/dosen/export', [DosenController::class, 'exportExcel'])->middleware('jwt.permission:dosen.read');
     Route::get('/dosen', [DosenController::class, 'index'])->middleware('jwt.permission:dosen.read');
     Route::get('/dosen/{id}', [DosenController::class, 'show'])->middleware('jwt.permission:dosen.read');
     Route::post('/dosen', [DosenController::class, 'store'])->middleware('jwt.permission:dosen.create');
