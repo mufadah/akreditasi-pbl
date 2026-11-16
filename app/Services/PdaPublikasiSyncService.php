@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Dosen;
 use App\Models\JenisLuaran;
 use App\Models\Luaran;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -13,32 +14,95 @@ class PdaPublikasiSyncService
 {
     private const API_URL = 'https://pda.polines.ac.id/internal/publikasi/list';
 
+    /** @var Collection<int, Dosen>|null */
+    private ?Collection $cachedDosens = null;
+
+    /** @var array<string, bool> */
+    private array $cachedTitles = [];
+
+    /** @var array<string, JenisLuaran> */
+    private array $cachedJenisLuaran = [];
+
+    private function loadCaches(): void
+    {
+        $this->cachedDosens = Dosen::all();
+        $this->cachedTitles = [];
+
+        foreach ([
+            'judul_buku',
+            'nama_jurnal',
+            'nama_prosiding',
+            'nama_seminar',
+            'judul_hak_cipta',
+            'nama_produk',
+        ] as $column) {
+            $titles = Luaran::query()->whereNotNull($column)->pluck($column)->all();
+            foreach ($titles as $t) {
+                $norm = mb_strtolower(trim((string) $t));
+                if ($norm !== '') {
+                    $this->cachedTitles[$norm] = true;
+                }
+            }
+        }
+    }
+
     /**
-     * @return array{pages: int, created: int, skipped: int}
+     * @param  (callable(array{status: string, dosen: Dosen, type: array{kind: string, name: string, index: ?string, classification: string}, year: ?int, title: string, page: int}): void)|null  $onItem
+     * @return array{pages: int, created: int, already_exists: int, skipped: int}
      *
      * @throws ConnectionException
      */
-    public function sync(int $maxPages, ?string $year = null): array
+    public function sync(int $maxPages, ?string $year = null, ?callable $onItem = null): array
     {
-        $result = ['pages' => 0, 'created' => 0, 'skipped' => 0];
+        $this->loadCaches();
+
+        $result = [
+            'pages' => 0,
+            'created' => 0,
+            'already_exists' => 0,
+            'skipped' => 0,
+        ];
+
+        $consecutiveFailures = 0;
 
         for ($page = 1; $page <= $maxPages; $page++) {
-            $response = Http::withOptions(['version' => 2.0])
-                ->withHeaders([
-                    'Referer' => 'https://pda.polines.ac.id/publikasi',
-                    'X-Requested-With' => 'XMLHttpRequest',
-                    'Accept' => 'application/json',
-                ])
-                ->timeout(30)
-                ->get(self::API_URL, [
-                    'page' => $page,
-                    'limit' => 50,
-                    'sort' => 'tanggal',
-                    'direction' => 'desc',
-                ]);
+            if ($page > 1) {
+                usleep(300000);
+            }
 
-            if (! $response->successful()) {
-                throw new RuntimeException("PDA mengembalikan HTTP {$response->status()} pada halaman {$page}.");
+            $response = null;
+            for ($attempt = 1; $attempt <= 3; $attempt++) {
+                try {
+                    $response = Http::withOptions(['version' => 2.0])
+                        ->withHeaders([
+                            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                            'Referer' => 'https://pda.polines.ac.id/publikasi',
+                            'X-Requested-With' => 'XMLHttpRequest',
+                            'Accept' => 'application/json',
+                        ])
+                        ->timeout(30)
+                        ->get(self::API_URL, [
+                            'page' => $page,
+                            'limit' => 50,
+                            'sort' => 'tanggal',
+                            'direction' => 'desc',
+                        ]);
+
+                    if ($response->successful()) {
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    // Retry on connection timeout / exception
+                }
+
+                if ($attempt < 3) {
+                    sleep(1);
+                }
+            }
+
+            if (! $response || ! $response->successful()) {
+                $status = $response ? $response->status() : 'timeout';
+                throw new RuntimeException("PDA mengembalikan HTTP {$status} pada halaman {$page}.");
             }
 
             $items = $this->publicationRows($response->json());
@@ -72,19 +136,38 @@ class PdaPublikasiSyncService
                 $dosen = $this->findDosen($item);
                 $type = $this->publicationType($item);
 
-                if (! $dosen || ! $type || $this->titleExists($title)) {
+                if (! $dosen || ! $type) {
                     $result['skipped']++;
 
                     continue;
                 }
 
-                $jenisLuaran = JenisLuaran::firstOrCreate([
+                $date = $this->publicationDate($item);
+                $publicationYear = $this->publicationYear($item, $date);
+
+                if ($this->titleExists($title)) {
+                    $result['already_exists']++;
+
+                    if ($onItem !== null) {
+                        $onItem([
+                            'status' => 'exists',
+                            'dosen' => $dosen,
+                            'type' => $type,
+                            'year' => $publicationYear,
+                            'title' => $title,
+                            'page' => $page,
+                        ]);
+                    }
+
+                    continue;
+                }
+
+                $cacheKey = "{$type['name']}|{$type['index']}";
+                $jenisLuaran = $this->cachedJenisLuaran[$cacheKey] ??= JenisLuaran::firstOrCreate([
                     'nama_jenis_luaran' => $type['name'],
                     'indeks' => $type['index'],
                 ]);
 
-                $date = $this->publicationDate($item);
-                $publicationYear = $this->publicationYear($item, $date);
                 $doi = $this->stringValue($this->firstValue($item, ['doi', 'DOI']));
                 $urlFields = [
                     'url',
@@ -136,7 +219,19 @@ class PdaPublikasiSyncService
                 }
 
                 Luaran::create($data);
+                $this->cachedTitles[mb_strtolower(trim($title))] = true;
                 $result['created']++;
+
+                if ($onItem !== null) {
+                    $onItem([
+                        'status' => 'created',
+                        'dosen' => $dosen,
+                        'type' => $type,
+                        'year' => $publicationYear,
+                        'title' => $title,
+                        'page' => $page,
+                    ]);
+                }
             }
         }
 
@@ -192,9 +287,13 @@ class PdaPublikasiSyncService
      */
     private function findDosen(array $publication): ?Dosen
     {
+        if ($this->cachedDosens === null) {
+            $this->loadCaches();
+        }
+
         foreach ($this->authors($publication) as $author) {
             if ($author['nip'] !== '') {
-                $dosen = Dosen::query()->where('nuptk', $author['nip'])->first();
+                $dosen = $this->cachedDosens->firstWhere('nuptk', $author['nip']);
 
                 if ($dosen) {
                     return $dosen;
@@ -202,7 +301,7 @@ class PdaPublikasiSyncService
             }
 
             if ($author['nidn'] !== '') {
-                $dosen = Dosen::query()->where('nidn', $author['nidn'])->first();
+                $dosen = $this->cachedDosens->firstWhere('nidn', $author['nidn']);
 
                 if ($dosen) {
                     return $dosen;
@@ -213,7 +312,9 @@ class PdaPublikasiSyncService
                 $name = trim($name);
 
                 if ($name !== '') {
-                    $dosen = Dosen::query()->where('nama_dosen', 'like', "%{$name}%")->first();
+                    $dosen = $this->cachedDosens->first(function (Dosen $d) use ($name) {
+                        return str_contains(mb_strtolower($d->nama_dosen), mb_strtolower($name));
+                    });
 
                     if ($dosen) {
                         return $dosen;
@@ -231,7 +332,13 @@ class PdaPublikasiSyncService
      */
     private function authors(array $publication): array
     {
-        $rawAuthors = $this->firstValue($publication, [
+        $rawAuthors = [];
+
+        if (! empty($publication['dosen']) && is_array($publication['dosen'])) {
+            $rawAuthors[] = $publication['dosen'];
+        }
+
+        $otherAuthors = $this->firstValue($publication, [
             'authors',
             'author',
             'penulis',
@@ -239,26 +346,29 @@ class PdaPublikasiSyncService
             'nama_penulis',
         ]);
 
-        if ($rawAuthors === null) {
-            $rawAuthors = [
+        if ($otherAuthors !== null && $otherAuthors !== '') {
+            if (is_array($otherAuthors) && is_array($otherAuthors['data'] ?? null) && array_is_list($otherAuthors['data'])) {
+                $otherAuthors = $otherAuthors['data'];
+            }
+
+            if (! is_array($otherAuthors)) {
+                $rawAuthors[] = $otherAuthors;
+            } elseif (array_is_list($otherAuthors)) {
+                $rawAuthors = array_merge($rawAuthors, $otherAuthors);
+            } else {
+                $rawAuthors[] = $otherAuthors;
+            }
+        }
+
+        if (empty($rawAuthors)) {
+            $fallback = [
                 'nip' => $this->firstValue($publication, ['authorNip', 'author_nip', 'nip_author', 'nip_penulis', 'nuptk']),
                 'nidn' => $this->firstValue($publication, ['authorNidn', 'author_nidn', 'nidn_author', 'nidn_penulis']),
                 'nama' => $this->firstValue($publication, ['authorNama', 'author_name', 'nama_author', 'nama_dosen']),
             ];
-        }
-
-        if ($rawAuthors === null || $rawAuthors === '') {
-            return [];
-        }
-
-        if (is_array($rawAuthors) && is_array($rawAuthors['data'] ?? null) && array_is_list($rawAuthors['data'])) {
-            $rawAuthors = $rawAuthors['data'];
-        }
-
-        if (! is_array($rawAuthors)) {
-            $rawAuthors = [$rawAuthors];
-        } elseif (! array_is_list($rawAuthors)) {
-            $rawAuthors = [$rawAuthors];
+            if (! empty($fallback['nip']) || ! empty($fallback['nidn']) || ! empty($fallback['nama'])) {
+                $rawAuthors[] = $fallback;
+            }
         }
 
         $authors = [];
@@ -336,14 +446,20 @@ class PdaPublikasiSyncService
             'quartile',
             'kuartil',
         ]));
-        $combined = strtolower($kind.' '.$classification);
+        $category = strtolower($this->stringValue($this->firstValue($publication, [
+            'kategori_kegiatan',
+            'kategori',
+        ])));
+        $combined = strtolower(trim("{$kind} {$classification} {$category}"));
 
         if (str_contains($kind, 'prosiding') || str_contains($kind, 'seminar')) {
+            $isInternasional = str_contains($combined, 'internasional');
+
             return [
                 'kind' => 'proceedings',
-                'name' => 'Prosiding Seminar',
-                'index' => null,
-                'classification' => $classification ?: $kind,
+                'name' => $isInternasional ? 'Prosiding Seminar Internasional' : 'Prosiding Seminar',
+                'index' => $isInternasional ? 'IEEE/Scopus' : null,
+                'classification' => $classification ?: ($isInternasional ? 'Internasional' : 'Nasional'),
             ];
         }
 
@@ -351,21 +467,12 @@ class PdaPublikasiSyncService
             return [
                 'kind' => 'book',
                 'name' => 'Buku Ajar / Monograf',
-                'index' => null,
+                'index' => 'ISBN',
                 'classification' => $combined,
             ];
         }
 
-        if (str_contains($combined, 'sinta')) {
-            return [
-                'kind' => 'journal',
-                'name' => 'Jurnal Nasional Terakreditasi',
-                'index' => 'SINTA',
-                'classification' => $classification ?: 'SINTA',
-            ];
-        }
-
-        if (str_contains($combined, 'scopus') || str_contains($combined, 'quartile') || preg_match('/\bq[1-4]\b/i', $combined)) {
+        if (str_contains($combined, 'scopus') || str_contains($combined, 'internasional') || preg_match('/\bq[1-4]\b/i', $combined)) {
             return [
                 'kind' => 'journal',
                 'name' => 'Jurnal Internasional Bereputasi',
@@ -374,21 +481,21 @@ class PdaPublikasiSyncService
             ];
         }
 
-        if (str_contains($combined, 'prosiding') || str_contains($combined, 'seminar')) {
+        if (str_contains($combined, 'terakreditasi') || str_contains($combined, 'sinta') || str_contains($combined, 'nasional')) {
             return [
-                'kind' => 'proceedings',
-                'name' => 'Prosiding Seminar',
-                'index' => null,
-                'classification' => $classification ?: $kind,
+                'kind' => 'journal',
+                'name' => 'Jurnal Nasional Terakreditasi',
+                'index' => 'SINTA',
+                'classification' => $classification ?: 'SINTA',
             ];
         }
 
-        if (str_contains($combined, 'buku') || str_contains($combined, 'monograf')) {
+        if (str_contains($kind, 'jurnal') || str_contains($kind, 'tulisan') || str_contains($kind, 'makalah')) {
             return [
-                'kind' => 'book',
-                'name' => 'Buku Ajar / Monograf',
-                'index' => null,
-                'classification' => $combined,
+                'kind' => 'journal',
+                'name' => 'Jurnal Nasional Terakreditasi',
+                'index' => 'SINTA',
+                'classification' => $classification ?: 'Nasional',
             ];
         }
 
@@ -399,20 +506,7 @@ class PdaPublikasiSyncService
     {
         $normalizedTitle = mb_strtolower(trim($title));
 
-        return Luaran::query()
-            ->where(function ($query) use ($normalizedTitle) {
-                foreach ([
-                    'judul_buku',
-                    'nama_jurnal',
-                    'nama_prosiding',
-                    'nama_seminar',
-                    'judul_hak_cipta',
-                    'nama_produk',
-                ] as $column) {
-                    $query->orWhereRaw("LOWER({$column}) = ?", [$normalizedTitle]);
-                }
-            })
-            ->exists();
+        return isset($this->cachedTitles[$normalizedTitle]);
     }
 
     /**
