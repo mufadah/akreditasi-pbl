@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\KegiatanExport;
 use App\Http\Controllers\Controller;
 use App\Models\Kegiatan;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class KegiatanController extends Controller
 {
@@ -82,7 +87,34 @@ class KegiatanController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Kegiatan::with($this->relations);
+        $query = $this->filteredQuery($request)->with($this->relations);
+
+        $kegiatan = $query->latest()->paginate($request->integer('per_page', 10));
+
+        return $this->respond(true, 200, 'Data kegiatan berhasil diambil.', $kegiatan);
+    }
+
+    /**
+     * Unduh daftar kegiatan (sesuai filter yang sama dengan index) sebagai file Excel.
+     */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $jenis = $request->filled('jenis') ? Str::slug((string) $request->query('jenis')) : 'kegiatan';
+
+        return Excel::download(
+            new KegiatanExport($this->filteredQuery($request)),
+            $jenis.'_'.now()->format('Ymd_His').'.xlsx',
+        );
+    }
+
+    /**
+     * Query kegiatan dengan seluruh filter dari request (dipakai index dan export).
+     *
+     * @return Builder<Kegiatan>
+     */
+    private function filteredQuery(Request $request): Builder
+    {
+        $query = Kegiatan::query();
 
         // Filter pencarian judul atau lokasi kegiatan
         if ($search = $request->query('search')) {
@@ -92,6 +124,20 @@ class KegiatanController extends Controller
             });
         }
 
+        // Filter berdasarkan nama jenis kegiatan (penelitian / pkm), tanpa perlu mengetahui ID-nya
+        if ($request->filled('jenis')) {
+            $jenis = mb_strtolower((string) $request->query('jenis'));
+            $query->whereHas('jenisKegiatan', function ($q) use ($jenis) {
+                $q->whereRaw('LOWER(nama_jenis_kegiatan) = ?', [$jenis]);
+            });
+        }
+
+        // Filter kegiatan yang diikuti dosen tertentu
+        if ($request->filled('id_dosen')) {
+            $idDosen = $request->query('id_dosen');
+            $query->whereHas('anggota', fn ($q) => $q->where('id_dosen', $idDosen));
+        }
+
         // Filter berdasarkan jenis kegiatan, tahun, dan status
         foreach (['id_jenis_kegiatan', 'tahun_usulan', 'tahun_kegiatan', 'tahun_pelaksanaan', 'status_kegiatan'] as $filter) {
             if ($request->filled($filter)) {
@@ -99,9 +145,7 @@ class KegiatanController extends Controller
             }
         }
 
-        $kegiatan = $query->latest()->paginate($request->integer('per_page', 10));
-
-        return $this->respond(true, 200, 'Data kegiatan berhasil diambil.', $kegiatan);
+        return $query;
     }
 
     /**

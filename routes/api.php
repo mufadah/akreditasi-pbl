@@ -1,7 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AktivitasKerjaSamaController;
-use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AssessmentController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\DosenController;
 use App\Http\Controllers\Api\EvidenceController;
@@ -11,13 +12,12 @@ use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
+use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
-use App\Http\Controllers\Api\AssessmentController;
-use App\Http\Controllers\Api\AuditLogController;
-use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
@@ -40,6 +40,7 @@ Route::match(['get', 'post'], '/register', [ProfileController::class, 'resourceS
 
 Route::middleware(['auth.jwt'])->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
+    Route::get('/jenis-luaran', [JenisLuaranController::class, 'index']);
     Route::post('/logout', function () {
         return response()->json([
             'success' => true,
@@ -73,7 +74,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
     Route::delete('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
     Route::apiResource('tendik', TenagaKependidikanController::class);
     Route::apiResource('jenis-kegiatan', JenisKegiatanController::class);
-    Route::apiResource('jenis-luaran', JenisLuaranController::class);
+    Route::apiResource('jenis-luaran', JenisLuaranController::class)->except(['index']);
     Route::apiResource('jenis-kerja-sama', JenisKerjaSamaController::class);
     Route::apiResource('jenis-kerjasama', JenisKerjaSamaController::class);
     Route::apiResource('mitra', MitraController::class);
@@ -96,6 +97,9 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
     Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
 
     // Kegiatan & Luaran (Unified Tridharma & Luaran Ilmiah Sesuai ERD Terbaru)
+    // Rute export harus sebelum apiResource agar tidak tertangkap sebagai {id}
+    Route::get('/kegiatan/export', [KegiatanController::class, 'export']);
+    Route::get('/luaran/export', [LuaranController::class, 'export']);
     Route::apiResource('kegiatan', KegiatanController::class);
     Route::apiResource('luaran', LuaranController::class);
     Route::post('/sertifikasi/sync-profil', [SertifikasiController::class, 'syncProfil']);
