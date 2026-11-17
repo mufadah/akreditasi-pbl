@@ -59,14 +59,17 @@ class DosenController extends Controller
                                     items: new OA\Items(
                                         type: 'object',
                                         properties: [
+                                            new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
                                             new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
                                             new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                            new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
                                             new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
                                             new OA\Property(
                                                 property: 'jabatan_akademik',
                                                 type: 'object',
                                                 nullable: true,
                                                 properties: [
+                                                    new OA\Property(property: 'id_jabatan', type: 'integer', example: 3),
                                                     new OA\Property(property: 'nama_jabatan', type: 'string', example: 'Lektor Kepala'),
                                                 ],
                                             ),
@@ -297,14 +300,17 @@ class DosenController extends Controller
                             property: 'data',
                             type: 'object',
                             properties: [
+                                new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
                                 new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
                                 new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
                                 new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
                                 new OA\Property(
                                     property: 'jabatan_akademik',
                                     type: 'object',
                                     nullable: true,
                                     properties: [
+                                        new OA\Property(property: 'id_jabatan', type: 'integer', example: 3),
                                         new OA\Property(property: 'nama_jabatan', type: 'string', example: 'Lektor Kepala'),
                                     ],
                                 ),
