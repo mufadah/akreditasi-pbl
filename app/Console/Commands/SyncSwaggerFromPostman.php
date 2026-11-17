@@ -149,9 +149,9 @@ class SyncSwaggerFromPostman extends Command
         }
 
         $paths = array_merge($paths, $suppPaths);
-        $this->applyDosenDocumentation($paths);
 
         $this->addKerjaSamaResponseExamples($paths);
+        $this->applyDosenDocumentation($paths);
 
         $openapi['tags'] = array_map(function ($t) {
             return [
@@ -186,13 +186,16 @@ class SyncSwaggerFromPostman extends Command
     private function applyDosenDocumentation(array &$paths): void
     {
         $dosenProperties = [
+            'id_dosen' => ['type' => 'integer', 'example' => 1],
             'nidn' => ['type' => 'string', 'example' => '0015088501'],
             'nama_dosen' => ['type' => 'string', 'example' => 'Dr. Ahmad Dahlan'],
+            'status_dosen' => ['type' => 'string', 'enum' => ['DTPS', 'DTT', 'NONAKTIF'], 'example' => 'DTPS'],
             'pendidikan_terakhir' => ['type' => 'string', 'nullable' => true, 'example' => 'S3'],
             'jabatan_akademik' => [
                 'type' => 'object',
                 'nullable' => true,
                 'properties' => [
+                    'id_jabatan' => ['type' => 'integer', 'example' => 3],
                     'nama_jabatan' => ['type' => 'string', 'example' => 'Lektor Kepala'],
                 ],
             ],
