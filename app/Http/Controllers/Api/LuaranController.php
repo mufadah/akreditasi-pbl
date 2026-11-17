@@ -16,24 +16,22 @@ class LuaranController extends Controller
     /**
      * Relasi yang selalu dimuat untuk mencegah N+1 query.
      */
-    private array $relations = [
-        'kegiatan.jenisKegiatan',
-        'dosen',
-        'jenisLuaran',
-        'evidence',
-    ];
+    private array $relations = ['kegiatan.jenisKegiatan', 'dosen', 'jenisLuaran', 'evidence'];
 
     /**
      * Helper format response JSON standar.
      */
     private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
     {
-        return response()->json([
-            'success' => $success,
-            'code' => $code,
-            'message' => $message,
-            'data' => $data,
-        ], $code);
+        return response()->json(
+            [
+                'success' => $success,
+                'code' => $code,
+                'message' => $message,
+                'data' => $data,
+            ],
+            $code,
+        );
     }
 
     /**
@@ -178,13 +176,13 @@ class LuaranController extends Controller
         $nomorSertifikat = $request->input('nomor_sertifikat_hki');
 
         $isDuplicate = false;
-        if (! empty($doi)) {
+        if (!empty($doi)) {
             $isDuplicate = Luaran::where('doi', $doi)->orWhere('doi_prosiding', $doi)->exists();
         }
-        if (! $isDuplicate && ! empty($isbn)) {
+        if (!$isDuplicate && !empty($isbn)) {
             $isDuplicate = Luaran::where('isbn', $isbn)->orWhere('isbn_prosiding', $isbn)->exists();
         }
-        if (! $isDuplicate && ! empty($nomorSertifikat)) {
+        if (!$isDuplicate && !empty($nomorSertifikat)) {
             $isDuplicate = Luaran::where('nomor_sertifikat_hki', $nomorSertifikat)->exists();
         }
 
@@ -197,7 +195,7 @@ class LuaranController extends Controller
                 return Luaran::create($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menyimpan data luaran: '.$e->getMessage());
+            return $this->respond(false, 500, 'Gagal menyimpan data luaran: ' . $e->getMessage());
         }
 
         return $this->respond(true, 201, 'Data luaran berhasil ditambahkan.', $luaran->load($this->relations));
@@ -210,7 +208,7 @@ class LuaranController extends Controller
     {
         $luaran = Luaran::with($this->relations)->find($id);
 
-        if (! $luaran) {
+        if (!$luaran) {
             return $this->respond(false, 404, 'Data luaran tidak ditemukan.');
         }
 
@@ -224,7 +222,7 @@ class LuaranController extends Controller
     {
         $luaran = Luaran::find($id);
 
-        if (! $luaran) {
+        if (!$luaran) {
             return $this->respond(false, 404, 'Data luaran tidak ditemukan.');
         }
 
@@ -241,7 +239,7 @@ class LuaranController extends Controller
                 $luaran->update($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal memperbarui data luaran: '.$e->getMessage());
+            return $this->respond(false, 500, 'Gagal memperbarui data luaran: ' . $e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data luaran berhasil diperbarui.', $luaran->fresh($this->relations));
@@ -254,7 +252,7 @@ class LuaranController extends Controller
     {
         $luaran = Luaran::find($id);
 
-        if (! $luaran) {
+        if (!$luaran) {
             return $this->respond(false, 404, 'Data luaran tidak ditemukan.');
         }
 
@@ -266,7 +264,7 @@ class LuaranController extends Controller
         try {
             $luaran->delete();
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menghapus data luaran: '.$e->getMessage());
+            return $this->respond(false, 500, 'Gagal menghapus data luaran: ' . $e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data luaran berhasil dihapus.');

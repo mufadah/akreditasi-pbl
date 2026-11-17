@@ -11,6 +11,8 @@ Artisan::command('inspire', function () {
 // Penjadwalan otomatis reminder kedaluwarsa kerja sama setiap hari pukul 01:00 WIB
 Schedule::command('kerjasama:check-kedaluwarsa')->dailyAt('01:00');
 
-// Impor master dosen berlangsung lebih dulu, lalu publikasi disinkronkan pukul 03:00 WIB.
-Schedule::command('pda:import-dosen')->timezone('Asia/Jakarta')->twiceMonthly(1, 15, '02:00');
+// Sinkronkan master dosen sekali setiap semester (Februari dan Agustus).
+Schedule::command('pda:sync-dosen')->timezone('Asia/Jakarta')->yearlyOn(2, 1, '02:00');
+Schedule::command('pda:sync-dosen')->timezone('Asia/Jakarta')->yearlyOn(8, 1, '02:00');
+// Impor publikasi berkala pukul 03:00 WIB.
 Schedule::command('pda:sync-publikasi --pages=5')->timezone('Asia/Jakarta')->twiceMonthly(1, 15, '03:00');
