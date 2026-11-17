@@ -13,6 +13,7 @@ class Evidence extends Model
     protected $primaryKey = 'id_evidence';
 
     protected $fillable = [
+        'judul_file',
         'id_kerjasama',
         'id_kerja_sama',
         'id_sertifikasi',
@@ -22,7 +23,6 @@ class Evidence extends Model
         'id_pkm',
         'tipe_entitas',
         'id_entitas',
-        'kode_indikator',
         'jenis_dokumen',
         'nama_file',
         'path_file',
@@ -34,6 +34,41 @@ class Evidence extends Model
         'divalidasi_oleh',
         'tanggal_validasi',
     ];
+
+    public function getJudulFileAttribute($value): ?string
+    {
+        if (! empty($value)) {
+            return $value;
+        }
+
+        // Fallback jika judul_file belum terisi pada data lama
+        $namaFile = $this->attributes['nama_file'] ?? null;
+        if (! empty($namaFile) && ! filter_var($namaFile, FILTER_VALIDATE_URL)) {
+            return $namaFile;
+        }
+
+        $jenis = $this->attributes['jenis_dokumen'] ?? null;
+
+        return ! empty($jenis) ? 'Dokumen '.$jenis : 'Dokumen Evidence';
+    }
+
+    public function getUrlDriveAttribute($value): ?string
+    {
+        if (! empty($value)) {
+            return $value;
+        }
+
+        if (! empty($this->attributes['url_evidence'])) {
+            return $this->attributes['url_evidence'];
+        }
+
+        $namaFile = $this->attributes['nama_file'] ?? null;
+        if (! empty($namaFile) && filter_var($namaFile, FILTER_VALIDATE_URL)) {
+            return $namaFile;
+        }
+
+        return null;
+    }
 
     public function kegiatan(): BelongsTo
     {

@@ -17,6 +17,15 @@ class EvidenceHistory extends Model
         'diubah_oleh',
     ];
 
+    protected $appends = [
+        'id_evidence_history',
+    ];
+
+    public function getIdEvidenceHistoryAttribute(): int
+    {
+        return $this->attributes['id'] ?? 0;
+    }
+
     public function evidence(): BelongsTo
     {
         return $this->belongsTo(Evidence::class, 'evidence_id', 'id_evidence');
