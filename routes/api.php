@@ -40,6 +40,7 @@ Route::match(['get', 'post'], '/register', [ProfileController::class, 'resourceS
 
 Route::middleware(['auth.jwt'])->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
+    Route::get('/jenis-luaran', [JenisLuaranController::class, 'index']);
     Route::post('/logout', function () {
         return response()->json([
             'success' => true,
@@ -74,7 +75,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
     Route::delete('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
     Route::apiResource('tendik', TenagaKependidikanController::class);
     Route::apiResource('jenis-kegiatan', JenisKegiatanController::class);
-    Route::apiResource('jenis-luaran', JenisLuaranController::class);
+    Route::apiResource('jenis-luaran', JenisLuaranController::class)->except(['index']);
     Route::apiResource('jenis-kerja-sama', JenisKerjaSamaController::class);
     Route::apiResource('jenis-kerjasama', JenisKerjaSamaController::class);
     Route::apiResource('mitra', MitraController::class);
@@ -97,6 +98,9 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
     Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
 
     // Kegiatan & Luaran (Unified Tridharma & Luaran Ilmiah Sesuai ERD Terbaru)
+    // Rute export harus sebelum apiResource agar tidak tertangkap sebagai {id}
+    Route::get('/kegiatan/export', [KegiatanController::class, 'export']);
+    Route::get('/luaran/export', [LuaranController::class, 'export']);
     Route::apiResource('kegiatan', KegiatanController::class);
     Route::apiResource('luaran', LuaranController::class);
     Route::post('/sertifikasi/sync-profil', [SertifikasiController::class, 'syncProfil']);
@@ -129,6 +133,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
         Route::get('/tridharma/summary', [StatistikController::class, 'tridharmaSummary']);
         Route::get('/kerjasama/aktif', [StatistikController::class, 'kerjasamaAktif']);
         // Rute Dashboard & 4 Tab Analitik
+        // Route::get('/dashboard', [StatistikController::class, 'dashboard']);
         Route::get('/dashboard', [StatistikController::class, 'dashboard']);
         Route::get('/rasio-dosen-mahasiswa', [StatistikController::class, 'rasioDosenMahasiswa']);
         Route::get('/produktivitas-dosen', [StatistikController::class, 'produktivitasDosen']);

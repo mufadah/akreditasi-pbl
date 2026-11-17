@@ -16,19 +16,24 @@ beforeEach(function () {
     $this->seed(DatabaseSeeder::class);
 });
 
-test('request ke /api/login mengarahkan ke portal SSO K1 karena sistem bertindak sebagai Resource Server', function () {
+test('request ke /api/login dengan kredensial valid mengembalikan token JWT (fallback in-memory)', function () {
     $response = $this->postJson('/api/login', [
         'email' => 'administrator@example.com',
         'password' => 'password',
     ]);
 
-    $response->assertStatus(401)
+    $response->assertStatus(200)
         ->assertJson([
-            'success' => false,
-            'code' => 401,
-            'message' => 'Layanan ini adalah Resource Server (Kelompok 2). Autentikasi dan penerbitan token dilakukan terpusat melalui portal SSO Kelompok 1.',
+            'success' => true,
+            'code' => 200,
+            'message' => 'Login berhasil',
         ])
-        ->assertJsonStructure(['login_url']);
+        ->assertJsonStructure([
+            'data' => [
+                'user' => ['id', 'nama', 'email', 'role'],
+                'authorization' => ['access_token', 'token_type', 'expires_in'],
+            ],
+        ]);
 });
 
 test('request ke /api/register mengarahkan ke portal SSO K1', function () {

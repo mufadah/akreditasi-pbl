@@ -16,3 +16,12 @@ Schedule::command('pda:sync-dosen')->timezone('Asia/Jakarta')->yearlyOn(2, 1, '0
 Schedule::command('pda:sync-dosen')->timezone('Asia/Jakarta')->yearlyOn(8, 1, '02:00');
 // Impor publikasi berkala pukul 03:00 WIB.
 Schedule::command('pda:sync-publikasi --pages=5')->timezone('Asia/Jakarta')->twiceMonthly(1, 15, '03:00');
+
+// 1. Impor Master Dosen TRK & Pengajar Luar TRK: 1 semester sekali (Februari & Agustus awal semester) pukul 02:00 WIB
+Schedule::command('pda:import-dosen')->timezone('Asia/Jakarta')->cron('0 2 1 2,8 *');
+
+// 2. Sinkronisasi Publikasi PDA: 3 bulan sekali (Januari, April, Juli, Oktober) pukul 03:00 WIB
+Schedule::command('pda:sync-publikasi --pages=50')->timezone('Asia/Jakarta')->cron('0 3 1 1,4,7,10 *');
+
+// 3. Cadangan: Satu perintah sinkronisasi terpadu pda:sync-all bisa dipanggil kapan saja atau triwulanan
+Schedule::command('pda:sync-all --compact')->timezone('Asia/Jakarta')->cron('0 4 1 1,4,7,10 *');
