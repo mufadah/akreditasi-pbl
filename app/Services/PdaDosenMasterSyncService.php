@@ -5,9 +5,8 @@ namespace App\Services;
 use App\Models\Dosen;
 use App\Models\JabatanAkademik;
 use App\Models\Pendidikan;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Client\Pool;
-use Illuminate\Http\Client\Response;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -26,145 +25,150 @@ class PdaDosenMasterSyncService
     /**
      * @return array{
      *     semester: ?string,
+     *     updated_jabatan: int,
+     *     created_trk: int,
+     *     created_ti: int,
+     *     created_mku: int,
+     *     unmatched: int,
+     *     protected: int,
+     *     jabatan_distribution: array<string, int>,
      *     d4_trk: int,
      *     d3_ti: int,
      *     mku: int,
      *     created: int,
      *     updated: int,
      *     skipped: int,
-     *     serdos_available: int,
-     *     jabatan_distribution: array<string, int>
+     *     serdos_available: int
      * }
      */
     public function sync(): array
     {
         $lecturers = $this->fetchLecturers();
-        $profiles = $this->fetchProfiles($lecturers);
-        $semester = $this->latestSemester($profiles);
-        $targets = [];
+        $existingDosen = Dosen::withTrashed()->with('jabatanAkademik')->get();
+        $indexes = $this->buildIndexes($existingDosen);
+        $updates = [];
+        $newTrk = [];
+        $newTi = [];
+        $outsideCandidates = [];
+        $unmatched = 0;
+        $protected = 0;
 
         foreach ($lecturers as $lecturer) {
-            $homebase = $this->homebase($lecturer);
-            $slug = trim((string) ($lecturer['slug'] ?? ''));
-            $profile = $profiles[$slug] ?? [];
-
-            if ($this->isD4Trk($homebase)) {
-                $targets[] = ['lecturer' => $lecturer, 'profile' => $profile, 'status' => 'DTPS', 'category' => 'd4_trk'];
-
-                continue;
-            }
-
-            if ($this->isD3Ti($homebase)) {
-                $targets[] = ['lecturer' => $lecturer, 'profile' => $profile, 'status' => 'DTPS', 'category' => 'd3_ti'];
+            $match = $this->findExistingDosen($lecturer, $indexes);
+            if ($match['ambiguous']) {
+                if ($this->isTargetHomebase($lecturer)) {
+                    $unmatched++;
+                }
 
                 continue;
             }
 
-            if ($this->teachesMku($profile, $semester)) {
-                $targets[] = ['lecturer' => $lecturer, 'profile' => $profile, 'status' => 'DTT', 'category' => 'mku'];
+            if ($match['dosen'] !== null) {
+                $positionName = $this->normalizePosition(
+                    $lecturer['jabatan_fungsional'] ?? $lecturer['jabatan_akademik'] ?? null
+                );
+                $position = $positionName !== null ? $this->findPosition($positionName) : null;
+                $currentName = trim((string) $match['dosen']->jabatanAkademik?->nama_jabatan);
+                $needsEnrichment = $currentName === ''
+                    || mb_strtolower($currentName) === 'tenaga pengajar';
+
+                if ($needsEnrichment && $position !== null && $position->id_jabatan !== $match['dosen']->id_jabatan) {
+                    $updates[] = ['dosen' => $match['dosen'], 'position' => $position];
+                } elseif ($needsEnrichment && $positionName !== null && $position === null) {
+                    $unmatched++;
+                } elseif (! $needsEnrichment) {
+                    $protected++;
+                }
+
+                continue;
+            }
+
+            $identity = $this->identity($lecturer);
+            if ($identity === null) {
+                if ($this->isTargetHomebase($lecturer)) {
+                    $unmatched++;
+                }
+
+                continue;
+            }
+
+            if ($this->isD4Trk($lecturer)) {
+                $newTrk[] = $lecturer;
+            } elseif ($this->isD3Ti($lecturer)) {
+                $newTi[] = $lecturer;
+            } else {
+                $outsideCandidates[] = $lecturer;
             }
         }
 
-        return DB::transaction(function () use ($targets, $semester): array {
+        $profileCandidates = $outsideCandidates;
+        if (isset($lecturers[0]['slug'])) {
+            $profileCandidates[] = $lecturers[0];
+        }
+
+        [$profiles] = $this->fetchProfiles($profileCandidates);
+        $semester = $this->latestSemester($profiles);
+        $newMku = [];
+
+        foreach ($outsideCandidates as $lecturer) {
+            $slug = trim((string) ($lecturer['slug'] ?? ''));
+            if (! isset($profiles[$slug])) {
+                $unmatched++;
+
+                continue;
+            }
+
+            if ($this->teachesMku($profiles[$slug], $semester)) {
+                $newMku[] = $lecturer;
+            }
+        }
+
+        return DB::transaction(function () use ($updates, $newTrk, $newTi, $newMku, $indexes, $semester, $unmatched, $protected): array {
             $result = [
                 'semester' => $semester,
-                'd4_trk' => 0,
-                'd3_ti' => 0,
-                'mku' => 0,
-                'created' => 0,
-                'updated' => 0,
-                'skipped' => 0,
-                'serdos_available' => 0,
+                'updated_jabatan' => 0,
+                'created_trk' => 0,
+                'created_ti' => 0,
+                'created_mku' => 0,
+                'unmatched' => $unmatched,
+                'protected' => $protected,
                 'jabatan_distribution' => [],
             ];
 
-            foreach ($targets as $target) {
-                $lecturer = $target['lecturer'];
-                $profile = $target['profile'];
-                $identity = $this->identity($lecturer);
+            foreach ($updates as $update) {
+                $dosen = $update['dosen'];
+                $dosen->update(['id_jabatan' => $update['position']->id_jabatan]);
+                $dosen->unsetRelation('jabatanAkademik');
+                $dosen->recordHistory('PDA');
+                $result['updated_jabatan']++;
+                $this->addPositionCount($result['jabatan_distribution'], $update['position']->nama_jabatan);
+            }
 
-                if ($identity === null) {
-                    $result['skipped']++;
-
-                    continue;
-                }
-
-                $existing = $this->findExistingDosen($identity['nidn'], $identity['nip']);
-                $education = $this->resolveEducation(
-                    $this->educationDetails($lecturer, $profile),
-                    $existing
-                );
-
-                if ($education === null && $existing === null) {
-                    $result['skipped']++;
-
-                    continue;
-                }
-
-                $jobTitle = $this->jobTitle($lecturer, $profile);
-                $job = $this->resolveJabatan($jobTitle);
-                $name = $this->fullName($lecturer);
-                if ($name === '') {
-                    $result['skipped']++;
-
-                    continue;
-                }
-
-                $email = $this->email($lecturer, $existing, $identity['slug'], $name);
-                $data = [
-                    'nama_dosen' => $name,
-                    'nidn' => $identity['nidn'],
-                    'nuptk' => $identity['nip'] !== '' ? $identity['nip'] : null,
-                    'email' => $email,
-                    'id_jabatan' => $job?->id_jabatan ?? $existing?->id_jabatan,
-                    'id_pendidikan' => $education?->id_pendidikan ?? $existing?->id_pendidikan,
-                    'status_dosen' => $target['status'],
-                ];
-
-                $serdos = $this->sertifikasiValue($lecturer, $profile);
-                if ($serdos['available']) {
-                    $result['serdos_available']++;
-                    $data['sertifikasi'] = $serdos['value'];
-                }
-
-                if ($data['id_jabatan'] === null || $data['id_pendidikan'] === null) {
-                    $result['skipped']++;
-
-                    continue;
-                }
-
-                if ($existing === null) {
-                    $dosen = Dosen::query()->create($data);
-                    $dosen->recordHistory('PDA');
-                    $result['created']++;
-                } else {
-                    $wasTrashed = $existing->trashed();
-                    if ($wasTrashed) {
-                        $existing->restore();
+            foreach ([
+                ['lecturers' => $newTrk, 'category' => 'created_trk', 'status' => 'DTPS'],
+                ['lecturers' => $newTi, 'category' => 'created_ti', 'status' => 'DTPS'],
+                ['lecturers' => $newMku, 'category' => 'created_mku', 'status' => 'DTT'],
+            ] as $group) {
+                foreach ($group['lecturers'] as $lecturer) {
+                    if ($this->createDosen($lecturer, $group['status'], $indexes, $result['jabatan_distribution'])) {
+                        $result[$group['category']]++;
+                    } else {
+                        $result['unmatched']++;
                     }
-
-                    $existing->update($data);
-                    if ($wasTrashed || $existing->wasChanged([
-                        'nama_dosen',
-                        'nidn',
-                        'nuptk',
-                        'email',
-                        'id_jabatan',
-                        'id_pendidikan',
-                        'sertifikasi',
-                        'status_dosen',
-                    ])) {
-                        $existing->recordHistory('PDA');
-                    }
-                    $result['updated']++;
                 }
-
-                $result[$target['category']]++;
-                $result['jabatan_distribution'][$job?->nama_jabatan ?? 'Tenaga Pengajar']
-                    = ($result['jabatan_distribution'][$job?->nama_jabatan ?? 'Tenaga Pengajar'] ?? 0) + 1;
             }
 
             ksort($result['jabatan_distribution']);
+
+            $result += [
+                'd4_trk' => $result['created_trk'],
+                'd3_ti' => $result['created_ti'],
+                'mku' => $result['created_mku'],
+                'created' => $result['created_trk'] + $result['created_ti'] + $result['created_mku'],
+                'updated' => $result['updated_jabatan'],
+                'skipped' => $result['unmatched'],
+                'serdos_available' => 0,
+            ];
 
             return $result;
         });
@@ -175,193 +179,211 @@ class PdaDosenMasterSyncService
      */
     private function fetchLecturers(): array
     {
-        $lecturers = [];
-        $page = 1;
-        $lastPage = 1;
+        $response = Http::withHeaders(self::REQUEST_HEADERS)
+            ->acceptJson()
+            ->timeout(30)
+            ->get(self::DIRECTORY_URL, ['limit' => 500]);
 
-        do {
-            $response = Http::withHeaders(self::REQUEST_HEADERS)
-                ->acceptJson()
-                ->timeout(30)
-                ->get(self::DIRECTORY_URL, ['limit' => 500, 'page' => $page]);
+        if (! $response->successful()) {
+            throw new RuntimeException("PDA mengembalikan HTTP {$response->status()} saat mengambil direktori dosen.");
+        }
 
-            if (! $response->successful()) {
-                throw new RuntimeException("PDA mengembalikan HTTP {$response->status()} saat mengambil direktori dosen.");
-            }
+        $payload = $response->json();
+        if (! is_array($payload) || ! is_array($payload['data'] ?? null)) {
+            throw new RuntimeException('Format direktori dosen PDA tidak berisi daftar data yang dikenali.');
+        }
 
-            $payload = $response->json();
-            if (! is_array($payload) || ! is_array($payload['data'] ?? null)) {
-                throw new RuntimeException('Format direktori dosen PDA tidak berisi daftar data yang dikenali.');
-            }
-
-            foreach ($payload['data'] as $lecturer) {
-                if (is_array($lecturer)) {
-                    $lecturers[] = $lecturer;
-                }
-            }
-
-            $lastPage = max(1, (int) ($payload['last_page'] ?? 1));
-            $page++;
-        } while ($page <= $lastPage);
-
-        return $lecturers;
+        return array_values(array_filter($payload['data'], 'is_array'));
     }
 
     /**
      * @param  array<int, array<string, mixed>>  $lecturers
-     * @return array<string, array<string, mixed>>
+     * @return array{0: array<string, array<string, mixed>>, 1: array<int, string>}
      */
     private function fetchProfiles(array $lecturers): array
     {
-        $slugs = array_values(array_unique(array_filter(array_map(
-            fn (array $lecturer): string => trim((string) ($lecturer['slug'] ?? '')),
-            $lecturers
-        ))));
         $profiles = [];
-        $errors = [];
+        $failures = [];
+        $seenSlugs = [];
 
-        foreach (array_chunk($slugs, 20) as $chunk) {
-            $responses = Http::pool(function (Pool $pool) use ($chunk): array {
-                return array_map(
-                    fn (string $slug) => $pool->as($slug)
-                        ->withHeaders(self::REQUEST_HEADERS)
-                        ->timeout(25)
-                        ->get(self::DETAIL_URL.'/'.rawurlencode($slug)),
-                    $chunk
-                );
-            });
+        foreach ($lecturers as $lecturer) {
+            $slug = trim((string) ($lecturer['slug'] ?? ''));
+            if ($slug === '') {
+                $failures[] = 'slug profil kosong';
 
-            foreach ($chunk as $slug) {
-                $response = $responses[$slug] ?? null;
-                if (! $response instanceof Response || ! $response->successful()) {
-                    $status = $response instanceof Response ? "HTTP {$response->status()}" : 'respons tidak valid';
-                    $errors[] = "{$slug} ({$status})";
-
-                    continue;
-                }
-
-                $props = $response->json('props');
-                if (! is_array($props)) {
-                    $props = $this->inertiaProps($response->body());
-                }
-
-                if ($props === null) {
-                    $errors[] = "{$slug} (data profil tidak dikenali)";
-
-                    continue;
-                }
-
-                $profiles[$slug] = $props;
+                continue;
             }
-        }
-
-        if ($errors !== []) {
-            $sampleErrors = implode(', ', array_slice($errors, 0, 8));
-            $remaining = count($errors) > 8 ? ' dan '.(count($errors) - 8).' profil lainnya' : '';
-
-            throw new RuntimeException('Gagal mengambil profil publik PDA: '.$sampleErrors.$remaining.'. Sinkronisasi dibatalkan.');
-        }
-
-        return $profiles;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function inertiaProps(string $html): ?array
-    {
-        if (! preg_match('/data-page="([^"]+)"/', $html, $matches)) {
-            return null;
-        }
-
-        $page = json_decode(
-            html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-            true
-        );
-
-        return is_array($page) && is_array($page['props'] ?? null) ? $page['props'] : null;
-    }
-
-    /**
-     * @param  array<string, array<string, mixed>>  $profiles
-     */
-    private function latestSemester(array $profiles): ?string
-    {
-        $semesters = [];
-
-        foreach ($profiles as $profile) {
-            $name = trim((string) ($profile['namaSemester'] ?? ''));
-            if ($name !== '') {
-                $semesters[] = $name;
+            if (isset($seenSlugs[$slug])) {
+                continue;
             }
+            $seenSlugs[$slug] = true;
 
-            foreach (($profile['pengajaranTerbaru'] ?? []) as $teaching) {
-                if (is_array($teaching)) {
-                    $semester = trim((string) ($teaching['semester'] ?? ''));
-                    if ($semester !== '') {
-                        $semesters[] = $semester;
-                    }
-                }
-            }
-        }
+            usleep(300000);
 
-        $ranked = [];
-        foreach (array_unique($semesters) as $semester) {
-            if (preg_match('/((?:19|20)\d{2})\s*\/\s*(?:19|20)\d{2}\s*(Ganjil|Genap)/i', $semester, $matches)) {
-                $rank = ((int) $matches[1] * 2) + (strtolower($matches[2]) === 'genap' ? 1 : 0);
-                $ranked[$rank] = $semester;
-            }
-        }
+            try {
+                $response = Http::withHeaders(self::REQUEST_HEADERS)
+                    ->timeout(20)
+                    ->get(self::DETAIL_URL.'/'.rawurlencode($slug));
+            } catch (ConnectionException $exception) {
+                $failures[] = "{$slug} ({$exception->getMessage()})";
 
-        if ($ranked === []) {
-            return null;
-        }
-
-        ksort($ranked);
-
-        return end($ranked) ?: null;
-    }
-
-    /**
-     * @param  array<string, mixed>  $profile
-     */
-    private function teachesMku(array $profile, ?string $semester): bool
-    {
-        if ($semester === null || ! is_array($profile['pengajaranTerbaru'] ?? null)) {
-            return false;
-        }
-
-        foreach ($profile['pengajaranTerbaru'] as $teaching) {
-            if (! is_array($teaching)
-                || mb_strtolower(trim((string) ($teaching['semester'] ?? ''))) !== mb_strtolower($semester)) {
                 continue;
             }
 
-            $course = mb_strtolower(trim((string) ($teaching['mata_kuliah'] ?? '')));
-            $class = trim((string) ($teaching['kelas'] ?? ''));
-            $isMku = collect([
-                'pancasila',
-                'pendidikan kewarganegaraan',
-                'kewarganegaraan',
-                'pkn',
-                'bahasa indonesia',
-                'bhs indonesia',
-                'bahasa inggris',
-                'bhs inggris',
-                'pendidikan agama',
-                'agama islam',
-                'agama kristen',
-                'agama katolik',
-                'agama hindu',
-                'agama buddha',
-            ])->contains(fn (string $keyword): bool => str_contains($course, $keyword));
+            if (! $response->successful()) {
+                $failures[] = "{$slug} (HTTP {$response->status()})";
 
-            if ($isMku && preg_match('/^(?:TI|IK)\s*-/i', $class) === 1) {
-                return true;
+                continue;
             }
+
+            $props = $response->json('props');
+            if (! is_array($props)) {
+                if (! preg_match('/data-page="([^"]+)"/', $response->body(), $matches)) {
+                    $failures[] = "{$slug} (data profil tidak dikenali)";
+
+                    continue;
+                }
+
+                $page = json_decode(
+                    html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                    true
+                );
+                $props = is_array($page) ? ($page['props'] ?? null) : null;
+            }
+
+            if (! is_array($props)) {
+                $failures[] = "{$slug} (data profil tidak dikenali)";
+
+                continue;
+            }
+
+            $profiles[$slug] = $props;
         }
 
-        return false;
+        if ($failures !== []) {
+            logger()->warning('Sebagian profil dosen PDA tidak dapat dibaca.', [
+                'count' => count($failures),
+                'samples' => array_slice($failures, 0, 10),
+            ]);
+        }
+
+        return [$profiles, $failures];
+    }
+
+    /**
+     * @param  EloquentCollection<int, Dosen>  $dosen
+     * @return array{nip: array<string, array<int, Dosen>>, nidn: array<string, array<int, Dosen>>, name: array<string, array<int, Dosen>>}
+     */
+    private function buildIndexes(EloquentCollection $dosen): array
+    {
+        $indexes = ['nip' => [], 'nidn' => [], 'name' => []];
+
+        foreach ($dosen as $lecturer) {
+            $this->indexDosen($lecturer, $indexes);
+        }
+
+        return $indexes;
+    }
+
+    /**
+     * @param  array{nip: array<string, array<int, Dosen>>, nidn: array<string, array<int, Dosen>>, name: array<string, array<int, Dosen>>}  $indexes
+     */
+    private function indexDosen(Dosen $dosen, array &$indexes): void
+    {
+        $nip = $this->normalizeIdentifier($dosen->nuptk);
+        if ($nip !== '') {
+            $indexes['nip'][$nip][] = $dosen;
+        }
+
+        $nidn = $this->normalizeIdentifier($dosen->nidn);
+        if ($nidn !== '' && ! str_starts_with($nidn, 'nip_') && ! str_starts_with($nidn, 'pda_')) {
+            $indexes['nidn'][$nidn][] = $dosen;
+        }
+
+        $name = $this->normalizeName($dosen->nama_dosen);
+        if ($name !== '') {
+            $indexes['name'][$name][] = $dosen;
+        }
+    }
+
+    /**
+     * @param  array{nip: array<string, array<int, Dosen>>, nidn: array<string, array<int, Dosen>>, name: array<string, array<int, Dosen>>}  $indexes
+     * @return array{dosen: ?Dosen, ambiguous: bool}
+     */
+    private function findExistingDosen(array $lecturer, array $indexes): array
+    {
+        $identity = $this->identity($lecturer);
+        $checks = [
+            ['index' => 'nip', 'value' => $this->normalizeIdentifier($identity['nip'] ?? '')],
+            ['index' => 'nidn', 'value' => $this->normalizeIdentifier($identity['nidn'] ?? '')],
+            ['index' => 'name', 'value' => $this->normalizeName($lecturer['nama'] ?? $lecturer['Nama_dosen'] ?? '')],
+        ];
+
+        foreach ($checks as $check) {
+            if ($check['value'] === '' || ! isset($indexes[$check['index']][$check['value']])) {
+                continue;
+            }
+
+            $matches = $indexes[$check['index']][$check['value']];
+            if (count($matches) !== 1) {
+                return ['dosen' => null, 'ambiguous' => true];
+            }
+
+            return ['dosen' => $matches[0], 'ambiguous' => false];
+        }
+
+        return ['dosen' => null, 'ambiguous' => false];
+    }
+
+    /**
+     * @param  array<string, mixed>  $lecturer
+     * @return array{nip: string, nidn: string, name: string}|null
+     */
+    private function identity(array $lecturer): ?array
+    {
+        $nip = trim((string) ($lecturer['nip'] ?? $lecturer['NIP'] ?? ''));
+        $nidn = trim((string) ($lecturer['nidn'] ?? $lecturer['NIDN'] ?? ''));
+        $name = trim((string) ($lecturer['nama'] ?? $lecturer['Nama_dosen'] ?? ''));
+
+        return $nip === '' && $nidn === '' && $name === ''
+            ? null
+            : ['nip' => $nip, 'nidn' => $nidn, 'name' => $name];
+    }
+
+    private function normalizeIdentifier(mixed $value): string
+    {
+        return mb_strtolower(trim((string) $value));
+    }
+
+    private function normalizeName(mixed $value): string
+    {
+        $name = mb_strtolower(trim((string) $value));
+        $name = preg_replace(
+            '/\b(?:prof(?:esor)?|drs?|dra|ir|ph\.?\s*d|eng|s\.?\s*(?:kom|ti|t|si|pd|e|h|s|ag)|m\.?\s*(?:kom|ti|t|si|pd|sc|eng|ag))\.?\b/iu',
+            ' ',
+            $name
+        );
+        $name = preg_replace('/[^\p{L}\p{N}\s-]/u', ' ', (string) $name);
+
+        return trim(preg_replace('/\s+/', ' ', (string) $name));
+    }
+
+    /**
+     * @param  array<string, mixed>  $lecturer
+     */
+    private function isTargetHomebase(array $lecturer): bool
+    {
+        return $this->isD4Trk($lecturer) || $this->isD3Ti($lecturer);
+    }
+
+    private function isD4Trk(array $lecturer): bool
+    {
+        return str_contains($this->homebase($lecturer), 'teknologi rekayasa komputer');
+    }
+
+    private function isD3Ti(array $lecturer): bool
+    {
+        return str_contains($this->homebase($lecturer), 'teknik informatika');
     }
 
     private function homebase(array $lecturer): string
@@ -382,45 +404,127 @@ class PdaDosenMasterSyncService
         return '';
     }
 
-    private function isD4Trk(string $homebase): bool
+    private function normalizePosition(mixed $value): ?string
     {
-        return str_contains($homebase, 'teknologi rekayasa komputer');
-    }
-
-    private function isD3Ti(string $homebase): bool
-    {
-        return str_contains($homebase, 'teknik informatika');
-    }
-
-    /**
-     * @return array{nidn: string, nip: string, slug: string}|null
-     */
-    private function identity(array $lecturer): ?array
-    {
-        $nidn = trim((string) ($lecturer['nidn'] ?? $lecturer['NIDN'] ?? ''));
-        $nip = trim((string) ($lecturer['nip'] ?? $lecturer['NIP'] ?? ''));
-
-        if ($nidn === '' && $nip === '') {
+        if (! is_scalar($value)) {
             return null;
         }
 
-        return [
-            'nidn' => $nidn !== '' ? $nidn : 'NIP_'.$nip,
-            'nip' => $nip,
-            'slug' => trim((string) ($lecturer['slug'] ?? '')),
-        ];
+        $normalized = mb_strtolower(trim((string) $value));
+        if ($normalized === '' || $normalized === '-') {
+            return null;
+        }
+
+        return match ($normalized) {
+            'asisten ahli' => 'Asisten Ahli',
+            'lektor' => 'Lektor',
+            'lektor kepala' => 'Lektor Kepala',
+            'guru besar', 'profesor' => 'Guru Besar',
+            'tenaga pengajar' => 'Tenaga Pengajar',
+            default => null,
+        };
     }
 
-    private function findExistingDosen(string $nidn, string $nip): ?Dosen
+    private function findPosition(string $positionName): ?JabatanAkademik
     {
-        return Dosen::withTrashed()
-            ->where(function (Builder $query) use ($nidn, $nip): void {
-                $query->where('nidn', $nidn);
-                if ($nip !== '') {
-                    $query->orWhere('nuptk', $nip);
-                }
-            })
+        $aliases = $positionName === 'Guru Besar'
+            ? ['guru besar', 'profesor']
+            : [mb_strtolower($positionName)];
+        $placeholders = implode(', ', array_fill(0, count($aliases), '?'));
+
+        return JabatanAkademik::query()
+            ->whereRaw("LOWER(TRIM(nama_jabatan)) IN ({$placeholders})", $aliases)
+            ->orderByRaw('CASE WHEN LOWER(TRIM(nama_jabatan)) = ? THEN 0 ELSE 1 END', [mb_strtolower($positionName)])
             ->first();
+    }
+
+    /**
+     * @param  array<string, array<int, Dosen>>  $indexes
+     * @param  array<string, int>  $distribution
+     */
+    private function createDosen(array $lecturer, string $status, array &$indexes, array &$distribution): bool
+    {
+        $identity = $this->identity($lecturer);
+        $name = $this->fullName($lecturer);
+        $positionName = $this->normalizePosition($lecturer['jabatan_fungsional'] ?? $lecturer['jabatan_akademik'] ?? null);
+        $position = $positionName !== null ? $this->findPosition($positionName) : null;
+        $educationId = $this->educationId($lecturer['pendidikan_terakhir'] ?? null);
+
+        if ($identity === null
+            || ($identity['nip'] === '' && $identity['nidn'] === '')
+            || $name === ''
+            || $position === null
+            || $educationId === null) {
+            return false;
+        }
+
+        $nidn = trim($identity['nidn']);
+        if ($nidn === '') {
+            $nip = trim($identity['nip']);
+            $nidn = 'NIP_'.$nip;
+        }
+
+        $email = $this->newEmail($lecturer, $name);
+        $dosen = Dosen::query()->firstOrCreate(
+            ['nidn' => $nidn],
+            [
+                'nuptk' => trim($identity['nip']) !== '' ? trim($identity['nip']) : null,
+                'nama_dosen' => $name,
+                'email' => $email,
+                'id_jabatan' => $position->id_jabatan,
+                'id_pendidikan' => $educationId,
+                'status_dosen' => $status,
+            ]
+        );
+
+        if (! $dosen->wasRecentlyCreated) {
+            $this->indexDosen($dosen, $indexes);
+
+            return false;
+        }
+
+        $this->indexDosen($dosen, $indexes);
+        $dosen->recordHistory('PDA');
+        $this->addPositionCount($distribution, $position->nama_jabatan);
+
+        return true;
+    }
+
+    private function educationId(mixed $level): ?int
+    {
+        $normalized = mb_strtolower(trim((string) $level));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $aliases = match ($normalized) {
+            's3', 'doktor' => ['s3'],
+            's2', 'magister' => ['s2'],
+            's1', 'sarjana', 'd4', 'sarjana terapan' => ['s1', 'd4/s1', 'd4', 'sarjana terapan'],
+            'd3', 'diploma iii' => ['d3', 'diploma iii'],
+            default => [$normalized],
+        };
+        $placeholders = implode(', ', array_fill(0, count($aliases), '?'));
+
+        $education = Pendidikan::query()
+            ->whereRaw("LOWER(TRIM(jenjang)) IN ({$placeholders})", $aliases)
+            ->orderByDesc('tahun_lulus')
+            ->first();
+
+        if ($education !== null) {
+            return $education->id_pendidikan;
+        }
+
+        if (! in_array($normalized, ['s1', 'sarjana', 'd4', 'sarjana terapan', 'd3', 'diploma iii', 's2', 'magister', 's3', 'doktor'], true)) {
+            return null;
+        }
+
+        return Pendidikan::query()->firstOrCreate([
+            'jenjang' => $aliases[0],
+            'universitas' => 'Tidak diketahui',
+            'program_studi' => 'Tidak diketahui',
+            'tahun_lulus' => 0,
+        ])->id_pendidikan;
     }
 
     private function fullName(array $lecturer): string
@@ -435,174 +539,108 @@ class PdaDosenMasterSyncService
         return trim((string) preg_replace('/\s+,\s+/', ', ', (string) $name));
     }
 
-    private function jobTitle(array $lecturer, array $profile): string
+    private function newEmail(array $lecturer, string $name): string
     {
-        foreach ([$profile['jabatan'] ?? null, $lecturer['jabatan_fungsional'] ?? null, $lecturer['jabatan_akademik'] ?? null] as $title) {
-            if (is_scalar($title) && trim((string) $title) !== '') {
-                return trim((string) $title);
-            }
+        $email = trim((string) ($lecturer['email_polines'] ?? ''));
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) !== false && ! Dosen::withTrashed()->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])->exists()) {
+            return $email;
         }
 
-        return 'Tenaga Pengajar';
-    }
+        $slug = trim((string) ($lecturer['slug'] ?? ''));
+        $base = ($slug !== '' ? $slug : 'dosen-'.substr(sha1($this->normalizeName($name)), 0, 12)).'@pda.polines.ac.id';
+        $email = $base;
+        $suffix = 1;
 
-    private function resolveJabatan(string $title): ?JabatanAkademik
-    {
-        $normalized = mb_strtolower(trim($title));
-        $aliases = match ($normalized) {
-            'profesor' => ['profesor', 'guru besar'],
-            'guru besar' => ['guru besar', 'profesor'],
-            default => [$normalized],
-        };
-        $placeholders = implode(', ', array_fill(0, count($aliases), '?'));
+        while (Dosen::withTrashed()->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])->exists()) {
+            $email = str_replace('@pda.polines.ac.id', "-{$suffix}@pda.polines.ac.id", $base);
+            $suffix++;
+        }
 
-        return JabatanAkademik::query()
-            ->whereRaw("LOWER(TRIM(nama_jabatan)) IN ({$placeholders})", $aliases)
-            ->first()
-            ?? JabatanAkademik::query()->create(['nama_jabatan' => $title]);
+        return $email;
     }
 
     /**
-     * @return array{jenjang: string, universitas: string, program_studi: string, tahun_lulus: int}|null
+     * @param  array<int, array<string, mixed>>  $profiles
      */
-    private function educationDetails(array $lecturer, array $profile): ?array
+    private function latestSemester(array $profiles): ?string
     {
-        $formal = $profile['pendidikanFormals'] ?? [];
-        $candidates = [];
-        if (is_array($formal)) {
-            foreach ($formal as $education) {
-                if (! is_array($education)) {
-                    continue;
-                }
+        $semesters = [];
+        foreach ($profiles as $profile) {
+            $semester = trim((string) ($profile['namaSemester'] ?? ''));
+            if ($semester !== '') {
+                $semesters[] = $semester;
+            }
 
-                $level = $this->normalizeEducationLevel($education['jenjang'] ?? null);
-                if ($level === null) {
-                    continue;
+            foreach (($profile['pengajaranTerbaru'] ?? []) as $teaching) {
+                if (is_array($teaching) && trim((string) ($teaching['semester'] ?? '')) !== '') {
+                    $semesters[] = trim((string) $teaching['semester']);
                 }
-
-                $candidates[] = [
-                    'jenjang' => $level,
-                    'universitas' => trim((string) ($education['nama_perguruan_tinggi'] ?? $education['universitas'] ?? '')),
-                    'program_studi' => trim((string) ($education['bidang_studi'] ?? $education['program_studi'] ?? '')),
-                    'tahun_lulus' => (int) ($education['tahun_lulus'] ?? 0),
-                ];
             }
         }
 
-        usort(
-            $candidates,
-            fn (array $left, array $right): int => $this->educationRank($right['jenjang']) <=> $this->educationRank($left['jenjang'])
-        );
-
-        if ($candidates !== []) {
-            return $candidates[0];
+        $ranked = [];
+        foreach (array_unique($semesters) as $semester) {
+            if (preg_match('/((?:19|20)\d{2})\s*\/\s*(?:19|20)\d{2}\s*(Ganjil|Genap)/i', $semester, $matches)) {
+                $rank = (int) $matches[1] * 2 + (strtolower($matches[2]) === 'genap' ? 1 : 0);
+                $ranked[$rank] = $semester;
+            }
         }
 
-        $level = $this->normalizeEducationLevel($lecturer['pendidikan_terakhir'] ?? null);
-
-        return $level === null ? null : [
-            'jenjang' => $level,
-            'universitas' => '',
-            'program_studi' => '',
-            'tahun_lulus' => 0,
-        ];
-    }
-
-    private function resolveEducation(?array $details, ?Dosen $existing): ?Pendidikan
-    {
-        if ($details === null) {
-            return $existing?->pendidikan;
-        }
-
-        $level = $details['jenjang'];
-        if ($details['universitas'] !== ''
-            && $details['program_studi'] !== ''
-            && $details['tahun_lulus'] > 0) {
-            return Pendidikan::query()->firstOrCreate([
-                'jenjang' => $level,
-                'universitas' => $details['universitas'],
-                'program_studi' => $details['program_studi'],
-                'tahun_lulus' => $details['tahun_lulus'],
-            ]);
-        }
-
-        $existingLevel = Pendidikan::query()
-            ->whereRaw('LOWER(TRIM(jenjang)) = ?', [mb_strtolower($level)])
-            ->orderByDesc('tahun_lulus')
-            ->first();
-
-        if ($existingLevel !== null) {
-            return $existingLevel;
-        }
-
-        if ($existing !== null && mb_strtolower(trim((string) $existing->pendidikan?->jenjang)) === mb_strtolower($level)) {
-            return $existing->pendidikan;
-        }
-
-        return null;
-    }
-
-    private function normalizeEducationLevel(mixed $level): ?string
-    {
-        if (! is_scalar($level)) {
+        if ($ranked === []) {
             return null;
         }
 
-        $normalized = mb_strtoupper(trim((string) $level));
-        if (preg_match('/\bS\s*3\b|\bDOKTOR\b|\bDOKTORAL\b/', $normalized) === 1) {
-            return 'S3';
-        }
-        if (preg_match('/\bS\s*2\b|\bMAGISTER\b/', $normalized) === 1) {
-            return 'S2';
-        }
-        if (preg_match('/\bD\s*4\b|\bSARJANA TERAPAN\b/', $normalized) === 1) {
-            return 'D4/S1';
-        }
-        if (preg_match('/\bS\s*1\b|\bSARJANA\b/', $normalized) === 1) {
-            return 'S1';
-        }
-        if (preg_match('/\bD\s*3\b|\bDIPLOMA III\b/', $normalized) === 1) {
-            return 'D3';
-        }
+        ksort($ranked);
 
-        return null;
+        return end($ranked) ?: null;
     }
 
-    private function educationRank(string $level): int
+    private function teachesMku(array $profile, ?string $semester): bool
     {
-        return match ($level) {
-            'S3' => 5,
-            'S2' => 4,
-            'S1', 'D4/S1' => 3,
-            'D3' => 2,
-            default => 0,
-        };
+        if ($semester === null || ! is_array($profile['pengajaranTerbaru'] ?? null)) {
+            return false;
+        }
+
+        $keywords = [
+            'pancasila',
+            'pendidikan kewarganegaraan',
+            'kewarganegaraan',
+            'pkn',
+            'bahasa indonesia',
+            'bhs indonesia',
+            'bahasa inggris',
+            'bhs inggris',
+            'pendidikan agama',
+            'agama islam',
+            'agama kristen',
+            'agama katolik',
+            'agama hindu',
+            'agama buddha',
+        ];
+
+        foreach ($profile['pengajaranTerbaru'] as $teaching) {
+            if (! is_array($teaching)
+                || mb_strtolower(trim((string) ($teaching['semester'] ?? ''))) !== mb_strtolower($semester)
+                || preg_match('/^(?:TI|IK)\s*-/i', trim((string) ($teaching['kelas'] ?? ''))) !== 1) {
+                continue;
+            }
+
+            $course = mb_strtolower(trim((string) ($teaching['mata_kuliah'] ?? '')));
+            foreach ($keywords as $keyword) {
+                if (str_contains($course, $keyword)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
-     * @return array{available: bool, value: ?string}
+     * @param  array<string, int>  $distribution
      */
-    private function sertifikasiValue(array $lecturer, array $profile): array
+    private function addPositionCount(array &$distribution, string $position): void
     {
-        foreach (['sertifikasi_dosen', 'status_serdos', 'serdos', 'sertifikasi'] as $key) {
-            $value = $profile[$key] ?? $lecturer[$key] ?? null;
-            if (is_bool($value)) {
-                return ['available' => true, 'value' => $value ? 'Tersertifikasi' : 'Belum Tersertifikasi'];
-            }
-            if (is_scalar($value) && trim((string) $value) !== '') {
-                return ['available' => true, 'value' => trim((string) $value)];
-            }
-        }
-
-        return ['available' => false, 'value' => null];
-    }
-
-    private function email(array $lecturer, ?Dosen $existing, string $slug, string $name): string
-    {
-        $sourceEmail = trim((string) ($lecturer['email_polines'] ?? $lecturer['email'] ?? ''));
-
-        return $sourceEmail !== ''
-            ? $sourceEmail
-            : ($existing?->email ?? (($slug !== '' ? $slug : 'dosen_'.substr(md5($name), 0, 8)).'@polines.ac.id'));
+        $distribution[$position] = ($distribution[$position] ?? 0) + 1;
     }
 }
