@@ -129,6 +129,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
         Route::get('/tridharma/summary', [StatistikController::class, 'tridharmaSummary']);
         Route::get('/kerjasama/aktif', [StatistikController::class, 'kerjasamaAktif']);
         // Rute Dashboard & 4 Tab Analitik
+        // Route::get('/dashboard', [StatistikController::class, 'dashboard']);
         Route::get('/dashboard', [StatistikController::class, 'dashboard']);
         Route::get('/rasio-dosen-mahasiswa', [StatistikController::class, 'rasioDosenMahasiswa']);
         Route::get('/produktivitas-dosen', [StatistikController::class, 'produktivitasDosen']);

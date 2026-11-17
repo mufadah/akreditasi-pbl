@@ -16,7 +16,10 @@ class ImportPdaDosenCommand extends Command
                             {--prodi=Teknologi Rekayasa Komputer : Filter berdasarkan nama program studi}
                             {--homebase-only : Hanya impor dosen homebase tanpa dosen luar prodi/jurusan yang mengajar}
                             {--scan-pengajar : Pindai ulang riwayat pengajaran seluruh dosen secara live dari portal PDA}
-                            {--all : Impor seluruh dosen dari semua program studi Polines}';
+                            {--all : Impor seluruh dosen dari semua program studi Polines}
+                            {--sync-publikasi : Otomatis sinkronisasi publikasi setelah impor selesai}
+                            {--pages=5 : Jumlah halaman publikasi jika --sync-publikasi aktif}
+                            {--year= : Filter tahun publikasi jika --sync-publikasi aktif}';
 
     /**
      * The console command description.
@@ -62,6 +65,19 @@ class ImportPdaDosenCommand extends Command
         $this->line("  - Diperbarui   : {$result['updated']}");
         if ($result['skipped'] > 0) {
             $this->line("  - Dilewati    : {$result['skipped']}");
+        }
+
+        if ($this->option('sync-publikasi')) {
+            $this->newLine();
+            $this->info('Melanjutkan sinkronisasi publikasi ilmiah dari PDA...');
+            $params = [
+                '--pages' => (int) ($this->option('pages') ?: 5),
+            ];
+            if ($this->option('year')) {
+                $params['--year'] = (string) $this->option('year');
+            }
+
+            return $this->call('pda:sync-publikasi', $params);
         }
 
         return self::SUCCESS;
