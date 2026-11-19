@@ -53,6 +53,8 @@ class KegiatanController extends Controller
             'id_jenis_kegiatan' => [...$req, 'integer', Rule::exists('jenis_kegiatan', 'id_jenis_kegiatan')],
             'judul_kegiatan' => [...$req, 'string', 'max:255'],
             'lokasi_kegiatan' => ['nullable', 'string', 'max:255'],
+            'afiliasi' => ['nullable', 'string', 'max:255'],
+            'jenis_skim' => ['nullable', 'string', 'max:255'],
             'tahun_usulan' => ['nullable', 'integer', 'digits:4'],
             'tahun_kegiatan' => ['nullable', 'integer', 'digits:4'],
             'tahun_pelaksanaan' => ['nullable', 'integer', 'digits:4'],
