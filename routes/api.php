@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\DosenController;
 use App\Http\Controllers\Api\EvidenceController;
+use App\Http\Controllers\Api\GapKompetensiDosenController;
 use App\Http\Controllers\Api\JabatanAkademikController;
 use App\Http\Controllers\Api\JenisKegiatanController;
 use App\Http\Controllers\Api\JenisKerjaSamaController;
@@ -84,6 +85,11 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
 // 2. Menu Validasi Evidence (Hanya Administrator, Kaprodi, dan Asesor - Dosen Ditolak 403)
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(function () {
     Route::post('/evidence/{id}/validasi', [EvidenceController::class, 'validasi']);
+});
+
+// Analisis Gap Kompetensi Dosen (Admin, Kaprodi, Asesor)
+Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->prefix('v1')->group(function () {
+    Route::get('/gap-kompetensi-dosen', [GapKompetensiDosenController::class, 'index']);
 });
 
 // 3. Menu Tridharma, Repository Evidence, & Interaksi (Admin, Kaprodi, Dosen, Asesor)
