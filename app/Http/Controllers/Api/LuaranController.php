@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\LuaranExport;
 use App\Http\Controllers\Controller;
+use App\Imports\LuaranImport;
 use App\Models\JenisLuaran;
 use App\Models\Luaran;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +12,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class LuaranController extends Controller
 {
@@ -126,6 +131,110 @@ class LuaranController extends Controller
         }
 
         return array_merge($baseRules, $conditionalRules);
+    }
+
+    /**
+     * Export seluruh data luaran ke Excel dengan lima sheet.
+     *
+     * @OA\Get(
+     *     path="/api/luaran/export",
+     *     tags={"Luaran"},
+     *     summary="Export data luaran ke Excel",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="File Excel berhasil dibuat."
+     *     )
+     * )
+     */
+    public function exportExcel(): BinaryFileResponse
+    {
+        return Excel::download(
+            new LuaranExport,
+            'data-luaran.xlsx'
+        );
+    }
+
+    /**
+     * Import data luaran dari Excel dengan lima sheet.
+     *
+     * @OA\Post(
+     *     path="/api/luaran/import",
+     *     tags={"Luaran"},
+     *     summary="Import data luaran dari Excel",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *
+     *             @OA\Schema(
+     *
+     *                 @OA\Property(
+     *                     property="file",
+     *                     type="string",
+     *                     format="binary"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=200, description="Import berhasil."),
+     *     @OA\Response(response=422, description="Validasi gagal.")
+     * )
+     */
+    public function importExcel(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => [
+                'required',
+                'file',
+                'mimes:xlsx,xls,csv',
+                'max:10240',
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->respond(
+                false,
+                422,
+                'Validasi file gagal.',
+                $validator->errors()
+            );
+        }
+
+        try {
+            DB::transaction(function () use ($request): void {
+                Excel::import(
+                    new LuaranImport,
+                    $request->file('file')
+                );
+            });
+
+            return $this->respond(
+                true,
+                200,
+                'Data luaran berhasil diimport.'
+            );
+        } catch (ValidationException $e) {
+            return $this->respond(
+                false,
+                422,
+                'Import gagal. Periksa kembali data Excel.',
+                $e->errors()
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->respond(
+                false,
+                500,
+                'Terjadi kesalahan saat mengimport data luaran.'
+            );
+        }
     }
 
     /**

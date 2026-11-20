@@ -1,7 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AktivitasKerjaSamaController;
-use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AssessmentController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\DosenController;
 use App\Http\Controllers\Api\EvidenceController;
@@ -11,13 +12,12 @@ use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
+use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
-use App\Http\Controllers\Api\AssessmentController;
-use App\Http\Controllers\Api\AuditLogController;
-use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
@@ -96,7 +96,61 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
     Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
 
     // Kegiatan & Luaran (Unified Tridharma & Luaran Ilmiah Sesuai ERD Terbaru)
+    // Import Penelitian dan PkM
+    Route::post('/kegiatan/import/{jenis}', [KegiatanController::class, 'importExcel']);
+
+    // Export Penelitian dan PkM
+    Route::get('/kegiatan/export/{jenis}', [KegiatanController::class, 'exportExcel']);
+
+    // Template Excel Penelitian dan PkM
+    Route::get('/kegiatan/template/{jenis}', [KegiatanController::class, 'templateExcel']);
+
     Route::apiResource('kegiatan', KegiatanController::class);
+
+    // Import Luaran (Buku, Jurnal, Prosiding, HKI, Produk)
+    Route::post('/luaran/import', [LuaranController::class, 'importExcel']);
+
+    // Export Luaran (Buku, Jurnal, Prosiding, HKI, Produk)
+    Route::get('/luaran/export', [LuaranController::class, 'exportExcel']);
+
+    Route::apiResource('luaran', LuaranController::class);
+
+    Route::post('/sertifikasi/sync-profil', [SertifikasiController::class, 'syncProfil']);
+    Route::apiResource('sertifikasi', SertifikasiController::class);
+
+    // Import Penelitian dan PkM
+    Route::post('/kegiatan/import/{jenis}', [KegiatanController::class, 'importExcel']);
+
+    // Export Penelitian dan PkM
+    Route::get('/kegiatan/export/{jenis}', [KegiatanController::class, 'exportExcel']);
+
+    // Template Excel Penelitian dan PkM
+    Route::get('/kegiatan/template/{jenis}', [KegiatanController::class, 'templateExcel']);
+
+    Route::apiResource('kegiatan', KegiatanController::class);
+
+    // Import Luaran (Buku, Jurnal, Prosiding, HKI, Produk)
+    Route::post('/luaran/import', [LuaranController::class, 'importExcel']);
+
+    // Export Luaran (Buku, Jurnal, Prosiding, HKI, Produk)
+    Route::get('/luaran/export', [LuaranController::class, 'exportExcel']);
+
+    Route::apiResource('luaran', LuaranController::class);
+
+    Route::post('/sertifikasi/sync-profil', [SertifikasiController::class, 'syncProfil']);
+    Route::apiResource('sertifikasi', SertifikasiController::class);
+
+    // Import Penelitian dan PkM
+    Route::post('/kegiatan/import/{jenis}', [KegiatanController::class, 'importExcel']);
+
+    // Export Penelitian dan PkM
+    Route::get('/kegiatan/export/{jenis}', [KegiatanController::class, 'exportExcel']);
+
+    // Template Excel Penelitian dan PkM
+    Route::get('/kegiatan/template/{jenis}', [KegiatanController::class, 'templateExcel']);
+
+    Route::apiResource('kegiatan', KegiatanController::class);
+    Route::get('/luaran/export', [LuaranController::class, 'exportExcel']);
     Route::apiResource('luaran', LuaranController::class);
     Route::post('/sertifikasi/sync-profil', [SertifikasiController::class, 'syncProfil']);
     Route::apiResource('sertifikasi', SertifikasiController::class);

@@ -2,13 +2,20 @@
 
 namespace App\Http\Controllers\Api;
 
+namespace App\Http\Controllers\Api;
+
+use App\Exports\KegiatanExport;
 use App\Http\Controllers\Controller;
+use App\Imports\KegiatanImport;
 use App\Models\Kegiatan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class KegiatanController extends Controller
 {
@@ -215,6 +222,87 @@ class KegiatanController extends Controller
         }
 
         return $this->respond(true, 200, 'Data kegiatan berhasil diperbarui.', $kegiatan->fresh($this->relations));
+    }
+
+    /**
+     * Mengubah parameter URL menjadi nama jenis kegiatan.
+     */
+    private function resolveJenisKegiatan(string $jenis): ?string
+    {
+        return match (strtolower($jenis)) {
+            'penelitian' => 'Penelitian',
+            'pkm' => 'PkM',
+            default => null,
+        };
+    }
+
+    /**
+     * Import data Penelitian atau PkM dari Excel/CSV.
+     */
+    public function importExcel(Request $request, string $jenis): JsonResponse
+    {
+        $namaJenis = $this->resolveJenisKegiatan($jenis);
+
+        if (! $namaJenis) {
+            return $this->respond(false, 404, 'Jenis kegiatan tidak valid.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:5120'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->respond(false, 422, 'Validasi file gagal.', $validator->errors());
+        }
+
+        try {
+            Excel::import(
+                new KegiatanImport($namaJenis),
+                $request->file('file')
+            );
+
+            return $this->respond(true, 200, "Data {$namaJenis} berhasil diimpor.");
+        } catch (ValidationException $e) {
+            return $this->respond(false, 422, 'Validasi data Excel gagal.', $e->errors());
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal mengimpor data: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Export data Penelitian atau PkM ke Excel.
+     */
+    public function exportExcel(string $jenis): BinaryFileResponse|JsonResponse
+    {
+        $namaJenis = $this->resolveJenisKegiatan($jenis);
+
+        if (! $namaJenis) {
+            return $this->respond(false, 404, 'Jenis kegiatan tidak valid.');
+        }
+
+        $namaFile = strtolower($jenis).'_'.now()->format('Ymd_His').'.xlsx';
+
+        return Excel::download(
+            new KegiatanExport($namaJenis),
+            $namaFile
+        );
+    }
+
+    /**
+     * Download template kosong untuk import Penelitian atau PkM.
+     */
+    public function templateExcel(string $jenis): BinaryFileResponse|JsonResponse
+    {
+        $namaJenis = $this->resolveJenisKegiatan($jenis);
+
+        if (! $namaJenis) {
+            return $this->respond(false, 404, 'Jenis kegiatan tidak valid.');
+        }
+
+        return Excel::download(
+            new KegiatanExport($namaJenis, true),
+            strtolower($jenis).'_template.xlsx'
+        );
     }
 
     /**
