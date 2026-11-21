@@ -13,7 +13,7 @@ class Evidence extends Model
     protected $primaryKey = 'id_evidence';
 
     protected $fillable = [
-        'judul_file',
+        'judul_file',       // kolom opsional lama, dipertahankan untuk kompatibilitas
         'id_kerjasama',
         'id_kerja_sama',
         'id_sertifikasi',
@@ -24,10 +24,10 @@ class Evidence extends Model
         'tipe_entitas',
         'id_entitas',
         'jenis_dokumen',
-        'nama_file',
+        'nama_file',        // nama/judul dokumen (teks yang diisi pengguna)
         'path_file',
-        'url_drive',
-        'url_evidence',
+        'url_drive',        // tautan bukti (URL)
+        'url_evidence',     // alias tautan bukti (URL)
         'tanggal_upload',
         'status_validasi',
         'catatan_validasi',
@@ -35,23 +35,20 @@ class Evidence extends Model
         'tanggal_validasi',
     ];
 
-    public function getJudulFileAttribute($value): ?string
+    /**
+     * Accessor: nama_file mengembalikan nama dokumen teks.
+     * Untuk data lama yang masih menyimpan URL di nama_file,
+     * kembalikan nilai apa adanya agar tidak merusak data.
+     */
+    public function getNamaFileAttribute($value): ?string
     {
-        if (! empty($value)) {
-            return $value;
-        }
-
-        // Fallback jika judul_file belum terisi pada data lama
-        $namaFile = $this->attributes['nama_file'] ?? null;
-        if (! empty($namaFile) && ! filter_var($namaFile, FILTER_VALIDATE_URL)) {
-            return $namaFile;
-        }
-
-        $jenis = $this->attributes['jenis_dokumen'] ?? null;
-
-        return ! empty($jenis) ? 'Dokumen '.$jenis : 'Dokumen Evidence';
+        return $value;
     }
 
+    /**
+     * Accessor: url_drive mengembalikan tautan bukti.
+     * Fallback ke url_evidence, lalu ke nama_file jika berupa URL (data lama).
+     */
     public function getUrlDriveAttribute($value): ?string
     {
         if (! empty($value)) {
@@ -62,6 +59,7 @@ class Evidence extends Model
             return $this->attributes['url_evidence'];
         }
 
+        // Kompatibilitas data lama: nama_file mungkin berisi URL
         $namaFile = $this->attributes['nama_file'] ?? null;
         if (! empty($namaFile) && filter_var($namaFile, FILTER_VALIDATE_URL)) {
             return $namaFile;
