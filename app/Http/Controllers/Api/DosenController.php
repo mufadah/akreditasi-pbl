@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\DosenExport;
 use App\Http\Controllers\Controller;
 use App\Imports\DosenImport;
 use App\Models\BidangKeahlian;
@@ -16,10 +17,75 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Validators\ValidationException;
+use OpenApi\Attributes as OA;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
+#[OA\OpenApi(
+    info: new OA\Info(title: 'API Tridharma & Akreditasi PBL', version: '1.0.0'),
+    components: new OA\Components(
+        securitySchemes: [
+            new OA\SecurityScheme(securityScheme: 'bearerAuth', type: 'http', scheme: 'bearer', bearerFormat: 'JWT'),
+        ],
+    ),
+)]
 class DosenController extends Controller
 {
     // Ambil daftar dosen dengan filter pencarian dan status
+    #[OA\Get(
+        path: '/api/dosen',
+        tags: ['Dosen'],
+        summary: 'Semua Data Dosen',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Daftar dosen berhasil diambil.',
+                content: new OA\JsonContent(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(
+                                    property: 'data',
+                                    type: 'array',
+                                    items: new OA\Items(
+                                        type: 'object',
+                                        properties: [
+                                            new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
+                                            new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
+                                            new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                            new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
+                                            new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
+                                            new OA\Property(
+                                                property: 'jabatan_akademik',
+                                                type: 'object',
+                                                nullable: true,
+                                                properties: [
+                                                    new OA\Property(property: 'id_jabatan', type: 'integer', example: 3),
+                                                    new OA\Property(property: 'nama_jabatan', type: 'string', example: 'Lektor Kepala'),
+                                                ],
+                                            ),
+                                            new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                                        ],
+                                    ),
+                                ),
+                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'total', type: 'integer', example: 25),
+                            ],
+                        ),
+                    ],
+                ),
+            ),
+        ],
+    )]
     public function index(Request $request): JsonResponse
     {
         // Query dengan relasi jabatan, pendidikan, dan bidang keahlian
@@ -46,6 +112,7 @@ class DosenController extends Controller
 
         // Paginasi data 10 per halaman
         $dosen = $query->paginate($request->integer('per_page', 10));
+        $dosen->getCollection()->each(fn (Dosen $lecturer) => $this->addAcademicSummaryAttributes($lecturer));
 
         return response()->json([
             'success' => true,
@@ -53,10 +120,60 @@ class DosenController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: '/api/dosen/export',
+        tags: ['Dosen'],
+        summary: 'Export seluruh data master dosen ke format Excel (.xlsx)',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'File Excel seluruh data master dosen.',
+                content: new OA\MediaType(
+                    mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    schema: new OA\Schema(type: 'string', format: 'binary'),
+                ),
+            ),
+        ],
+    )]
+    public function exportExcel(): BinaryFileResponse
+    {
+        return Excel::download(new DosenExport, 'dosen.xlsx');
+    }
+
     // Tambah data dosen baru (Aksi 2: Input NIDN, NUPTK, Nama, Jabatan, Bidang Keahlian, Status DTPS atau DTT)
+    #[OA\Post(
+        path: '/api/dosen',
+        tags: ['Dosen'],
+        summary: 'Tambah Data Dosen',
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                type: 'object',
+                example: [
+                    'nidn' => '0015088501',
+                    'nama_dosen' => 'Dr. Ahmad Dahlan',
+                    'pendidikan_terakhir' => 'S3 Ilmu Komputer',
+                    'jabatan_akademik' => 'Lektor Kepala',
+                    'sertifikasi_dosen' => 'Tersertifikasi',
+                ],
+                properties: [
+                    new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
+                    new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                    new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3 Ilmu Komputer'),
+                    new OA\Property(property: 'jabatan_akademik', type: 'string', nullable: true, example: 'Lektor Kepala'),
+                    new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Data dosen berhasil ditambahkan.'),
+        ],
+    )]
     public function store(Request $request): JsonResponse
     {
-        $input = $request->all();
+        $input = $this->mapAcademicAliases($request->all());
 
         // Mapping nama -> nama_dosen
         if ($request->filled('nama') && ! $request->filled('nama_dosen')) {
@@ -64,28 +181,28 @@ class DosenController extends Controller
         }
 
         // Resolusi jabatan (ID atau string nama jabatan)
-        if ($request->filled('jabatan') && ! $request->filled('id_jabatan')) {
-            $jabatanVal = $request->input('jabatan');
+        if (! empty($input['jabatan']) && empty($input['id_jabatan'])) {
+            $jabatanVal = $input['jabatan'];
             if (is_numeric($jabatanVal)) {
                 $input['id_jabatan'] = (int) $jabatanVal;
             } else {
                 $jabatan = JabatanAkademik::where('nama_jabatan', $jabatanVal)->first();
                 $input['id_jabatan'] = $jabatan ? $jabatan->id_jabatan : 1;
             }
-        } elseif (! $request->filled('id_jabatan')) {
+        } elseif (empty($input['id_jabatan'])) {
             $input['id_jabatan'] = 1;
         }
 
         // Resolusi pendidikan (ID atau string jenjang)
-        if ($request->filled('pendidikan') && ! $request->filled('id_pendidikan')) {
-            $pendidikanVal = $request->input('pendidikan');
+        if (! empty($input['pendidikan']) && empty($input['id_pendidikan'])) {
+            $pendidikanVal = $input['pendidikan'];
             if (is_numeric($pendidikanVal)) {
                 $input['id_pendidikan'] = (int) $pendidikanVal;
             } else {
                 $pendidikan = Pendidikan::where('jenjang', $pendidikanVal)->first();
                 $input['id_pendidikan'] = $pendidikan ? $pendidikan->id_pendidikan : 1;
             }
-        } elseif (! $request->filled('id_pendidikan')) {
+        } elseif (empty($input['id_pendidikan'])) {
             $input['id_pendidikan'] = 1;
         }
 
@@ -143,28 +260,68 @@ class DosenController extends Controller
 
         $validated = $validator->validated();
 
-        // Simpan ke Database
-        $dosen = Dosen::create($validated);
+        $dosen = DB::transaction(function () use ($validated): Dosen {
+            $dosenAttributes = $validated;
+            unset($dosenAttributes['bidang_keahlian_ids']);
 
-        // Simpan relasi bidang keahlian jika ada
-        if (! empty($validated['bidang_keahlian_ids'])) {
-            $syncData = [];
-            $bidangItems = BidangKeahlian::whereIn('id_bidang_keahlian', $validated['bidang_keahlian_ids'])->get();
-            foreach ($bidangItems as $item) {
-                $syncData[$item->id_bidang_keahlian] = ['nama_bidang_keahlian_dosen' => $item->nama_bidang];
-            }
-            $dosen->bidangKeahlian()->sync($syncData);
-        }
+            $dosen = Dosen::create($dosenAttributes);
+            $this->syncExpertise($dosen, $validated['bidang_keahlian_ids'] ?? []);
+            $dosen->recordHistory('MANUAL');
+
+            return $dosen;
+        });
 
         // Tampilkan Pesan Berhasil
         return response()->json([
             'success' => true,
             'message' => 'Data dosen berhasil ditambahkan.',
-            'data' => $dosen->load(['jabatanAkademik', 'pendidikan', 'bidangKeahlian']),
+            'data' => $this->addAcademicSummaryAttributes($dosen->load(['jabatanAkademik', 'pendidikan', 'bidangKeahlian'])),
         ], 201);
     }
 
     // Ambil detail satu dosen beserta riwayat Tridharma (Screen: Detail Dosen)
+    #[OA\Get(
+        path: '/api/dosen/{id}',
+        tags: ['Dosen'],
+        summary: 'Detail Dosen',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Detail dosen berhasil diambil.',
+                content: new OA\JsonContent(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
+                                new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
+                                new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
+                                new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
+                                new OA\Property(
+                                    property: 'jabatan_akademik',
+                                    type: 'object',
+                                    nullable: true,
+                                    properties: [
+                                        new OA\Property(property: 'id_jabatan', type: 'integer', example: 3),
+                                        new OA\Property(property: 'nama_jabatan', type: 'string', example: 'Lektor Kepala'),
+                                    ],
+                                ),
+                                new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                            ],
+                        ),
+                    ],
+                ),
+            ),
+        ],
+    )]
     public function show(int $id): JsonResponse
     {
         $dosen = Dosen::with([
@@ -184,10 +341,38 @@ class DosenController extends Controller
             return response()->json(['success' => false, 'message' => 'Data dosen tidak ditemukan.'], 404);
         }
 
-        return response()->json(['success' => true, 'data' => $dosen]);
+        return response()->json(['success' => true, 'data' => $this->addAcademicSummaryAttributes($dosen)]);
     }
 
     // Ubah Data Dosen (Aksi 4: Ubah Data Dosen -> Update Data di Database -> Tampilkan Pesan Berhasil)
+    #[OA\Put(
+        path: '/api/dosen/{id}',
+        tags: ['Dosen'],
+        summary: 'Update Data Dosen',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                type: 'object',
+                example: [
+                    'pendidikan_terakhir' => 'S3 Ilmu Komputer',
+                    'jabatan_akademik' => 'Lektor Kepala',
+                    'sertifikasi_dosen' => 'Tersertifikasi',
+                ],
+                properties: [
+                    new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3 Ilmu Komputer'),
+                    new OA\Property(property: 'jabatan_akademik', type: 'string', nullable: true, example: 'Lektor Kepala'),
+                    new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Data dosen berhasil diperbarui.'),
+        ],
+    )]
     public function update(Request $request, int $id): JsonResponse
     {
         $dosen = Dosen::find($id);
@@ -197,7 +382,7 @@ class DosenController extends Controller
             return response()->json(['success' => false, 'message' => 'Data dosen tidak ditemukan.'], 404);
         }
 
-        $input = $request->all();
+        $input = $this->mapAcademicAliases($request->all());
 
         // Mapping nama -> nama_dosen
         if ($request->filled('nama') && ! $request->filled('nama_dosen')) {
@@ -205,8 +390,8 @@ class DosenController extends Controller
         }
 
         // Resolusi jabatan
-        if ($request->filled('jabatan') && ! $request->filled('id_jabatan')) {
-            $jabatanVal = $request->input('jabatan');
+        if (! empty($input['jabatan']) && empty($input['id_jabatan'])) {
+            $jabatanVal = $input['jabatan'];
             if (is_numeric($jabatanVal)) {
                 $input['id_jabatan'] = (int) $jabatanVal;
             } else {
@@ -218,8 +403,8 @@ class DosenController extends Controller
         }
 
         // Resolusi pendidikan
-        if ($request->filled('pendidikan') && ! $request->filled('id_pendidikan')) {
-            $pendidikanVal = $request->input('pendidikan');
+        if (! empty($input['pendidikan']) && empty($input['id_pendidikan'])) {
+            $pendidikanVal = $input['pendidikan'];
             if (is_numeric($pendidikanVal)) {
                 $input['id_pendidikan'] = (int) $pendidikanVal;
             } else {
@@ -288,27 +473,28 @@ class DosenController extends Controller
 
         $validated = $validator->validated();
 
-        // Update Data di Database
-        $dosen->update($validated);
+        $dosen = DB::transaction(function () use ($dosen, $validated, $input): Dosen {
+            $dosenAttributes = $validated;
+            unset($dosenAttributes['bidang_keahlian_ids']);
 
-        // Update relasi bidang keahlian jika ada
-        if (isset($validated['bidang_keahlian_ids']) || array_key_exists('bidang_keahlian_ids', $input)) {
-            $ids = $validated['bidang_keahlian_ids'] ?? [];
-            $syncData = [];
-            if (! empty($ids)) {
-                $bidangItems = BidangKeahlian::whereIn('id_bidang_keahlian', $ids)->get();
-                foreach ($bidangItems as $item) {
-                    $syncData[$item->id_bidang_keahlian] = ['nama_bidang_keahlian_dosen' => $item->nama_bidang];
-                }
+            $dosen->update($dosenAttributes);
+
+            if (isset($validated['bidang_keahlian_ids']) || array_key_exists('bidang_keahlian_ids', $input)) {
+                $this->syncExpertise($dosen, $validated['bidang_keahlian_ids'] ?? []);
             }
-            $dosen->bidangKeahlian()->sync($syncData);
-        }
+
+            if ($dosen->wasChanged(['id_jabatan', 'id_pendidikan', 'sertifikasi'])) {
+                $dosen->recordHistory('MANUAL');
+            }
+
+            return $dosen;
+        });
 
         // Tampilkan Pesan Berhasil
         return response()->json([
             'success' => true,
             'message' => 'Data dosen berhasil diperbarui.',
-            'data' => $dosen->fresh(['jabatanAkademik', 'pendidikan', 'bidangKeahlian']),
+            'data' => $this->addAcademicSummaryAttributes($dosen->fresh(['jabatanAkademik', 'pendidikan', 'bidangKeahlian'])),
         ]);
     }
 
@@ -408,6 +594,52 @@ class DosenController extends Controller
                 'message' => 'Gagal mengimpor file: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Map frontend-friendly names to the persisted lecturer attributes.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function mapAcademicAliases(array $input): array
+    {
+        foreach ([
+            'jabatan_akademik' => 'jabatan',
+            'pendidikan_terakhir' => 'pendidikan',
+            'sertifikasi_dosen' => 'sertifikasi',
+        ] as $alias => $attribute) {
+            if (array_key_exists($alias, $input) && ! array_key_exists($attribute, $input)) {
+                $input[$attribute] = $input[$alias];
+            }
+        }
+
+        return $input;
+    }
+
+    /**
+     * @param  array<int, int|string>  $ids
+     */
+    private function syncExpertise(Dosen $dosen, array $ids): void
+    {
+        $syncData = [];
+        if ($ids !== []) {
+            $bidangItems = BidangKeahlian::whereIn('id_bidang_keahlian', $ids)->get();
+            foreach ($bidangItems as $item) {
+                $syncData[$item->id_bidang_keahlian] = [
+                    'nama_bidang_keahlian_dosen' => $item->nama_bidang,
+                ];
+            }
+        }
+
+        $dosen->bidangKeahlian()->sync($syncData);
+    }
+
+    private function addAcademicSummaryAttributes(Dosen $dosen): Dosen
+    {
+        return $dosen
+            ->setAttribute('pendidikan_terakhir', $dosen->pendidikan?->jenjang)
+            ->setAttribute('sertifikasi_dosen', $dosen->sertifikasi);
     }
 
     /**

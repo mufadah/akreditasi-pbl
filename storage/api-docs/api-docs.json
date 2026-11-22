@@ -2068,11 +2068,87 @@
                 "operationId": "09d2175c9fa6e509e8ccfee8af24581f",
                 "responses": {
                     "200": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Daftar dosen berhasil diambil.",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id_dosen": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "nidn": {
+                                                                "type": "string",
+                                                                "example": "0015088501"
+                                                            },
+                                                            "nama_dosen": {
+                                                                "type": "string",
+                                                                "example": "Dr. Ahmad Dahlan"
+                                                            },
+                                                            "status_dosen": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "DTPS",
+                                                                    "DTT",
+                                                                    "NONAKTIF"
+                                                                ],
+                                                                "example": "DTPS"
+                                                            },
+                                                            "pendidikan_terakhir": {
+                                                                "type": "string",
+                                                                "nullable": true,
+                                                                "example": "S3"
+                                                            },
+                                                            "jabatan_akademik": {
+                                                                "type": "object",
+                                                                "nullable": true,
+                                                                "properties": {
+                                                                    "id_jabatan": {
+                                                                        "type": "integer",
+                                                                        "example": 3
+                                                                    },
+                                                                    "nama_jabatan": {
+                                                                        "type": "string",
+                                                                        "example": "Lektor Kepala"
+                                                                    }
+                                                                }
+                                                            },
+                                                            "sertifikasi_dosen": {
+                                                                "type": "string",
+                                                                "nullable": true,
+                                                                "example": "Tersertifikasi"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 25
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2204,6 +2280,21 @@
                                         "type": "string",
                                         "example": "Pendidik Profesional (Kemenristekdikti)"
                                     },
+                                    "pendidikan_terakhir": {
+                                        "type": "string",
+                                        "example": "S3 Ilmu Komputer",
+                                        "nullable": true
+                                    },
+                                    "jabatan_akademik": {
+                                        "type": "string",
+                                        "example": "Lektor Kepala",
+                                        "nullable": true
+                                    },
+                                    "sertifikasi_dosen": {
+                                        "type": "string",
+                                        "example": "Tersertifikasi",
+                                        "nullable": true
+                                    },
                                     "bidang_keahlian_ids": {
                                         "type": "array",
                                         "items": {
@@ -2221,6 +2312,9 @@
                                 "email": "ahmad.dahlan@polines.ac.id",
                                 "status_dosen": "DTPS",
                                 "sertifikasi": "Pendidik Profesional (Kemenristekdikti)",
+                                "pendidikan_terakhir": "S3 Ilmu Komputer",
+                                "jabatan_akademik": "Lektor Kepala",
+                                "sertifikasi_dosen": "Tersertifikasi",
                                 "bidang_keahlian_ids": [
                                     1,
                                     2,
@@ -2242,11 +2336,67 @@
                 "operationId": "fe09da0f0580737a220c3a97509ef97b",
                 "responses": {
                     "200": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Detail dosen berhasil diambil.",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id_dosen": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nidn": {
+                                                    "type": "string",
+                                                    "example": "0015088501"
+                                                },
+                                                "nama_dosen": {
+                                                    "type": "string",
+                                                    "example": "Dr. Ahmad Dahlan"
+                                                },
+                                                "status_dosen": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "DTPS",
+                                                        "DTT",
+                                                        "NONAKTIF"
+                                                    ],
+                                                    "example": "DTPS"
+                                                },
+                                                "pendidikan_terakhir": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "S3"
+                                                },
+                                                "jabatan_akademik": {
+                                                    "type": "object",
+                                                    "nullable": true,
+                                                    "properties": {
+                                                        "id_jabatan": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "nama_jabatan": {
+                                                            "type": "string",
+                                                            "example": "Lektor Kepala"
+                                                        }
+                                                    }
+                                                },
+                                                "sertifikasi_dosen": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "Tersertifikasi"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2370,6 +2520,21 @@
                                         "type": "string",
                                         "example": "Sertifikasi Asesor Kompetensi BNSP & Pendidik"
                                     },
+                                    "pendidikan_terakhir": {
+                                        "type": "string",
+                                        "example": "S3 Ilmu Komputer",
+                                        "nullable": true
+                                    },
+                                    "jabatan_akademik": {
+                                        "type": "string",
+                                        "example": "Lektor Kepala",
+                                        "nullable": true
+                                    },
+                                    "sertifikasi_dosen": {
+                                        "type": "string",
+                                        "example": "Tersertifikasi",
+                                        "nullable": true
+                                    },
                                     "bidang_keahlian_ids": {
                                         "type": "array",
                                         "items": {
@@ -2387,6 +2552,9 @@
                                 "email": "ahmad.dahlan@polines.ac.id",
                                 "status_dosen": "DTPS",
                                 "sertifikasi": "Sertifikasi Asesor Kompetensi BNSP & Pendidik",
+                                "pendidikan_terakhir": "S3 Ilmu Komputer",
+                                "jabatan_akademik": "Lektor Kepala",
+                                "sertifikasi_dosen": "Tersertifikasi",
                                 "bidang_keahlian_ids": [
                                     1,
                                     2,
@@ -2562,6 +2730,43 @@
                             "type": "integer",
                             "example": 1
                         }
+                    }
+                ]
+            }
+        },
+        "/api/dosen/export": {
+            "get": {
+                "tags": [
+                    "Dosen"
+                ],
+                "summary": "Export seluruh data master dosen ke format Excel (.xlsx)",
+                "description": "Unduh seluruh data master dosen sebagai file Excel.",
+                "operationId": "337ce407ef59d8471d773de7bd05e4ff",
+                "responses": {
+                    "200": {
+                        "description": "File Excel seluruh data master dosen.",
+                        "content": {
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Permintaan tidak valid / Bad Request."
+                    },
+                    "401": {
+                        "description": "Unauthenticated: Token JWT tidak valid atau sesi berakhir."
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan."
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -3920,6 +4125,47 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Data kerja sama berhasil diambil.",
+                                    "data": {
+                                        "current_page": 1,
+                                        "data": [
+                                            {
+                                                "id_kerja_sama": 6,
+                                                "id_mitra": 1,
+                                                "id_jenis_kerjasama": 2,
+                                                "id_dosen": 1,
+                                                "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                                "tingkat": "Nasional",
+                                                "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                                "tanggal_mulai": "2026-01-15",
+                                                "tanggal_selesai": "2028-01-15",
+                                                "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                                "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                                "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                                "status": "Aktif",
+                                                "mitra": {
+                                                    "id_mitra": 1,
+                                                    "nama_mitra": "PT Contoh",
+                                                    "jenis_mitra": "Industri",
+                                                    "tingkat": "Nasional"
+                                                },
+                                                "jenis_kerja_sama": {
+                                                    "id_jenis_kerjasama": 2,
+                                                    "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                                },
+                                                "dosen": {
+                                                    "id_dosen": 1,
+                                                    "nama_dosen": "Dr. Contoh"
+                                                }
+                                            }
+                                        ],
+                                        "per_page": 10,
+                                        "total": 1
+                                    }
                                 }
                             }
                         }
@@ -3996,6 +4242,40 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 201,
+                                    "message": "Data kerja sama berhasil ditambahkan.",
+                                    "data": {
+                                        "id_kerja_sama": 6,
+                                        "id_mitra": 1,
+                                        "id_jenis_kerjasama": 2,
+                                        "id_dosen": 1,
+                                        "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                        "tingkat": "Nasional",
+                                        "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                        "tanggal_mulai": "2026-01-15",
+                                        "tanggal_selesai": "2028-01-15",
+                                        "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                        "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                        "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                        "status": "Aktif",
+                                        "mitra": {
+                                            "id_mitra": 1,
+                                            "nama_mitra": "PT Contoh",
+                                            "jenis_mitra": "Industri",
+                                            "tingkat": "Nasional"
+                                        },
+                                        "jenis_kerja_sama": {
+                                            "id_jenis_kerjasama": 2,
+                                            "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                        },
+                                        "dosen": {
+                                            "id_dosen": 1,
+                                            "nama_dosen": "Dr. Contoh"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4117,6 +4397,40 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Detail kerja sama berhasil diambil.",
+                                    "data": {
+                                        "id_kerja_sama": 6,
+                                        "id_mitra": 1,
+                                        "id_jenis_kerjasama": 2,
+                                        "id_dosen": 1,
+                                        "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                        "tingkat": "Nasional",
+                                        "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                        "tanggal_mulai": "2026-01-15",
+                                        "tanggal_selesai": "2028-01-15",
+                                        "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                        "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                        "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                        "status": "Aktif",
+                                        "mitra": {
+                                            "id_mitra": 1,
+                                            "nama_mitra": "PT Contoh",
+                                            "jenis_mitra": "Industri",
+                                            "tingkat": "Nasional"
+                                        },
+                                        "jenis_kerja_sama": {
+                                            "id_jenis_kerjasama": 2,
+                                            "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                        },
+                                        "dosen": {
+                                            "id_dosen": 1,
+                                            "nama_dosen": "Dr. Contoh"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4163,6 +4477,40 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Data kerja sama berhasil diperbarui.",
+                                    "data": {
+                                        "id_kerja_sama": 6,
+                                        "id_mitra": 1,
+                                        "id_jenis_kerjasama": 2,
+                                        "id_dosen": 1,
+                                        "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+                                        "tingkat": "Nasional",
+                                        "bentuk_kegiatan": "Kelas industri dan riset bersama",
+                                        "tanggal_mulai": "2026-01-15",
+                                        "tanggal_selesai": "2028-01-15",
+                                        "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+                                        "jenis_dokumen": "MoA (Memorandum of Agreement)",
+                                        "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+                                        "status": "Aktif",
+                                        "mitra": {
+                                            "id_mitra": 1,
+                                            "nama_mitra": "PT Contoh",
+                                            "jenis_mitra": "Industri",
+                                            "tingkat": "Nasional"
+                                        },
+                                        "jenis_kerja_sama": {
+                                            "id_jenis_kerjasama": 2,
+                                            "nama_jenis_kerjasama": "MoA (Memorandum of Agreement)"
+                                        },
+                                        "dosen": {
+                                            "id_dosen": 1,
+                                            "nama_dosen": "Dr. Contoh"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4244,9 +4592,17 @@
                                         "type": "string",
                                         "example": "2028-12-31"
                                     },
+                                    "bukti_dokumen": {
+                                        "type": "string",
+                                        "example": "https://drive.google.com/file/d/1MoU-Telkomsel-2025/view"
+                                    },
                                     "nomor_dokumen": {
                                         "type": "string",
                                         "example": "045/KS/POLINES-TELKOMSEL/I/2025-Rev1"
+                                    },
+                                    "jenis_dokumen": {
+                                        "type": "string",
+                                        "example": "MoA (Memorandum of Agreement)"
                                     },
                                     "status": {
                                         "type": "string",
@@ -4263,7 +4619,9 @@
                                 "bentuk_kegiatan": "Penyusunan Kurikulum, Magang Kampus Merdeka, dan Riset Bersama",
                                 "tanggal_mulai": "2025-01-01",
                                 "tanggal_selesai": "2028-12-31",
+                                "bukti_dokumen": "https://drive.google.com/file/d/1MoU-Telkomsel-2025/view",
                                 "nomor_dokumen": "045/KS/POLINES-TELKOMSEL/I/2025-Rev1",
+                                "jenis_dokumen": "MoA (Memorandum of Agreement)",
                                 "status": "Aktif"
                             }
                         }
@@ -4284,6 +4642,12 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/StandardResponse"
+                                },
+                                "example": {
+                                    "success": true,
+                                    "code": 200,
+                                    "message": "Data kerja sama berhasil dihapus.",
+                                    "data": null
                                 }
                             }
                         }

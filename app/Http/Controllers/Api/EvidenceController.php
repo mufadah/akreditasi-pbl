@@ -11,10 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EvidenceController extends Controller
 {
@@ -24,8 +22,6 @@ class EvidenceController extends Controller
         'kegiatan',
         'luaran',
         'sertifikasi',
-        'penelitian',
-        'pkm',
         'history',
         'validator',
     ];
@@ -41,70 +37,37 @@ class EvidenceController extends Controller
         ], $code);
     }
 
-    // Aturan validasi data evidence
-    private function rules(bool $isUpdate = false): array
-    {
-        $fileRules = $isUpdate
-            ? ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240']
-            : ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'];
-
-        $req = $isUpdate ? ['sometimes', 'required'] : ['required'];
-
-        return [
-            'file' => $fileRules,
-            'nama_file' => ['nullable', 'string', 'max:255'],
-            'url_drive' => [
-                'nullable',
-                'string',
-                'max:255',
-                'regex:/^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/',
-            ],
-            'kode_indikator' => ['nullable', 'string', 'max:50'],
-            'jenis_dokumen' => [...$req, 'string', 'max:255'],
-            'tanggal_upload' => ['nullable', 'date'],
-            'status_validasi' => ['nullable', 'string', 'max:50'],
-            'id_kegiatan' => ['nullable', 'integer', Rule::exists('kegiatan', 'id_kegiatan')],
-            'id_luaran' => ['nullable', 'integer', Rule::exists('luaran', 'id_luaran')],
-            'id_sertifikasi' => ['nullable', 'integer', Rule::exists('sertifikasi', 'id_sertifikasi')],
-            'id_penelitian' => ['nullable', 'integer', Rule::exists('penelitian', 'id_penelitian')],
-            'id_pkm' => ['nullable', 'integer', Rule::exists('pkm', 'id_pkm')],
-            'id_kerjasama' => ['nullable', 'integer', Rule::exists('kerja_sama', 'id_kerja_sama')],
-            'id_kerja_sama' => ['nullable', 'integer', Rule::exists('kerja_sama', 'id_kerja_sama')],
-        ];
-    }
-
-    // Ambil daftar evidence dengan filter pencarian dan relasi (Fitur 11 B Repository)
+    // Ambil daftar repository evidence dengan filter dan pencarian
     public function index(Request $request): JsonResponse
     {
         $query = Evidence::with($this->relations);
 
-        // Filter pencarian nama file atau jenis dokumen
+        // Filter pencarian nama file / judul dokumen atau jenis dokumen
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('nama_file', 'like', "%{$search}%")
-                    ->orWhere('jenis_dokumen', 'like', "%{$search}%")
-                    ->orWhere('kode_indikator', 'like', "%{$search}%");
+                if (Schema::hasColumn('evidence', 'judul_file')) {
+                    $q->where('judul_file', 'like', "%{$search}%")
+                        ->orWhere('jenis_dokumen', 'like', "%{$search}%")
+                        ->orWhere('nama_file', 'like', "%{$search}%");
+                } else {
+                    $q->where('nama_file', 'like', "%{$search}%")
+                        ->orWhere('jenis_dokumen', 'like', "%{$search}%");
+                }
             });
         }
 
+        // Filter jenis dokumen
         if ($jenis = $request->query('jenis_dokumen')) {
             $query->where('jenis_dokumen', 'like', "%{$jenis}%");
         }
 
+        // Filter status validasi (Menunggu Validasi, Valid, Ditolak, Perlu Perbaikan)
         if ($status = $request->query('status_validasi')) {
             $query->where('status_validasi', $status);
         }
 
-        if ($kode = $request->query('kode_indikator')) {
-            $query->where('kode_indikator', $kode);
-        }
-
-        if ($tahun = $request->query('tahun')) {
-            $query->whereYear('tanggal_upload', $tahun);
-        }
-
-        // Filter foreign key
-        foreach (['id_kegiatan', 'id_luaran', 'id_sertifikasi', 'id_penelitian', 'id_pkm'] as $fk) {
+        // Filter entitas terkait (foreign key)
+        foreach (['id_kegiatan', 'id_luaran', 'id_sertifikasi'] as $fk) {
             if ($request->filled($fk)) {
                 $query->where($fk, $request->query($fk));
             }
@@ -122,10 +85,22 @@ class EvidenceController extends Controller
         return $this->respond(true, 200, 'Data repository evidence berhasil diambil.', $evidence);
     }
 
-    // Upload berkas fisik atau simpan URL Drive metadata evidence baru
+    // Simpan data metadata evidence dan link Google Drive baru
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), $this->rules());
+        $validator = Validator::make($request->all(), [
+            'judul_file' => ['nullable', 'string', 'max:255'],
+            'jenis_dokumen' => ['required', 'string', 'max:255'],
+            'tanggal_upload' => ['nullable', 'date'],
+            'nama_file' => ['nullable', 'string', 'max:500'],
+            'url_drive' => ['nullable', 'string', 'max:500'],
+            'id_kegiatan' => ['nullable', 'integer', Rule::exists('kegiatan', 'id_kegiatan')],
+            'id_luaran' => ['nullable', 'integer', Rule::exists('luaran', 'id_luaran')],
+            'id_sertifikasi' => ['nullable', 'integer', Rule::exists('sertifikasi', 'id_sertifikasi')],
+            'id_kerjasama' => ['nullable', 'integer', Rule::exists('kerja_sama', 'id_kerja_sama')],
+            'id_kerja_sama' => ['nullable', 'integer', Rule::exists('kerja_sama', 'id_kerja_sama')],
+            'konfirmasi_lanjut' => ['nullable', 'boolean'],
+        ]);
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
@@ -133,61 +108,77 @@ class EvidenceController extends Controller
 
         $validated = $validator->validated();
 
-        // Normalisasi foreign key kerja sama
-        $idKerjaSama = $validated['id_kerja_sama'] ?? $validated['id_kerjasama'] ?? null;
-
-        // Cek apakah ada file fisik yang diunggah
-        $storedPath = null;
-        $originalName = $validated['nama_file'] ?? null;
-        $urlDrive = $validated['url_drive'] ?? null;
-
-        if ($request->hasFile('file')) {
-            $uploadedFile = $request->file('file');
-            $storedPath = $uploadedFile->store('evidence', 'public');
-            $originalName = $uploadedFile->getClientOriginalName();
-            $urlDrive = Storage::disk('public')->url($storedPath);
-        } elseif (! empty($originalName) && filter_var($originalName, FILTER_VALIDATE_URL)) {
-            $urlDrive = $originalName;
-
-            // Cek duplikasi link jika berupa URL
-            $dupQuery = Evidence::where('nama_file', $originalName);
-            if (Schema::hasColumn('evidence', 'url_drive')) {
-                $dupQuery->orWhere('url_drive', $originalName);
-            }
-            $isDuplicate = $dupQuery->exists();
-            if ($isDuplicate && ! $request->boolean('konfirmasi_lanjut')) {
-                return $this->respond(false, 409, 'Peringatan: Link ini sudah pernah digunakan sebelumnya. Kirim parameter "konfirmasi_lanjut": true jika ingin tetap menyimpan.', [
-                    'is_duplicate' => true,
-                ]);
-            }
+        // 1. Ekstraksi dan Validasi URL Google Drive
+        $targetUrl = null;
+        if (! empty($validated['url_drive']) && filter_var($validated['url_drive'], FILTER_VALIDATE_URL)) {
+            $targetUrl = trim($validated['url_drive']);
+        } elseif (! empty($validated['nama_file']) && filter_var($validated['nama_file'], FILTER_VALIDATE_URL)) {
+            $targetUrl = trim($validated['nama_file']);
         }
 
+        if (empty($targetUrl)) {
+            return $this->respond(false, 422, 'Tautan Google Drive wajib diisi.', [
+                'nama_file' => ['Tautan Google Drive dokumen evidence wajib disertakan.'],
+            ]);
+        }
+
+        // URL hanya boleh berasal dari https://drive.google.com atau https://docs.google.com
+        if (! preg_match('/^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/', $targetUrl)) {
+            return $this->respond(false, 422, 'Tautan dokumen harus berupa URL resmi Google Drive atau Google Docs (diawali https://drive.google.com atau https://docs.google.com).', [
+                'nama_file' => ['Format URL Google Drive tidak valid.'],
+            ]);
+        }
+
+        // 2. Ekstraksi Judul Dokumen (Nama File yang ditampilkan)
+        $judulFile = null;
+        if (! empty($validated['judul_file'])) {
+            $judulFile = trim($validated['judul_file']);
+        } elseif (! empty($validated['nama_file']) && ! filter_var($validated['nama_file'], FILTER_VALIDATE_URL)) {
+            $judulFile = trim($validated['nama_file']);
+        } else {
+            $judulFile = 'Dokumen '.$validated['jenis_dokumen'];
+        }
+
+        // 3. Deteksi Duplikasi URL Google Drive
+        $dupQuery = Evidence::where(function ($q) use ($targetUrl) {
+            $q->where('nama_file', $targetUrl);
+            if (Schema::hasColumn('evidence', 'url_drive')) {
+                $q->orWhere('url_drive', $targetUrl);
+            }
+            if (Schema::hasColumn('evidence', 'url_evidence')) {
+                $q->orWhere('url_evidence', $targetUrl);
+            }
+        });
+
+        if ($dupQuery->exists() && ! $request->boolean('konfirmasi_lanjut')) {
+            return $this->respond(false, 409, 'Peringatan: Link ini sudah pernah digunakan sebelumnya. Kirim parameter "konfirmasi_lanjut": true jika ingin tetap menyimpan.', [
+                'is_duplicate' => true,
+            ]);
+        }
+
+        // 4. Normalisasi relasi kerja sama
+        $idKerjaSama = $validated['id_kerja_sama'] ?? $validated['id_kerjasama'] ?? null;
+
         try {
-            $evidence = DB::transaction(function () use ($validated, $storedPath, $originalName, $urlDrive, $idKerjaSama) {
+            $evidence = DB::transaction(function () use ($validated, $judulFile, $targetUrl, $idKerjaSama) {
                 $createData = [
-                    'nama_file' => $originalName ?? ($urlDrive ?: 'Dokumen Evidence'),
-                    'path_file' => $storedPath,
                     'jenis_dokumen' => $validated['jenis_dokumen'],
+                    'nama_file' => $targetUrl, // Tetap kompatibel dengan kontrak lama
+                    'url_drive' => $targetUrl,
                     'tanggal_upload' => $validated['tanggal_upload'] ?? now()->toDateString(),
-                    'status_validasi' => $validated['status_validasi'] ?? 'Menunggu Validasi',
+                    'status_validasi' => 'Menunggu Validasi',
                     'id_kegiatan' => $validated['id_kegiatan'] ?? null,
                     'id_luaran' => $validated['id_luaran'] ?? null,
                     'id_sertifikasi' => $validated['id_sertifikasi'] ?? null,
-                    'id_penelitian' => $validated['id_penelitian'] ?? null,
-                    'id_pkm' => $validated['id_pkm'] ?? null,
-                    'kode_indikator' => $validated['kode_indikator'] ?? null,
                     'id_kerja_sama' => $idKerjaSama,
                     'id_kerjasama' => $idKerjaSama,
                 ];
 
-                if (Schema::hasColumn('evidence', 'url_drive')) {
-                    $createData['url_drive'] = $urlDrive;
+                if (Schema::hasColumn('evidence', 'judul_file')) {
+                    $createData['judul_file'] = $judulFile;
                 }
                 if (Schema::hasColumn('evidence', 'url_evidence')) {
-                    $createData['url_evidence'] = $urlDrive;
-                }
-                if (! Schema::hasColumn('evidence', 'url_drive') && ! Schema::hasColumn('evidence', 'url_evidence') && empty($storedPath) && ! empty($urlDrive)) {
-                    $createData['nama_file'] = $urlDrive;
+                    $createData['url_evidence'] = $targetUrl;
                 }
 
                 return Evidence::create($createData);
@@ -195,17 +186,13 @@ class EvidenceController extends Controller
 
             AuditLogService::log('CREATE', 'Evidence', $evidence->id_evidence, null, $evidence->toArray());
         } catch (\Throwable $e) {
-            if ($storedPath) {
-                Storage::disk('public')->delete($storedPath);
-            }
-
             return $this->respond(false, 500, 'Gagal menyimpan data evidence: '.$e->getMessage());
         }
 
-        return $this->respond(true, 201, 'Berkas evidence berhasil disimpan.', $evidence->load($this->relations));
+        return $this->respond(true, 201, 'Link evidence berhasil disimpan dan menunggu validasi.', $evidence->load($this->relations));
     }
 
-    // Ambil detail satu evidence
+    // Ambil detail satu record evidence
     public function show(int $id): JsonResponse
     {
         $evidence = Evidence::with($this->relations)->find($id);
@@ -217,7 +204,7 @@ class EvidenceController extends Controller
         return $this->respond(true, 200, 'Detail evidence berhasil diambil.', $evidence);
     }
 
-    // Update metadata evidence atau ganti berkas fisik
+    // Update metadata evidence secara lengkap dan pergantian URL Google Drive
     public function update(Request $request, int $id): JsonResponse
     {
         $evidence = Evidence::find($id);
@@ -226,99 +213,207 @@ class EvidenceController extends Controller
             return $this->respond(false, 404, 'Data evidence tidak ditemukan.');
         }
 
-        $validator = Validator::make($request->all(), $this->rules(true));
+        $validator = Validator::make($request->all(), [
+            'judul_file' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'nama_file' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'url_drive' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'jenis_dokumen' => ['sometimes', 'required', 'string', 'max:255'],
+            'tanggal_upload' => ['sometimes', 'nullable', 'date'],
+            'alasan_perubahan' => ['nullable', 'string', 'max:255'],
+            'id_kegiatan' => ['sometimes', 'nullable', 'integer', Rule::exists('kegiatan', 'id_kegiatan')],
+            'id_luaran' => ['sometimes', 'nullable', 'integer', Rule::exists('luaran', 'id_luaran')],
+            'id_sertifikasi' => ['sometimes', 'nullable', 'integer', Rule::exists('sertifikasi', 'id_sertifikasi')],
+            'id_kerjasama' => ['sometimes', 'nullable', 'integer', Rule::exists('kerja_sama', 'id_kerja_sama')],
+            'id_kerja_sama' => ['sometimes', 'nullable', 'integer', Rule::exists('kerja_sama', 'id_kerja_sama')],
+        ]);
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
         }
 
         $validated = $validator->validated();
-        $oldPath = $evidence->path_file;
-        $newPath = null;
 
-        // Tangani unggah berkas baru jika dikirimkan
-        if ($request->hasFile('file')) {
-            $newFile = $request->file('file');
-            $newPath = $newFile->store('evidence', 'public');
-            $validated['nama_file'] = $newFile->getClientOriginalName();
-            $validated['path_file'] = $newPath;
-            $validated['url_drive'] = Storage::disk('public')->url($newPath);
+        // 1. Tentukan apakah URL Google Drive diganti
+        $newUrl = null;
+        if (! empty($validated['url_drive']) && filter_var($validated['url_drive'], FILTER_VALIDATE_URL)) {
+            $newUrl = trim($validated['url_drive']);
+        } elseif (! empty($validated['nama_file']) && filter_var($validated['nama_file'], FILTER_VALIDATE_URL)) {
+            $newUrl = trim($validated['nama_file']);
+        }
+
+        $currentUrl = $evidence->url_drive ?: (filter_var($evidence->nama_file, FILTER_VALIDATE_URL) ? $evidence->nama_file : $evidence->url_evidence);
+        $isUrlChanged = (! empty($newUrl) && $newUrl !== $currentUrl);
+
+        if ($isUrlChanged) {
+            // Validasi format URL Google Drive baru
+            if (! preg_match('/^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/', $newUrl)) {
+                return $this->respond(false, 422, 'Tautan Google Drive baru harus diawali dengan https://drive.google.com atau https://docs.google.com.', [
+                    'url_drive' => ['Format URL Google Drive baru tidak valid.'],
+                ]);
+            }
+
+            // Alasan perubahan wajib diisi jika URL Google Drive diganti
+            if (empty(trim((string) $request->input('alasan_perubahan')))) {
+                return $this->respond(false, 422, 'Alasan perubahan link wajib diisi jika tautan Google Drive diperbarui.', [
+                    'alasan_perubahan' => ['Alasan perubahan wajib disertakan saat mengganti link Google Drive.'],
+                ]);
+            }
+        }
+
+        // 2. Siapkan data update metadata
+        $updateData = [];
+
+        if (array_key_exists('jenis_dokumen', $validated)) {
+            $updateData['jenis_dokumen'] = $validated['jenis_dokumen'];
+        }
+
+        if (array_key_exists('tanggal_upload', $validated) && ! empty($validated['tanggal_upload'])) {
+            $updateData['tanggal_upload'] = $validated['tanggal_upload'];
+        }
+
+        if (array_key_exists('judul_file', $validated)) {
+            if (Schema::hasColumn('evidence', 'judul_file')) {
+                $updateData['judul_file'] = $validated['judul_file'];
+            }
+        } elseif (array_key_exists('nama_file', $validated) && ! filter_var($validated['nama_file'], FILTER_VALIDATE_URL)) {
+            if (Schema::hasColumn('evidence', 'judul_file')) {
+                $updateData['judul_file'] = $validated['nama_file'];
+            }
         }
 
         // Normalisasi foreign key kerja sama
         if (array_key_exists('id_kerjasama', $validated) || array_key_exists('id_kerja_sama', $validated)) {
             $idKerjaSama = $validated['id_kerja_sama'] ?? $validated['id_kerjasama'] ?? null;
-            $validated['id_kerja_sama'] = $idKerjaSama;
-            $validated['id_kerjasama'] = $idKerjaSama;
+            $updateData['id_kerja_sama'] = $idKerjaSama;
+            $updateData['id_kerjasama'] = $idKerjaSama;
         }
 
-        unset($validated['file']);
+        foreach (['id_kegiatan', 'id_luaran', 'id_sertifikasi'] as $fk) {
+            if (array_key_exists($fk, $validated)) {
+                $updateData[$fk] = $validated[$fk];
+            }
+        }
+
+        // Pengguna tidak diizinkan mengubah status_validasi melalui form Edit biasa
+        unset($updateData['status_validasi'], $updateData['catatan_validasi'], $updateData['divalidasi_oleh'], $updateData['tanggal_validasi']);
+
+        $authUser = $request->input('auth_user');
+        $userId = is_array($authUser) ? ($authUser['id'] ?? null) : ($authUser->id ?? auth()->id());
 
         try {
-            $oldData = $evidence->toArray();
-            DB::transaction(function () use ($evidence, $validated) {
-                $evidence->update($validated);
+            DB::transaction(function () use ($evidence, $updateData, $isUrlChanged, $newUrl, $currentUrl, $request, $userId) {
+                // Jika URL Google Drive berubah, simpan riwayat ke evidence_histories & reset status ke Menunggu Validasi
+                if ($isUrlChanged) {
+                    EvidenceHistory::create([
+                        'evidence_id' => $evidence->id_evidence,
+                        'url_lama' => $currentUrl ?? '',
+                        'url_baru' => $newUrl,
+                        'alasan_perubahan' => $request->input('alasan_perubahan'),
+                        'diubah_oleh' => $userId,
+                    ]);
+
+                    $updateData['nama_file'] = $newUrl;
+                    if (Schema::hasColumn('evidence', 'url_drive')) {
+                        $updateData['url_drive'] = $newUrl;
+                    }
+                    if (Schema::hasColumn('evidence', 'url_evidence')) {
+                        $updateData['url_evidence'] = $newUrl;
+                    }
+
+                    $updateData['status_validasi'] = 'Menunggu Validasi';
+                    $updateData['catatan_validasi'] = null;
+                    $updateData['divalidasi_oleh'] = null;
+                    $updateData['tanggal_validasi'] = null;
+                }
+
+                $evidence->update($updateData);
             });
 
-            // Hapus berkas fisik lama jika ada berkas baru
-            if ($newPath && $oldPath && Storage::disk('public')->exists($oldPath)) {
-                Storage::disk('public')->delete($oldPath);
-            }
-
-            AuditLogService::log('UPDATE', 'Evidence', $evidence->id_evidence, $oldData, $evidence->toArray());
+            AuditLogService::log('UPDATE', 'Evidence', $evidence->id_evidence, null, $evidence->toArray());
         } catch (\Throwable $e) {
-            if ($newPath) {
-                Storage::disk('public')->delete($newPath);
-            }
-
             return $this->respond(false, 500, 'Gagal memperbarui evidence: '.$e->getMessage());
         }
 
         return $this->respond(true, 200, 'Data evidence berhasil diperbarui.', $evidence->fresh($this->relations));
     }
 
-    // Hapus record evidence beserta berkas fisik di storage
-    public function destroy(int $id): JsonResponse
+    // Endpoint khusus pergantian link Google Drive dan pengarsipan riwayat
+    public function gantiLink(Request $request, int $id): JsonResponse
     {
         $evidence = Evidence::find($id);
 
         if (! $evidence) {
             return $this->respond(false, 404, 'Data evidence tidak ditemukan.');
         }
+
+        $validator = Validator::make($request->all(), [
+            'url_drive_baru' => [
+                'required',
+                'url',
+                'regex:/^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/',
+            ],
+            'alasan_perubahan' => 'required|string|max:255',
+        ], [
+            'url_drive_baru.regex' => 'Format URL Google Drive baru harus diawali dengan https://drive.google.com atau https://docs.google.com.',
+            'alasan_perubahan.required' => 'Alasan perubahan link wajib diisi.',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
+        }
+
+        $oldUrl = $evidence->url_drive ?: (filter_var($evidence->nama_file, FILTER_VALIDATE_URL) ? $evidence->nama_file : $evidence->url_evidence);
+        $newUrl = trim($request->input('url_drive_baru'));
+
+        // Jika URL sama persis, tidak perlu membuat riwayat baru
+        if ($oldUrl === $newUrl) {
+            return $this->respond(false, 422, 'URL Google Drive baru sama dengan URL saat ini.', [
+                'url_drive_baru' => ['URL Google Drive baru tidak boleh sama dengan URL yang sedang aktif.'],
+            ]);
+        }
+
+        $authUser = $request->input('auth_user');
+        $userId = is_array($authUser) ? ($authUser['id'] ?? null) : ($authUser->id ?? auth()->id());
 
         try {
-            if ($evidence->path_file && Storage::disk('public')->exists($evidence->path_file)) {
-                Storage::disk('public')->delete($evidence->path_file);
-            }
+            DB::transaction(function () use ($evidence, $oldUrl, $newUrl, $request, $userId) {
+                // 1. Simpan riwayat perubahan ke evidence_histories
+                EvidenceHistory::create([
+                    'evidence_id' => $evidence->id_evidence,
+                    'url_lama' => $oldUrl ?? '',
+                    'url_baru' => $newUrl,
+                    'alasan_perubahan' => $request->input('alasan_perubahan'),
+                    'diubah_oleh' => $userId,
+                ]);
 
-            $oldData = $evidence->toArray();
-            $evidence->delete();
+                // 2. Perbarui link dan reset status ke "Menunggu Validasi"
+                $updateData = [
+                    'nama_file' => $newUrl,
+                    'status_validasi' => 'Menunggu Validasi',
+                    'catatan_validasi' => null,
+                    'divalidasi_oleh' => null,
+                    'tanggal_validasi' => null,
+                ];
 
-            AuditLogService::log('DELETE', 'Evidence', $id, $oldData, null);
+                if (Schema::hasColumn('evidence', 'url_drive')) {
+                    $updateData['url_drive'] = $newUrl;
+                }
+                if (Schema::hasColumn('evidence', 'url_evidence')) {
+                    $updateData['url_evidence'] = $newUrl;
+                }
+
+                $evidence->update($updateData);
+            });
+
+            AuditLogService::log('UPDATE_LINK', 'Evidence', $evidence->id_evidence, ['old' => $oldUrl], ['new' => $newUrl]);
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menghapus data evidence: '.$e->getMessage());
+            return $this->respond(false, 500, 'Gagal mengganti link evidence: '.$e->getMessage());
         }
 
-        return $this->respond(true, 200, 'Data evidence dan berkas fisik berhasil dihapus.');
+        return $this->respond(true, 200, 'Link Google Drive berhasil diganti, link lama diarsipkan, dan status di-reset ke Menunggu Validasi.', $evidence->fresh($this->relations));
     }
 
-    // Download berkas fisik evidence
-    public function download(int $id): StreamedResponse|JsonResponse
-    {
-        $evidence = Evidence::find($id);
-
-        if (! $evidence) {
-            return $this->respond(false, 404, 'Data evidence tidak ditemukan.');
-        }
-
-        if (! $evidence->path_file || ! Storage::disk('public')->exists($evidence->path_file)) {
-            return $this->respond(false, 404, 'Berkas fisik evidence tidak ditemukan di server.');
-        }
-
-        return Storage::disk('public')->download($evidence->path_file, $evidence->nama_file ?? 'evidence');
-    }
-
-    // Workflow Validasi Evidence oleh Kaprodi / Validator (Tugas Teman)
+    // Workflow Validasi Evidence oleh Kaprodi / Asesor / Validator
     public function validasi(Request $request, int $id): JsonResponse
     {
         $evidence = Evidence::find($id);
@@ -330,6 +425,9 @@ class EvidenceController extends Controller
         $validator = Validator::make($request->all(), [
             'status_validasi' => 'required|in:Valid,Ditolak,Perlu Perbaikan',
             'catatan_validasi' => 'required_if:status_validasi,Ditolak,Perlu Perbaikan|nullable|string',
+        ], [
+            'status_validasi.in' => 'Status validasi hanya boleh bernilai: Valid, Ditolak, atau Perlu Perbaikan.',
+            'catatan_validasi.required_if' => 'Catatan validasi wajib diisi jika status Ditolak atau Perlu Perbaikan.',
         ]);
 
         if ($validator->fails()) {
@@ -349,27 +447,19 @@ class EvidenceController extends Controller
             'tanggal_validasi' => now(),
         ]);
 
-        // Jika status "Perlu Perbaikan", otomatis kirim Notifikasi in-app
-        if ($status === 'Perlu Perbaikan') {
-            Notifikasi::create([
-                'user_id' => $evidence->divalidasi_oleh,
-                'tipe' => 'EVIDENCE_REVISI',
-                'judul' => 'Revisi Evidence Diperlukan',
-                'pesan' => "Dokumen '{$evidence->jenis_dokumen}' memerlukan perbaikan: {$catatan}",
-                'link' => "/evidence/{$evidence->id_evidence}",
-            ]);
-        }
+        // Catatan: Tabel evidence saat ini belum memiliki kolom identitas pengguna pengunggah (user_id/diunggah_oleh).
+        // Sesuai batasan, notifikasi ditunda dan tidak dikirim kepada pengguna yang belum dapat dipastikan identitasnya.
 
         AuditLogService::log('VALIDATE', 'Evidence', $evidence->id_evidence, null, [
             'status_validasi' => $status,
             'catatan_validasi' => $catatan,
         ]);
 
-        return $this->respond(true, 200, "Evidence berhasil divalidasi dengan status: {$status}.", $evidence);
+        return $this->respond(true, 200, "Evidence berhasil divalidasi dengan status: {$status}.", $evidence->fresh($this->relations));
     }
 
-    // Fitur Ganti Link (Arsipkan Link Lama & Reset Status - Tugas Teman)
-    public function gantiLink(Request $request, int $id): JsonResponse
+    // Hapus record evidence
+    public function destroy(int $id): JsonResponse
     {
         $evidence = Evidence::find($id);
 
@@ -377,48 +467,17 @@ class EvidenceController extends Controller
             return $this->respond(false, 404, 'Data evidence tidak ditemukan.');
         }
 
-        $validator = Validator::make($request->all(), [
-            'url_drive_baru' => [
-                'required',
-                'url',
-                'regex:/^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/',
-            ],
-            'alasan_perubahan' => 'nullable|string|max:255',
-        ], [
-            'url_drive_baru.regex' => 'Format URL Google Drive baru tidak valid.',
-        ]);
+        try {
+            DB::transaction(function () use ($evidence, $id) {
+                $oldData = $evidence->toArray();
+                $evidence->delete();
 
-        if ($validator->fails()) {
-            return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
+                AuditLogService::log('DELETE', 'Evidence', $id, $oldData, null);
+            });
+        } catch (\Throwable $e) {
+            return $this->respond(false, 500, 'Gagal menghapus data evidence: '.$e->getMessage());
         }
 
-        $oldUrl = $evidence->url_drive ?? $evidence->nama_file;
-        $newUrl = $request->input('url_drive_baru');
-
-        $authUser = $request->input('auth_user');
-        $userId = is_array($authUser) ? ($authUser['id'] ?? null) : ($authUser->id ?? auth()->id());
-
-        // 1. Simpan riwayat link lama ke tabel evidence_histories
-        EvidenceHistory::create([
-            'evidence_id' => $evidence->id_evidence,
-            'url_lama' => $oldUrl ?? '',
-            'url_baru' => $newUrl,
-            'alasan_perubahan' => $request->input('alasan_perubahan') ?? 'Penggantian link bukti dukung',
-            'diubah_oleh' => $userId,
-        ]);
-
-        // 2. Perbarui link dan reset status ke "Menunggu Validasi"
-        $evidence->update([
-            'nama_file' => $newUrl,
-            'url_drive' => $newUrl,
-            'status_validasi' => 'Menunggu Validasi',
-            'catatan_validasi' => null,
-            'divalidasi_oleh' => null,
-            'tanggal_validasi' => null,
-        ]);
-
-        AuditLogService::log('UPDATE_LINK', 'Evidence', $evidence->id_evidence, ['old' => $oldUrl], ['new' => $newUrl]);
-
-        return $this->respond(true, 200, 'Link Google Drive berhasil diganti, link lama diarsipkan, dan status di-reset ke Menunggu Validasi.', $evidence->fresh('history'));
+        return $this->respond(true, 200, 'Data evidence berhasil dihapus.');
     }
 }

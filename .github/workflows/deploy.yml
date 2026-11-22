@@ -40,6 +40,9 @@ jobs:
           rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
           php artisan package:discover --ansi
 
+          echo "Running database migrations..."
+          php artisan migrate --force
+
           echo "Syncing Swagger API documentation..."
           php artisan swagger:sync || true
 

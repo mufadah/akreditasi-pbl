@@ -150,6 +150,9 @@ class SyncSwaggerFromPostman extends Command
 
         $paths = array_merge($paths, $suppPaths);
 
+        $this->addKerjaSamaResponseExamples($paths);
+        $this->applyDosenDocumentation($paths);
+
         $openapi['tags'] = array_map(function ($t) {
             return [
                 'name' => $t,
@@ -173,6 +176,171 @@ class SyncSwaggerFromPostman extends Command
         $this->line('Swagger UI  : <comment>'.url('/api/documentation').'</comment>');
 
         return 0;
+    }
+
+    /**
+     * Keep the generated Dosen OpenAPI schemas aligned with its controller contract.
+     *
+     * @param  array<string, array<string, mixed>>  $paths
+     */
+    private function applyDosenDocumentation(array &$paths): void
+    {
+        $dosenProperties = [
+            'id_dosen' => ['type' => 'integer', 'example' => 1],
+            'nidn' => ['type' => 'string', 'example' => '0015088501'],
+            'nama_dosen' => ['type' => 'string', 'example' => 'Dr. Ahmad Dahlan'],
+            'status_dosen' => ['type' => 'string', 'enum' => ['DTPS', 'DTT', 'NONAKTIF'], 'example' => 'DTPS'],
+            'pendidikan_terakhir' => ['type' => 'string', 'nullable' => true, 'example' => 'S3'],
+            'jabatan_akademik' => [
+                'type' => 'object',
+                'nullable' => true,
+                'properties' => [
+                    'id_jabatan' => ['type' => 'integer', 'example' => 3],
+                    'nama_jabatan' => ['type' => 'string', 'example' => 'Lektor Kepala'],
+                ],
+            ],
+            'sertifikasi_dosen' => ['type' => 'string', 'nullable' => true, 'example' => 'Tersertifikasi'],
+        ];
+
+        if (isset($paths['/api/dosen']['get'])) {
+            $paths['/api/dosen']['get']['responses']['200']['description'] = 'Daftar dosen berhasil diambil.';
+            $paths['/api/dosen']['get']['responses']['200']['content']['application/json']['schema'] = [
+                'type' => 'object',
+                'properties' => [
+                    'success' => ['type' => 'boolean', 'example' => true],
+                    'data' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'data' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => $dosenProperties,
+                                ],
+                            ],
+                            'current_page' => ['type' => 'integer', 'example' => 1],
+                            'per_page' => ['type' => 'integer', 'example' => 10],
+                            'total' => ['type' => 'integer', 'example' => 25],
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        $requestBodyOperations = [
+            ['/api/dosen', 'post'],
+            ['/api/dosen/{id}', 'put'],
+        ];
+        foreach ($requestBodyOperations as [$path, $method]) {
+            foreach (['pendidikan_terakhir', 'jabatan_akademik', 'sertifikasi_dosen'] as $property) {
+                if (isset($paths[$path][$method]['requestBody']['content']['application/json']['schema']['properties'][$property])) {
+                    $paths[$path][$method]['requestBody']['content']['application/json']['schema']['properties'][$property]['nullable'] = true;
+                }
+            }
+        }
+
+        if (isset($paths['/api/dosen/{id}']['get'])) {
+            $paths['/api/dosen/{id}']['get']['responses']['200']['description'] = 'Detail dosen berhasil diambil.';
+            $paths['/api/dosen/{id}']['get']['responses']['200']['content']['application/json']['schema'] = [
+                'type' => 'object',
+                'properties' => [
+                    'success' => ['type' => 'boolean', 'example' => true],
+                    'data' => [
+                        'type' => 'object',
+                        'properties' => $dosenProperties,
+                    ],
+                ],
+            ];
+        }
+
+        if (isset($paths['/api/dosen/export']['get'])) {
+            $paths['/api/dosen/export']['get']['summary'] = 'Export seluruh data master dosen ke format Excel (.xlsx)';
+            $paths['/api/dosen/export']['get']['description'] = 'Unduh seluruh data master dosen sebagai file Excel.';
+            $paths['/api/dosen/export']['get']['responses']['200'] = [
+                'description' => 'File Excel seluruh data master dosen.',
+                'content' => [
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => [
+                        'schema' => [
+                            'type' => 'string',
+                            'format' => 'binary',
+                        ],
+                    ],
+                ],
+            ];
+        }
+    }
+
+    private function addKerjaSamaResponseExamples(array &$paths): void
+    {
+        $kerjaSama = [
+            'id_kerja_sama' => 6,
+            'id_mitra' => 1,
+            'id_jenis_kerjasama' => 2,
+            'id_dosen' => 1,
+            'judul_kerja_sama' => 'Kerja Sama Penyelenggaraan Kelas Industri',
+            'tingkat' => 'Nasional',
+            'bentuk_kegiatan' => 'Kelas industri dan riset bersama',
+            'tanggal_mulai' => '2026-01-15',
+            'tanggal_selesai' => '2028-01-15',
+            'nomor_dokumen' => '042/MoA/POLINES-PTINTI/2026',
+            'jenis_dokumen' => 'MoA (Memorandum of Agreement)',
+            'bukti_dokumen' => 'https://drive.google.com/file/d/example/view',
+            'status' => 'Aktif',
+            'mitra' => [
+                'id_mitra' => 1,
+                'nama_mitra' => 'PT Contoh',
+                'jenis_mitra' => 'Industri',
+                'tingkat' => 'Nasional',
+            ],
+            'jenis_kerja_sama' => [
+                'id_jenis_kerjasama' => 2,
+                'nama_jenis_kerjasama' => 'MoA (Memorandum of Agreement)',
+            ],
+            'dosen' => [
+                'id_dosen' => 1,
+                'nama_dosen' => 'Dr. Contoh',
+            ],
+        ];
+
+        $paths['/api/kerja-sama']['get']['responses']['200']['content']['application/json']['example'] = [
+            'success' => true,
+            'code' => 200,
+            'message' => 'Data kerja sama berhasil diambil.',
+            'data' => [
+                'current_page' => 1,
+                'data' => [$kerjaSama],
+                'per_page' => 10,
+                'total' => 1,
+            ],
+        ];
+
+        $paths['/api/kerja-sama']['post']['responses']['201']['content']['application/json']['example'] = [
+            'success' => true,
+            'code' => 201,
+            'message' => 'Data kerja sama berhasil ditambahkan.',
+            'data' => $kerjaSama,
+        ];
+
+        $paths['/api/kerja-sama/{id}']['get']['responses']['200']['content']['application/json']['example'] = [
+            'success' => true,
+            'code' => 200,
+            'message' => 'Detail kerja sama berhasil diambil.',
+            'data' => $kerjaSama,
+        ];
+
+        $paths['/api/kerja-sama/{id}']['put']['responses']['200']['content']['application/json']['example'] = [
+            'success' => true,
+            'code' => 200,
+            'message' => 'Data kerja sama berhasil diperbarui.',
+            'data' => $kerjaSama,
+        ];
+
+        $paths['/api/kerja-sama/{id}']['delete']['responses']['200']['content']['application/json']['example'] = [
+            'success' => true,
+            'code' => 200,
+            'message' => 'Data kerja sama berhasil dihapus.',
+            'data' => null,
+        ];
     }
 
     private function parseItems(array $items, array $folders, array &$tags, array &$paths): void

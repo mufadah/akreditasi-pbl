@@ -28,6 +28,23 @@ class Dosen extends Model
         return $this->belongsTo(Pendidikan::class, 'id_pendidikan', 'id_pendidikan');
     }
 
+    public function dosenHistories(): HasMany
+    {
+        return $this->hasMany(DosenHistory::class, 'id_dosen', 'id_dosen');
+    }
+
+    public function recordHistory(string $sumberData): DosenHistory
+    {
+        $this->loadMissing(['jabatanAkademik', 'pendidikan']);
+
+        return $this->dosenHistories()->create([
+            'sumber_data' => $sumberData,
+            'pendidikan_terakhir' => $this->pendidikan?->jenjang,
+            'jabatan_akademik' => $this->jabatanAkademik?->nama_jabatan,
+            'sertifikasi_dosen' => $this->sertifikasi,
+        ]);
+    }
+
     public function bidangKeahlian(): BelongsToMany
     {
         return $this->belongsToMany(BidangKeahlian::class, 'bidang_keahlian_dosen', 'id_dosen', 'id_bidang_keahlian')

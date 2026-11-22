@@ -246,3 +246,119 @@ test('pda publication sync rejects invalid options and reports remote errors', f
         ->expectsOutputToContain('PDA mengembalikan HTTP 503')
         ->assertExitCode(1);
 });
+
+test('pda publication sync with --import-dosen imports trk and outside teaching lecturers before syncing publications', function () {
+    Http::fake([
+        'https://pda.polines.ac.id/dosen?page=*' => Http::response([
+            'current_page' => 1,
+            'last_page' => 1,
+            'data' => [
+                [
+                    'Nama_dosen' => 'Dosen TRK Asli',
+                    'NIDN' => '0099887766',
+                    'NIP' => '198501012010121001',
+                    'slug' => 'dosen-trk-asli',
+                    'homebase_prodi_nama' => 'Teknologi Rekayasa Komputer',
+                ],
+            ],
+        ]),
+        'https://pda.polines.ac.id/internal/dosen/list*' => Http::response([
+            'data' => [
+                [
+                    'nama' => 'Dosen Luar Pengajar TRK',
+                    'nidn' => '0077889900',
+                    'nip' => '198602022012121002',
+                    'slug' => 'afandi-nur-aziz-thohari',
+                    'homebase_prodi_nama' => 'Teknik Elektro',
+                ],
+            ],
+        ]),
+        'https://pda.polines.ac.id/internal/publikasi/list*' => Http::response([
+            'data' => [
+                'data' => [
+                    [
+                        'judul' => 'Publikasi Riset TRK & Dosen Luar',
+                        'jenis_publikasi' => 'Jurnal Internasional',
+                        'indeksasi' => 'Scopus Q1',
+                        'tahun' => 2025,
+                        'doi' => '10.1234/trk.auto.2025',
+                        'authors' => [
+                            ['nip' => '198602022012121002'],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+
+    $this->artisan('pda:sync-publikasi --import-dosen --pages=1 --year=2025')
+        ->expectsOutputToContain('Mengimpor master data dosen')
+        ->expectsOutputToContain('Publikasi ditambahkan: 1')
+        ->assertSuccessful();
+
+    $importedDosenLuar = Dosen::query()->where('nuptk', '198602022012121002')->first();
+    expect($importedDosenLuar)->not->toBeNull()
+        ->and($importedDosenLuar->status_dosen)->toBe('Tidak Tetap');
+
+    $luaran = Luaran::query()->where('nama_jurnal', 'Publikasi Riset TRK & Dosen Luar')->first();
+    expect($luaran)->not->toBeNull()
+        ->and($luaran->id_dosen)->toBe($importedDosenLuar->id_dosen)
+        ->and($luaran->doi)->toBe('10.1234/trk.auto.2025');
+});
+
+test('pda:sync-all command runs zero-config sync for both lecturers and publications', function () {
+    Http::fake([
+        'https://pda.polines.ac.id/dosen?page=*' => Http::response([
+            'current_page' => 1,
+            'last_page' => 1,
+            'data' => [
+                [
+                    'Nama_dosen' => 'Dosen TRK All-in-One',
+                    'NIDN' => '0011992288',
+                    'NIP' => '198703032015031003',
+                    'slug' => 'dosen-trk-all',
+                    'homebase_prodi_nama' => 'Teknologi Rekayasa Komputer',
+                ],
+            ],
+        ]),
+        'https://pda.polines.ac.id/internal/dosen/list*' => Http::response([
+            'data' => [
+                [
+                    'nama' => 'Dosen Pengajar Luar All',
+                    'nidn' => '0044883377',
+                    'nip' => '198804042016041004',
+                    'slug' => 'aisyatul-karima',
+                    'homebase_prodi_nama' => 'Teknik Elektro',
+                ],
+            ],
+        ]),
+        'https://pda.polines.ac.id/internal/publikasi/list*' => Http::response([
+            'data' => [
+                'data' => [
+                    [
+                        'judul' => 'Publikasi Otomatis Sync All',
+                        'jenis_publikasi' => 'Jurnal Nasional',
+                        'indeksasi' => 'SINTA 2',
+                        'tahun' => 2026,
+                        'doi' => '10.1234/sync-all.2026',
+                        'authors' => [
+                            ['nip' => '198804042016041004'],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+
+    $this->artisan('pda:sync-all')
+        ->expectsOutputToContain('SINKRONISASI OTOMATIS PDA POLINES')
+        ->expectsOutputToContain('Seluruh proses sinkronisasi PDA selesai dengan sukses')
+        ->assertSuccessful();
+
+    $dosen = Dosen::query()->where('nuptk', '198804042016041004')->first();
+    expect($dosen)->not->toBeNull();
+
+    $luaran = Luaran::query()->where('nama_jurnal', 'Publikasi Otomatis Sync All')->first();
+    expect($luaran)->not->toBeNull()
+        ->and($luaran->id_dosen)->toBe($dosen->id_dosen);
+});

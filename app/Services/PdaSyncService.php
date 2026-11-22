@@ -10,6 +10,7 @@ use App\Models\JenisLuaran;
 use App\Models\Kegiatan;
 use App\Models\Luaran;
 use App\Models\Pendidikan;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -73,6 +74,7 @@ class PdaSyncService
                 'fullName' => $props['fullName'] ?? null,
                 'jabatan' => $props['jabatan'] ?? null,
                 'pendidikan' => $props['pendidikanFormals'] ?? [],
+                'sertifikasi_dosen' => $props['sertifikasi_dosen'] ?? $props['status_serdos'] ?? $props['serdos'] ?? null,
                 'penelitian' => $props['allPenelitian'] ?? [],
                 'pengabdian' => $props['allPengabdians'] ?? [],
                 'publikasi' => $props['allPublikasis'] ?? [],
@@ -167,6 +169,14 @@ class PdaSyncService
 
             $isS3 = (bool) preg_match('/\b(dr|ph\.d|doktor|prof)\b/i', $formattedName);
             $idPendidikan = $isS3 ? $pendidikanS3->id_pendidikan : $defaultPendidikanS2->id_pendidikan;
+            $pendidikanLevel = $this->highestEducationLevel($item['pendidikan_terakhir'] ?? $item['pendidikan'] ?? null);
+            $pdaPendidikan = $pendidikanLevel
+                ? Pendidikan::where('jenjang', $pendidikanLevel)->orderByDesc('tahun_lulus')->first()
+                : null;
+            $pdaJabatan = trim((string) ($item['jabatan_akademik'] ?? $item['jabatan'] ?? ''));
+            $pdaJabatan = $pdaJabatan !== ''
+                ? JabatanAkademik::where('nama_jabatan', $pdaJabatan)->first()
+                : null;
 
             $existing = Dosen::withTrashed()
                 ->where('nidn', $nidn)
@@ -181,19 +191,27 @@ class PdaSyncService
                 'nidn' => $nidn,
                 'nuptk' => $rawNip !== '' ? $rawNip : null,
                 'email' => $existing ? $existing->email : $email,
-                'id_jabatan' => $existing ? $existing->id_jabatan : $defaultJabatan->id_jabatan,
-                'id_pendidikan' => $existing ? $existing->id_pendidikan : $idPendidikan,
+                'id_jabatan' => $pdaJabatan?->id_jabatan ?? $existing?->id_jabatan ?? $defaultJabatan->id_jabatan,
+                'id_pendidikan' => $pdaPendidikan?->id_pendidikan ?? $existing?->id_pendidikan ?? $idPendidikan,
                 'status_dosen' => $targetStatus,
             ];
+
+            $pdaCertification = $item['sertifikasi_dosen'] ?? $item['status_serdos'] ?? $item['serdos'] ?? null;
+            if (is_scalar($pdaCertification) && trim((string) $pdaCertification) !== '') {
+                $data['sertifikasi'] = trim((string) $pdaCertification);
+            }
 
             if ($existing) {
                 if ($existing->trashed()) {
                     $existing->restore();
                 }
                 $existing->update($data);
+                if ($existing->wasChanged(['id_jabatan', 'id_pendidikan', 'sertifikasi'])) {
+                    $existing->recordHistory('PDA');
+                }
                 $updated++;
             } else {
-                Dosen::create($data);
+                Dosen::create($data)->recordHistory('PDA');
                 $created++;
             }
         }
@@ -541,6 +559,8 @@ class PdaSyncService
             ];
         }
 
+        $this->syncAcademicAttributes($dosen, $pdaDetail);
+
         $synced = [
             'penelitian' => 0,
             'pengabdian' => 0,
@@ -571,7 +591,7 @@ class PdaSyncService
             ->all();
 
         // 1. Sinkronisasi PENELITIAN
-        foreach ($pdaDetail['penelitian'] as $item) {
+        foreach ($this->filterCurrentSemesterItems($pdaDetail['penelitian']) as $item) {
             $judul = trim((string) ($item['judul'] ?? ''));
             if ($judul === '' || in_array(strtolower($judul), $existingKegiatan, true)) {
                 continue;
@@ -609,7 +629,7 @@ class PdaSyncService
         }
 
         // 2. Sinkronisasi PENGABDIAN (PkM)
-        foreach ($pdaDetail['pengabdian'] as $item) {
+        foreach ($this->filterCurrentSemesterItems($pdaDetail['pengabdian']) as $item) {
             $judul = trim((string) ($item['judul'] ?? ''));
             if ($judul === '' || in_array(strtolower($judul), $existingKegiatan, true)) {
                 continue;
@@ -648,7 +668,7 @@ class PdaSyncService
         }
 
         // 3. Sinkronisasi PUBLIKASI
-        foreach ($pdaDetail['publikasi'] as $item) {
+        foreach ($this->filterCurrentSemesterItems($pdaDetail['publikasi']) as $item) {
             $judul = trim((string) ($item['judul'] ?? ''));
             if ($judul === '' || in_array(strtolower($judul), $existingLuaran, true)) {
                 continue;
@@ -683,7 +703,7 @@ class PdaSyncService
         }
 
         // 4. Sinkronisasi HKI
-        foreach ($pdaDetail['hki'] as $item) {
+        foreach ($this->filterCurrentSemesterItems($pdaDetail['hki']) as $item) {
             $judul = trim((string) ($item['judul'] ?? ''));
             if ($judul === '' || in_array(strtolower($judul), $existingLuaran, true)) {
                 continue;
@@ -715,5 +735,242 @@ class PdaSyncService
             'synced' => $synced,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterCurrentSemesterItems(array $items): array
+    {
+        [$semesterStart, $semesterEnd] = $this->currentSemesterWindow();
+
+        return array_values(array_filter(
+            $items,
+            fn (mixed $item): bool => is_array($item)
+                && $this->isCurrentSemesterItem($item, $semesterStart, $semesterEnd)
+        ));
+    }
+
+    /**
+     * @return array{CarbonImmutable, CarbonImmutable}
+     */
+    private function currentSemesterWindow(): array
+    {
+        $now = CarbonImmutable::now();
+
+        if ($now->month >= 8) {
+            $start = $now->startOfYear()->month(8)->startOfDay();
+        } elseif ($now->month === 1) {
+            $start = $now->subYear()->startOfYear()->month(8)->startOfDay();
+        } else {
+            $start = $now->startOfYear()->month(2)->startOfDay();
+        }
+
+        return [$start, $start->addMonths(6)];
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     */
+    private function isCurrentSemesterItem(array $item, CarbonImmutable $semesterStart, CarbonImmutable $semesterEnd): bool
+    {
+        $currentTerm = $semesterStart->month === 8 ? 'ganjil' : 'genap';
+        $hasActiveSemesterMarker = false;
+
+        foreach (['semester_aktif', 'semester'] as $semesterKey) {
+            $value = $item[$semesterKey] ?? null;
+            if (! is_scalar($value) || trim((string) $value) === '') {
+                continue;
+            }
+
+            if ($semesterKey === 'semester_aktif'
+                && (is_bool($value) || (is_numeric($value) && in_array((int) $value, [0, 1], true)))) {
+                if (! (bool) $value) {
+                    return false;
+                }
+
+                $hasActiveSemesterMarker = true;
+
+                continue;
+            }
+
+            $normalized = strtolower(trim((string) $value));
+            $term = match (true) {
+                preg_match('/ganjil|gasal|odd|semester\s*1/', $normalized) === 1,
+                $normalized === '1' => 'ganjil',
+                preg_match('/genap|even|semester\s*2/', $normalized) === 1,
+                $normalized === '2' => 'genap',
+                default => null,
+            };
+
+            if ($term !== null) {
+                if ($term !== $currentTerm) {
+                    return false;
+                }
+
+                $hasActiveSemesterMarker = true;
+
+                continue;
+            }
+
+            if ($semesterKey === 'semester_aktif') {
+                if (in_array($normalized, ['false', '0', 'no', 'tidak', 'inactive'], true)) {
+                    return false;
+                }
+
+                if (in_array($normalized, ['true', 'yes', 'ya', 'aktif', 'active', 'berjalan', 'current'], true)) {
+                    $hasActiveSemesterMarker = true;
+                }
+            }
+        }
+
+        $yearValues = [];
+        foreach ([
+            'tahun_ajaran',
+            'tahun_pelajaran',
+            'academic_year',
+            'semester_aktif',
+            'semester',
+            'tahun_pelaksanaan',
+            'tahun_kegiatan',
+            'tahun_usulan',
+            'tahun_terbit',
+            'tahun',
+            'year',
+        ] as $yearKey) {
+            $value = $item[$yearKey] ?? null;
+            if (! is_scalar($value)) {
+                continue;
+            }
+
+            preg_match_all('/(?<!\d)(?:19|20)\d{2}(?!\d)/', (string) $value, $matches);
+            foreach ($matches[0] as $year) {
+                $yearValues[] = (int) $year;
+            }
+        }
+
+        $academicYears = [$semesterStart->year, $semesterEnd->subDay()->year];
+        if ($yearValues !== [] && array_intersect($yearValues, $academicYears) === []) {
+            return false;
+        }
+
+        foreach ([
+            'tanggal_pelaksanaan',
+            'tanggal_kegiatan',
+            'tanggal_mulai',
+            'tanggal_terbit',
+            'tanggal_publikasi',
+            'tanggal_pendaftaran',
+            'tanggal',
+            'date',
+        ] as $dateKey) {
+            $value = $item[$dateKey] ?? null;
+            if (! is_scalar($value) || trim((string) $value) === '') {
+                continue;
+            }
+
+            $dateValue = trim((string) $value);
+            if (preg_match('/^(?:19|20)\d{2}$/', $dateValue) === 1) {
+                return in_array((int) $dateValue, $academicYears, true);
+            }
+
+            try {
+                $date = CarbonImmutable::parse($dateValue);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            return $date->greaterThanOrEqualTo($semesterStart)
+                && $date->lessThan($semesterEnd);
+        }
+
+        return ($yearValues !== [] && array_intersect($yearValues, $academicYears) !== [])
+            || $hasActiveSemesterMarker;
+    }
+
+    /**
+     * @param  array<string, mixed>  $pdaDetail
+     */
+    private function syncAcademicAttributes(Dosen $dosen, array $pdaDetail): void
+    {
+        $attributes = [];
+
+        $jabatan = $pdaDetail['jabatan'] ?? null;
+        if (is_string($jabatan) && trim($jabatan) !== '') {
+            $jabatan = JabatanAkademik::where('nama_jabatan', trim($jabatan))->first();
+            if ($jabatan && $jabatan->id_jabatan !== $dosen->id_jabatan) {
+                $attributes['id_jabatan'] = $jabatan->id_jabatan;
+            }
+        }
+
+        $pendidikanLevel = $this->highestEducationLevel($pdaDetail['pendidikan'] ?? null);
+        if ($pendidikanLevel !== null) {
+            $pendidikan = Pendidikan::where('jenjang', $pendidikanLevel)
+                ->orderByDesc('tahun_lulus')
+                ->first();
+            if ($pendidikan && $pendidikan->id_pendidikan !== $dosen->id_pendidikan) {
+                $attributes['id_pendidikan'] = $pendidikan->id_pendidikan;
+            }
+        }
+
+        $sertifikasi = $pdaDetail['sertifikasi_dosen'] ?? null;
+        if (is_bool($sertifikasi)) {
+            $sertifikasi = $sertifikasi ? 'Tersertifikasi' : 'Belum Tersertifikasi';
+        }
+        if (is_scalar($sertifikasi) && trim((string) $sertifikasi) !== '') {
+            $sertifikasi = trim((string) $sertifikasi);
+            if ($sertifikasi !== $dosen->sertifikasi) {
+                $attributes['sertifikasi'] = $sertifikasi;
+            }
+        }
+
+        if ($attributes === []) {
+            return;
+        }
+
+        DB::transaction(function () use ($dosen, $attributes): void {
+            $dosen->update($attributes);
+
+            if ($dosen->wasChanged(['id_jabatan', 'id_pendidikan', 'sertifikasi'])) {
+                $dosen->recordHistory('PDA');
+            }
+        });
+    }
+
+    private function highestEducationLevel(mixed $education): ?string
+    {
+        $educationValues = [];
+        if (is_array($education)) {
+            array_walk_recursive($education, function (mixed $value) use (&$educationValues): void {
+                if (is_scalar($value)) {
+                    $educationValues[] = (string) $value;
+                }
+            });
+        } elseif (is_scalar($education)) {
+            $educationValues[] = (string) $education;
+        }
+
+        $educationText = implode(' ', $educationValues);
+        $levels = [];
+
+        if (preg_match_all('/\bS[\s-]*([123])\b/i', $educationText, $matches)) {
+            $levels = array_merge($levels, array_map(fn (string $level): string => 'S'.$level, $matches[1]));
+        }
+        if (preg_match('/doktor|doctor|ph\.?d/i', $educationText) === 1) {
+            $levels[] = 'S3';
+        } elseif (preg_match('/magister|master/i', $educationText) === 1) {
+            $levels[] = 'S2';
+        } elseif (preg_match('/sarjana|bachelor/i', $educationText) === 1) {
+            $levels[] = 'S1';
+        }
+
+        if ($levels === []) {
+            return null;
+        }
+
+        usort($levels, fn (string $left, string $right): int => (int) substr($right, 1) <=> (int) substr($left, 1));
+
+        return $levels[0];
     }
 }

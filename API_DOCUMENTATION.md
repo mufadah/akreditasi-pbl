@@ -284,6 +284,39 @@ API ini menyediakan endpoint standar CRUD Resource (`GET`, `POST`, `GET {id}`, `
 * **Method**: `GET`
 * **Endpoint**: `/api/kerja-sama`
 * **Query Parameters**: `search`, `id_mitra`, `id_jenis_kerjasama`, `id_dosen`, `status`, `per_page`.
+* **ID kanonis**: `id_kerja_sama`. ID ini dipakai pada daftar, detail, update, dan hapus. Field legacy `id_kerjasama` tidak dikirim pada response.
+
+#### Response Daftar (200 OK)
+`data` berisi objek pagination Laravel; setiap elemen di `data.data` menyertakan seluruh field kerja sama dan relasi `mitra`, `jenis_kerja_sama`, dan `dosen`.
+
+#### Detail, Update, dan Hapus
+* **Detail**: `GET /api/kerja-sama/{id}`
+* **Update**: `PUT /api/kerja-sama/{id}`
+* **Hapus**: `DELETE /api/kerja-sama/{id}`
+
+Contoh objek pada `data` untuk detail dan update:
+```json
+{
+  "id_kerja_sama": 6,
+  "id_mitra": 1,
+  "id_jenis_kerjasama": 2,
+  "id_dosen": 1,
+  "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+  "tingkat": "Nasional",
+  "bentuk_kegiatan": "Kelas industri dan riset bersama",
+  "tanggal_mulai": "2026-01-15",
+  "tanggal_selesai": "2028-01-15",
+  "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
+  "jenis_dokumen": "MoA (Memorandum of Agreement)",
+  "bukti_dokumen": "https://drive.google.com/file/d/example/view",
+  "status": "Aktif",
+  "mitra": { "id_mitra": 1, "nama_mitra": "PT Contoh" },
+  "jenis_kerja_sama": { "id_jenis_kerjasama": 2, "nama_jenis_kerjasama": "MoA" },
+  "dosen": { "id_dosen": 1, "nama_dosen": "Dr. Contoh" }
+}
+```
+
+`GET` detail, `PUT`, dan `DELETE` mengembalikan `404` hanya jika ID tidak ditemukan. Payload tidak valid mengembalikan `422`; data yang masih terkait evidence tidak dapat dihapus dan mengembalikan `422`.
 
 #### Tambah Kerja Sama Baru
 * **Method**: `POST`
@@ -294,11 +327,26 @@ API ini menyediakan endpoint standar CRUD Resource (`GET`, `POST`, `GET {id}`, `
   "id_mitra": 1,
   "id_jenis_kerjasama": 2,
   "id_dosen": 1,
+  "judul_kerja_sama": "Kerja Sama Penyelenggaraan Kelas Industri",
+  "tingkat": "Nasional",
+  "bentuk_kegiatan": "Kelas industri dan riset bersama",
   "nomor_dokumen": "042/MoA/POLINES-PTINTI/2026",
   "jenis_dokumen": "MoA (Memorandum of Agreement)",
   "tanggal_mulai": "2026-01-15",
   "tanggal_selesai": "2028-01-15",
+  "bukti_dokumen": "https://drive.google.com/file/d/example/view",
   "status": "Aktif"
+}
+```
+
+#### Request Update (PUT)
+PUT menerima field yang ingin diubah saja. `jenis_dokumen` dan `bukti_dokumen` dapat disertakan untuk diperbarui; jika tidak dikirim, nilai sebelumnya dipertahankan. Nilai `null` secara eksplisit menghapus nilai pada field nullable.
+
+```json
+{
+  "judul_kerja_sama": "Kerja Sama Kelas Industri dan Riset Terapan",
+  "jenis_dokumen": "Adendum MoA",
+  "bukti_dokumen": "https://drive.google.com/file/d/updated/view"
 }
 ```
 

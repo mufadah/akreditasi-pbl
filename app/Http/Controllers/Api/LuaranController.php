@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Imports\LuaranImport;
 use App\Models\JenisLuaran;
 use App\Models\Luaran;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,19 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class LuaranController extends Controller
 {
+    /**
+     * Pemetaan kategori ala SINTA ke kata kunci nama jenis luaran.
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const KATEGORI = [
+        'artikel' => ['jurnal'],
+        'buku' => ['buku'],
+        'hki' => ['hki'],
+        'seminar' => ['prosiding', 'seminar'],
+        'produk' => ['produk'],
+    ];
+
     /**
      * Relasi yang selalu dimuat untuk mencegah N+1 query.
      */
@@ -31,8 +45,12 @@ class LuaranController extends Controller
     /**
      * Helper format response JSON standar.
      */
-    private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
-    {
+    private function respond(
+        bool $success,
+        int $code,
+        string $message,
+        mixed $data = null
+    ): JsonResponse {
         return response()->json([
             'success' => $success,
             'code' => $code,
@@ -44,19 +62,40 @@ class LuaranController extends Controller
     /**
      * Membentuk aturan validasi kondisional berdasarkan jenis luaran.
      */
-    private function rules(Request $request, bool $isUpdate = false, ?Luaran $existing = null): array
-    {
+    private function rules(
+        Request $request,
+        bool $isUpdate = false,
+        ?Luaran $existing = null
+    ): array {
         $req = $isUpdate ? ['sometimes', 'required'] : ['required'];
 
         $baseRules = [
-            'id_kegiatan' => ['nullable', 'integer', Rule::exists('kegiatan', 'id_kegiatan')],
-            'id_dosen' => [...$req, 'integer', Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at')],
-            'id_jenis_luaran' => [...$req, 'integer', Rule::exists('jenis_luaran', 'id_jenis_luaran')],
+            'id_kegiatan' => [
+                'nullable',
+                'integer',
+                Rule::exists('kegiatan', 'id_kegiatan'),
+            ],
+            'id_dosen' => [
+                ...$req,
+                'integer',
+                Rule::exists('dosen', 'id_dosen')->whereNull('deleted_at'),
+            ],
+            'id_jenis_luaran' => [
+                ...$req,
+                'integer',
+                Rule::exists('jenis_luaran', 'id_jenis_luaran'),
+            ],
         ];
 
-        // Cari jenis luaran terpilih
-        $idJenisLuaran = $request->input('id_jenis_luaran', $existing?->id_jenis_luaran);
-        $jenisLuaran = $idJenisLuaran ? JenisLuaran::find($idJenisLuaran) : null;
+        $idJenisLuaran = $request->input(
+            'id_jenis_luaran',
+            $existing?->id_jenis_luaran
+        );
+
+        $jenisLuaran = $idJenisLuaran
+            ? JenisLuaran::find($idJenisLuaran)
+            : null;
+
         $namaJenis = strtolower($jenisLuaran?->nama_jenis_luaran ?? '');
 
         $conditionalRules = [];
@@ -120,7 +159,6 @@ class LuaranController extends Controller
                 'tautan_produk' => ['nullable', 'url', 'max:2048'],
             ];
         } else {
-            // Default rules jika jenis belum terspesifikasi spesifik
             $conditionalRules = [
                 'judul_buku' => ['nullable', 'string', 'max:255'],
                 'nama_jurnal' => ['nullable', 'string', 'max:255'],
@@ -134,7 +172,7 @@ class LuaranController extends Controller
     }
 
     /**
-     * Export seluruh data luaran ke Excel dengan lima sheet.
+     * Unduh data luaran dalam Excel lima sheet.
      *
      * @OA\Get(
      *     path="/api/luaran/export",
@@ -148,12 +186,32 @@ class LuaranController extends Controller
      *     )
      * )
      */
-    public function exportExcel(): BinaryFileResponse
+    public function export(Request $request): BinaryFileResponse|JsonResponse
     {
+        if ($error = $this->kategoriError($request)) {
+            return $error;
+        }
+
+        $kategori = $request->filled('kategori')
+            ? mb_strtolower((string) $request->query('kategori'))
+            : null;
+
+        $filename = $kategori !== null
+        ? 'luaran-'.$kategori.'_'.now()->format('Ymd_His').'.xlsx'
+        : 'data-luaran.xlsx';
+
         return Excel::download(
-            new LuaranExport,
-            'data-luaran.xlsx'
+            new LuaranExport($this->filteredQuery($request), $kategori),
+            $filename
         );
+    }
+
+    /**
+     * Kompatibilitas dengan nama method export sebelumnya.
+     */
+    public function exportExcel(Request $request): BinaryFileResponse|JsonResponse
+    {
+        return $this->export($request);
     }
 
     /**
@@ -242,9 +300,51 @@ class LuaranController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Luaran::with($this->relations);
+        if ($error = $this->kategoriError($request)) {
+            return $error;
+        }
 
-        // Filter pencarian berdasarkan judul dari berbagai varian luaran
+        $luaran = $this->filteredQuery($request)
+            ->with($this->relations)
+            ->latest()
+            ->paginate($request->integer('per_page', 10));
+
+        return $this->respond(
+            true,
+            200,
+            'Data luaran berhasil diambil.',
+            $luaran
+        );
+    }
+
+    /**
+     * Respons 422 bila parameter kategori tidak dikenal.
+     */
+    private function kategoriError(Request $request): ?JsonResponse
+    {
+        if (
+            ! $request->filled('kategori')
+            || isset(self::KATEGORI[mb_strtolower((string) $request->query('kategori'))])
+        ) {
+            return null;
+        }
+
+        return $this->respond(
+            false,
+            422,
+            'Kategori tidak dikenal. Gunakan: '.implode(', ', array_keys(self::KATEGORI)).'.'
+        );
+    }
+
+    /**
+     * Query luaran dengan seluruh filter dari request.
+     *
+     * @return Builder<Luaran>
+     */
+    private function filteredQuery(Request $request): Builder
+    {
+        $query = Luaran::query();
+
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('judul_buku', 'like', "%{$search}%")
@@ -256,16 +356,51 @@ class LuaranController extends Controller
             });
         }
 
-        // Filter spesifik berdasarkan relasi dan tahun
+        if ($request->filled('kategori')) {
+            $keywords = self::KATEGORI[
+                mb_strtolower((string) $request->query('kategori'))
+            ];
+
+            $query->whereHas('jenisLuaran', function ($q) use ($keywords) {
+                $q->where(function ($w) use ($keywords) {
+                    foreach ($keywords as $keyword) {
+                        $w->orWhereRaw(
+                            'LOWER(nama_jenis_luaran) LIKE ?',
+                            ['%'.$keyword.'%']
+                        );
+                    }
+                });
+            });
+        }
+
+        if ($request->filled('tahun')) {
+            $tahun = (int) $request->query('tahun');
+
+            $query->where(function ($q) use ($tahun) {
+                $q->where('tahun_terbit', $tahun)
+                    ->orWhereYear('tanggal_terbit', $tahun)
+                    ->orWhereYear('tanggal_seminar', $tahun)
+                    ->orWhereYear('tanggal_pendaftaran_hki', $tahun)
+                    ->orWhereYear('tanggal_terbit_sertifikat_hki', $tahun)
+                    ->orWhereYear('tanggal_pembuatan', $tahun);
+            });
+        }
+
         foreach (['id_jenis_luaran', 'id_kegiatan', 'id_dosen', 'tahun_terbit'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->query($filter));
             }
         }
 
-        $luaran = $query->latest()->paginate($request->integer('per_page', 10));
+        if ($request->filled('jenis')) {
+            $jenis = mb_strtolower((string) $request->query('jenis'));
 
-        return $this->respond(true, 200, 'Data luaran berhasil diambil.', $luaran);
+            $query->whereHas('kegiatan.jenisKegiatan', function ($q) use ($jenis) {
+                $q->whereRaw('LOWER(nama_jenis_kegiatan) = ?', [$jenis]);
+            });
+        }
+
+        return $query;
     }
 
     /**
@@ -281,24 +416,35 @@ class LuaranController extends Controller
 
         $validated = $validator->validated();
 
-        // Cek duplikasi DOI, Nomor Sertifikat, atau ISBN (Flowchart Fitur 8)
         $doi = $request->input('doi') ?? $request->input('doi_prosiding');
         $isbn = $request->input('isbn') ?? $request->input('isbn_prosiding');
         $nomorSertifikat = $request->input('nomor_sertifikat_hki');
 
         $isDuplicate = false;
+
         if (! empty($doi)) {
-            $isDuplicate = Luaran::where('doi', $doi)->orWhere('doi_prosiding', $doi)->exists();
+            $isDuplicate = Luaran::where('doi', $doi)
+                ->orWhere('doi_prosiding', $doi)
+                ->exists();
         }
+
         if (! $isDuplicate && ! empty($isbn)) {
-            $isDuplicate = Luaran::where('isbn', $isbn)->orWhere('isbn_prosiding', $isbn)->exists();
+            $isDuplicate = Luaran::where('isbn', $isbn)
+                ->orWhere('isbn_prosiding', $isbn)
+                ->exists();
         }
+
         if (! $isDuplicate && ! empty($nomorSertifikat)) {
-            $isDuplicate = Luaran::where('nomor_sertifikat_hki', $nomorSertifikat)->exists();
+            $isDuplicate = Luaran::where('nomor_sertifikat_hki', $nomorSertifikat)
+                ->exists();
         }
 
         if ($isDuplicate) {
-            return $this->respond(false, 422, 'Data Duplikat: DOI, Nomor Sertifikat, atau ISBN sudah terdaftar dalam sistem.');
+            return $this->respond(
+                false,
+                422,
+                'Data Duplikat: DOI, Nomor Sertifikat, atau ISBN sudah terdaftar dalam sistem.'
+            );
         }
 
         try {
@@ -306,10 +452,19 @@ class LuaranController extends Controller
                 return Luaran::create($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menyimpan data luaran: '.$e->getMessage());
+            return $this->respond(
+                false,
+                500,
+                'Gagal menyimpan data luaran: '.$e->getMessage()
+            );
         }
 
-        return $this->respond(true, 201, 'Data luaran berhasil ditambahkan.', $luaran->load($this->relations));
+        return $this->respond(
+            true,
+            201,
+            'Data luaran berhasil ditambahkan.',
+            $luaran->load($this->relations)
+        );
     }
 
     /**
@@ -337,7 +492,10 @@ class LuaranController extends Controller
             return $this->respond(false, 404, 'Data luaran tidak ditemukan.');
         }
 
-        $validator = Validator::make($request->all(), $this->rules($request, true, $luaran));
+        $validator = Validator::make(
+            $request->all(),
+            $this->rules($request, true, $luaran)
+        );
 
         if ($validator->fails()) {
             return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
@@ -350,10 +508,19 @@ class LuaranController extends Controller
                 $luaran->update($validated);
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal memperbarui data luaran: '.$e->getMessage());
+            return $this->respond(
+                false,
+                500,
+                'Gagal memperbarui data luaran: '.$e->getMessage()
+            );
         }
 
-        return $this->respond(true, 200, 'Data luaran berhasil diperbarui.', $luaran->fresh($this->relations));
+        return $this->respond(
+            true,
+            200,
+            'Data luaran berhasil diperbarui.',
+            $luaran->fresh($this->relations)
+        );
     }
 
     /**
@@ -367,15 +534,22 @@ class LuaranController extends Controller
             return $this->respond(false, 404, 'Data luaran tidak ditemukan.');
         }
 
-        // Cek keterkaitan ke Evidence (Flowchart Fitur 8)
         if ($luaran->evidence()->exists()) {
-            return $this->respond(false, 422, 'Luaran Masih Dipakai: Data luaran tidak dapat dihapus karena masih terkait dengan data evidence.');
+            return $this->respond(
+                false,
+                422,
+                'Luaran Masih Dipakai: Data luaran tidak dapat dihapus karena masih terkait dengan data evidence.'
+            );
         }
 
         try {
             $luaran->delete();
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menghapus data luaran: '.$e->getMessage());
+            return $this->respond(
+                false,
+                500,
+                'Gagal menghapus data luaran: '.$e->getMessage()
+            );
         }
 
         return $this->respond(true, 200, 'Data luaran berhasil dihapus.');

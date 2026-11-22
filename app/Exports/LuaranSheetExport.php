@@ -6,17 +6,20 @@ use App\Models\Luaran;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\Export;
 use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class LuaranSheetExport implements Export, FromQuery, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
+class LuaranSheetExport extends SafeExport implements Export, FromQuery, WithHeadings, WithMapping, WithTitle
 {
     private array $fields;
 
+    /**
+     * @param  Builder<Luaran>|null  $query
+     */
     public function __construct(
-        private readonly string $kategori
+        private readonly string $kategori,
+        private readonly ?Builder $baseQuery = null,
     ) {
         $this->fields = match ($kategori) {
             'Buku' => [
@@ -90,7 +93,9 @@ class LuaranSheetExport implements Export, FromQuery, ShouldAutoSize, WithHeadin
 
     public function query(): Builder
     {
-        return Luaran::query()
+        $query = $this->baseQuery ?? Luaran::query();
+
+        return $query
             ->with(['dosen', 'jenisLuaran'])
             ->whereHas('jenisLuaran', function (Builder $query): void {
                 $query->where(function (Builder $query): void {
@@ -124,7 +129,8 @@ class LuaranSheetExport implements Export, FromQuery, ShouldAutoSize, WithHeadin
                         ),
                     };
                 });
-            });
+            })
+            ->orderByDesc('id_luaran');
     }
 
     public function headings(): array
