@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
+use App\Http\Controllers\Api\EarlyWarningController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
 use App\Http\Controllers\Api\ProfileController;
@@ -91,6 +92,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(
 // Analisis Gap Kompetensi Dosen (Admin, Kaprodi, Asesor)
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->prefix('v1')->group(function () {
     Route::get('/gap-kompetensi-dosen', [GapKompetensiDosenController::class, 'index']);
+    Route::get('/early-warning', [EarlyWarningController::class, 'index']);
     Route::get('/produktivitas-per-dosen', [ProduktivitasPerDosenController::class, 'index']);
 });
 
