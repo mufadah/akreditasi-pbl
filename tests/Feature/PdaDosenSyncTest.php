@@ -64,7 +64,9 @@ test('pda enrichment only updates default positions and appends unmatched target
             'email_polines' => 'must-not-overwrite@example.test',
             'slug' => 'match-nip',
             'jabatan_fungsional' => 'Lektor',
+            'homebase_jurusan' => 'Teknik Elektro',
             'homebase_prodi_nama' => 'Akuntansi',
+            'jenjang' => 'D3',
         ],
         [
             'nama' => 'Nama PDA Berbeda',
@@ -73,7 +75,9 @@ test('pda enrichment only updates default positions and appends unmatched target
             'email_polines' => 'must-not-overwrite-either@example.test',
             'slug' => 'match-nidn',
             'jabatan_fungsional' => 'Asisten Ahli',
+            'homebase_jurusan' => 'Akuntansi',
             'homebase_prodi_nama' => 'Akuntansi',
+            'jenjang' => 'D3',
         ],
         [
             'nama' => 'NUR CONTOH',
@@ -82,7 +86,9 @@ test('pda enrichment only updates default positions and appends unmatched target
             'email_polines' => 'must-not-overwrite-name@example.test',
             'slug' => 'match-name',
             'jabatan_fungsional' => 'Lektor Kepala',
+            'homebase_jurusan' => 'Administrasi Bisnis',
             'homebase_prodi_nama' => 'Akuntansi',
+            'jenjang' => 'D3',
         ],
         [
             'nama' => 'Jabatan Sudah Spesifik',
@@ -90,7 +96,9 @@ test('pda enrichment only updates default positions and appends unmatched target
             'nip' => '198301012008011004',
             'slug' => 'protected',
             'jabatan_fungsional' => 'Lektor Kepala',
+            'homebase_jurusan' => 'Administrasi Bisnis',
             'homebase_prodi_nama' => 'Akuntansi',
+            'jenjang' => 'D3',
         ],
         [
             'nama' => 'Dosen Baru TRK',
@@ -100,6 +108,8 @@ test('pda enrichment only updates default positions and appends unmatched target
             'slug' => 'new-trk',
             'jabatan_fungsional' => 'Profesor',
             'pendidikan_terakhir' => 'S3',
+            'homebase_jurusan' => 'Teknik Elektro',
+            'jenjang' => 'D4',
             'homebase_prodi_nama' => 'Teknologi Rekayasa Komputer',
         ],
         [
@@ -110,6 +120,8 @@ test('pda enrichment only updates default positions and appends unmatched target
             'slug' => 'new-ti',
             'jabatan_fungsional' => 'Lektor',
             'pendidikan_terakhir' => 'S2',
+            'homebase_jurusan' => 'Teknik Elektro',
+            'jenjang' => 'D3',
             'homebase_prodi_nama' => 'Teknik Informatika',
         ],
         [
@@ -120,6 +132,8 @@ test('pda enrichment only updates default positions and appends unmatched target
             'slug' => 'new-mku',
             'jabatan_fungsional' => 'Asisten Ahli',
             'pendidikan_terakhir' => 'S2',
+            'homebase_jurusan' => 'Administrasi Bisnis',
+            'jenjang' => 'D3',
             'homebase_prodi_nama' => 'Administrasi Bisnis',
         ],
         [
@@ -130,6 +144,8 @@ test('pda enrichment only updates default positions and appends unmatched target
             'slug' => 'old-mku',
             'jabatan_fungsional' => 'Lektor',
             'pendidikan_terakhir' => 'S2',
+            'homebase_jurusan' => 'Administrasi Bisnis',
+            'jenjang' => 'D3',
             'homebase_prodi_nama' => 'Administrasi Bisnis',
         ],
     ];
@@ -174,7 +190,8 @@ test('pda enrichment only updates default positions and appends unmatched target
         ->expectsOutput('D4 Teknologi Rekayasa Komputer (DTPS): 1')
         ->expectsOutput('D3 Teknik Informatika (DTPS): 1')
         ->expectsOutput('Pengampu MKU lintas prodi (DTT): 1')
-        ->expectsOutput('Ditambahkan: 3 | Diperbarui: 3 | Dilewati: 0')
+        ->expectsOutput('Ditambahkan: 3 | Diperbarui: 7 | Dilewati: 0')
+        ->expectsOutput('Homebase jurusan/prodi dosen eksisting yang diisi: 4')
         ->assertSuccessful();
 
     expect($existingByNip->fresh()->jabatanAkademik->nama_jabatan)->toBe('Lektor')
@@ -182,15 +199,32 @@ test('pda enrichment only updates default positions and appends unmatched target
         ->and($existingByNip->fresh()->nama_dosen)->toBe('Nama Lokal Dengan NIP')
         ->and($existingByNip->fresh()->email)->toBe('existing-nip@example.test')
         ->and($existingByNip->fresh()->status_dosen)->toBe('DTT')
+        ->and($existingByNip->fresh()->jurusan)->toBe('Teknik Elektro')
+        ->and($existingByNip->fresh()->prodi)->toBe('D3 - Akuntansi')
         ->and($existingByNidn->fresh()->jabatanAkademik->nama_jabatan)->toBe('Asisten Ahli')
         ->and($existingByNidn->fresh()->nuptk)->toBe('198101012006011002')
         ->and($existingByNidn->fresh()->email)->toBe('existing-nidn@example.test')
+        ->and($existingByNidn->fresh()->jurusan)->toBe('Akuntansi')
         ->and($existingByName->fresh()->jabatanAkademik->nama_jabatan)->toBe('Lektor Kepala')
         ->and($protectedDosen->fresh()->jabatanAkademik->nama_jabatan)->toBe('Lektor');
 
-    $this->assertDatabaseHas('dosen', ['nidn' => '2000000001', 'status_dosen' => 'DTPS']);
-    $this->assertDatabaseHas('dosen', ['nidn' => '2000000002', 'status_dosen' => 'DTPS']);
-    $this->assertDatabaseHas('dosen', ['nidn' => '2000000003', 'status_dosen' => 'DTT']);
+    $this->assertDatabaseHas('dosen', [
+        'nidn' => '2000000001',
+        'status_dosen' => 'DTPS',
+        'jurusan' => 'Teknik Elektro',
+        'prodi' => 'D4 - Teknologi Rekayasa Komputer',
+    ]);
+    $this->assertDatabaseHas('dosen', [
+        'nidn' => '2000000002',
+        'status_dosen' => 'DTPS',
+        'prodi' => 'D3 - Teknik Informatika',
+    ]);
+    $this->assertDatabaseHas('dosen', [
+        'nidn' => '2000000003',
+        'status_dosen' => 'DTT',
+        'jurusan' => 'Administrasi Bisnis',
+        'prodi' => 'D3 - Administrasi Bisnis',
+    ]);
     $this->assertDatabaseMissing('dosen', ['nidn' => '2000000004']);
     $this->assertDatabaseCount('dosen_histories', 6);
     expect(JabatanAkademik::whereRaw('LOWER(nama_jabatan) = ?', ['profesor'])->exists())->toBeFalse();

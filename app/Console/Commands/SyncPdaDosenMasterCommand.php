@@ -31,6 +31,7 @@ class SyncPdaDosenMasterCommand extends Command
         $this->line("D3 Teknik Informatika (DTPS): {$result['d3_ti']}");
         $this->line("Pengampu MKU lintas prodi (DTT): {$result['mku']}");
         $this->line("Ditambahkan: {$result['created']} | Diperbarui: {$result['updated']} | Dilewati: {$result['skipped']}");
+        $this->line("Homebase jurusan/prodi dosen eksisting yang diisi: {$result['updated_homebase']}");
 
         if ($result['jabatan_distribution'] !== []) {
             $this->newLine();

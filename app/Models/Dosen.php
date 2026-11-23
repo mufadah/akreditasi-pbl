@@ -16,7 +16,18 @@ class Dosen extends Model
 
     protected $primaryKey = 'id_dosen';
 
-    protected $guarded = ['id_dosen'];
+    protected $fillable = [
+        'id_jabatan',
+        'id_pendidikan',
+        'nidn',
+        'nuptk',
+        'nama_dosen',
+        'email',
+        'status_dosen',
+        'sertifikasi',
+        'jurusan',
+        'prodi',
+    ];
 
     public function jabatanAkademik(): BelongsTo
     {

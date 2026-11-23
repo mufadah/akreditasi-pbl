@@ -176,12 +176,16 @@ test('manual academic changes are historized and summary fields are returned wit
         'jabatan_akademik' => 'Lektor',
         'pendidikan_terakhir' => 'S3',
         'sertifikasi_dosen' => 'Tersertifikasi',
+        'jurusan' => 'Teknik Elektro',
+        'prodi' => 'D4 - Teknologi Rekayasa Komputer',
     ]);
 
     $response->assertCreated()
         ->assertJsonPath('data.jabatan_akademik.nama_jabatan', 'Lektor')
         ->assertJsonPath('data.pendidikan_terakhir', 'S3')
-        ->assertJsonPath('data.sertifikasi_dosen', 'Tersertifikasi');
+        ->assertJsonPath('data.sertifikasi_dosen', 'Tersertifikasi')
+        ->assertJsonPath('data.jurusan', 'Teknik Elektro')
+        ->assertJsonPath('data.prodi', 'D4 - Teknologi Rekayasa Komputer');
 
     $dosen = Dosen::where('nidn', '0066554433')->firstOrFail();
     $this->assertDatabaseHas('dosen_histories', [
@@ -191,15 +195,24 @@ test('manual academic changes are historized and summary fields are returned wit
         'jabatan_akademik' => 'Lektor',
         'sertifikasi_dosen' => 'Tersertifikasi',
     ]);
+    $this->assertDatabaseHas('dosen', [
+        'id_dosen' => $dosen->id_dosen,
+        'jurusan' => 'Teknik Elektro',
+        'prodi' => 'D4 - Teknologi Rekayasa Komputer',
+    ]);
 
     $this->withToken($this->adminToken)->putJson("/api/dosen/{$dosen->id_dosen}", [
         'jabatan_akademik' => 'Asisten Ahli',
         'pendidikan_terakhir' => 'S2',
         'sertifikasi_dosen' => 'Belum Tersertifikasi',
+        'jurusan' => 'Teknik Elektro',
+        'prodi' => 'D4 - Teknologi Rekayasa Komputer',
     ])->assertOk()
         ->assertJsonPath('data.jabatan_akademik.nama_jabatan', 'Asisten Ahli')
         ->assertJsonPath('data.pendidikan_terakhir', 'S2')
-        ->assertJsonPath('data.sertifikasi_dosen', 'Belum Tersertifikasi');
+        ->assertJsonPath('data.sertifikasi_dosen', 'Belum Tersertifikasi')
+        ->assertJsonPath('data.jurusan', 'Teknik Elektro')
+        ->assertJsonPath('data.prodi', 'D4 - Teknologi Rekayasa Komputer');
 
     $this->assertDatabaseCount('dosen_histories', 2);
 
@@ -207,15 +220,46 @@ test('manual academic changes are historized and summary fields are returned wit
     $indexResponse->assertOk()
         ->assertJsonPath('data.data.0.pendidikan_terakhir', 'S2')
         ->assertJsonPath('data.data.0.jabatan_akademik.nama_jabatan', 'Asisten Ahli')
-        ->assertJsonPath('data.data.0.sertifikasi_dosen', 'Belum Tersertifikasi');
+        ->assertJsonPath('data.data.0.sertifikasi_dosen', 'Belum Tersertifikasi')
+        ->assertJsonPath('data.data.0.jurusan', 'Teknik Elektro')
+        ->assertJsonPath('data.data.0.prodi', 'D4 - Teknologi Rekayasa Komputer');
     $this->assertArrayNotHasKey('dosen_histories', $indexResponse->json('data.data.0'));
 
     $showResponse = $this->withToken($this->adminToken)->getJson("/api/dosen/{$dosen->id_dosen}");
     $showResponse->assertOk()
         ->assertJsonPath('data.pendidikan_terakhir', 'S2')
         ->assertJsonPath('data.jabatan_akademik.nama_jabatan', 'Asisten Ahli')
-        ->assertJsonPath('data.sertifikasi_dosen', 'Belum Tersertifikasi');
+        ->assertJsonPath('data.sertifikasi_dosen', 'Belum Tersertifikasi')
+        ->assertJsonPath('data.jurusan', 'Teknik Elektro')
+        ->assertJsonPath('data.prodi', 'D4 - Teknologi Rekayasa Komputer');
     $this->assertArrayNotHasKey('dosen_histories', $showResponse->json('data'));
+});
+
+test('jurusan and prodi are nullable strings limited to 255 characters', function () {
+    $payload = [
+        'nidn' => '0066554434',
+        'nama_dosen' => 'Dosen Validasi Homebase',
+        'jurusan' => str_repeat('J', 256),
+        'prodi' => 'Teknik Informatika',
+    ];
+
+    $this->withToken($this->adminToken)->postJson('/api/dosen', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['jurusan']);
+
+    $dosen = Dosen::create([
+        'id_jabatan' => 1,
+        'id_pendidikan' => 1,
+        'nidn' => '0066554435',
+        'nama_dosen' => 'Dosen Validasi Homebase Update',
+        'email' => 'validasi.homebase@example.test',
+        'status_dosen' => 'DTPS',
+    ]);
+
+    $this->withToken($this->adminToken)->putJson("/api/dosen/{$dosen->id_dosen}", [
+        'prodi' => str_repeat('P', 256),
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['prodi']);
 });
 
 test('dosen export downloads an xlsx file', function () {
@@ -226,11 +270,16 @@ test('dosen export downloads an xlsx file', function () {
 
     $response->assertOk();
     Excel::assertDownloaded('dosen.xlsx', function (DosenExport $export) use ($dosen): bool {
+        $dosen->jurusan = 'Teknik Elektro';
+        $dosen->prodi = 'D4 - Teknologi Rekayasa Komputer';
+
         expect($export->headings())->toBe([
             'NIDN',
             'Nama',
             'Jabatan Akademik',
             'Pendidikan Terakhir',
+            'Jurusan',
+            'Program Studi',
             'Serdos',
             'Status',
         ])->and($export->map($dosen))->toBe([
@@ -238,6 +287,8 @@ test('dosen export downloads an xlsx file', function () {
             $dosen->nama_dosen,
             $dosen->jabatanAkademik?->nama_jabatan,
             $dosen->pendidikan?->jenjang,
+            $dosen->jurusan,
+            $dosen->prodi,
             $dosen->sertifikasi,
             $dosen->status_dosen,
         ]);
