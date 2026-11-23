@@ -136,6 +136,9 @@ class SyncSwaggerFromPostman extends Command
         // Hapus endpoint auth bawaan Postman agar digantikan secara presisi oleh endpoint SSO live K1
         unset($paths['/api/login'], $paths['/api/register'], $paths['/api/me'], $paths['/api/logout']);
 
+        // Hapus endpoint evidence bawaan Postman agar digantikan secara presisi oleh rute resmi
+        unset($paths['/api/evidence'], $paths['/api/evidence/{id}'], $paths['/api/evidence/{id}/download'], $paths['/api/evidence/{id}/validasi'], $paths['/api/evidence/{id}/ganti-link']);
+
         // Tambahkan rute fitur lanjutan (Auth SSO K1, Sertifikasi, Reminder, Gap Analysis, Konfigurasi Metrik, Notifikasi & Audit)
         $suppPaths = $this->getSupplementaryPaths();
         foreach ($suppPaths as $suppPath => $suppOps) {
@@ -496,6 +499,234 @@ class SyncSwaggerFromPostman extends Command
     private function getSupplementaryPaths(): array
     {
         return [
+            '/api/evidence' => [
+                'get' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Daftar Repository Evidence',
+                    'description' => "Mengambil daftar repository evidence (dokumen bukti dukung akreditasi) dengan pagination dan filter.\n\n**Filter yang tersedia:**\n- `search`: Pencarian pada nama_file dan jenis_dokumen\n- `jenis_dokumen`: Filter jenis dokumen\n- `status_validasi`: Filter status (Menunggu Validasi / Valid / Ditolak)\n- `id_kegiatan`, `id_luaran`, `id_sertifikasi`, `id_kerja_sama`: Filter per entitas terkait\n- `per_page`: Jumlah data per halaman (default 10)",
+                    'operationId' => 'getEvidenceList',
+                    'security' => [['bearerAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'search', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string'], 'description' => 'Pencarian pada nama_file dan jenis_dokumen'],
+                        ['name' => 'jenis_dokumen', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string'], 'description' => 'Filter berdasarkan jenis dokumen'],
+                        ['name' => 'status_validasi', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['Menunggu Validasi', 'Valid', 'Ditolak']], 'description' => 'Filter status validasi'],
+                        ['name' => 'id_kegiatan', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Filter ID kegiatan'],
+                        ['name' => 'id_luaran', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Filter ID luaran'],
+                        ['name' => 'id_sertifikasi', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Filter ID sertifikasi'],
+                        ['name' => 'id_kerja_sama', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer'], 'description' => 'Filter ID kerja sama'],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 10], 'description' => 'Jumlah data per halaman'],
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1], 'description' => 'Nomor halaman'],
+                    ],
+                    'responses' => [
+                        '200' => ['description' => 'Data evidence berhasil diambil.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => true, 'code' => 200, 'message' => 'Data repository evidence berhasil diambil.', 'data' => ['current_page' => 1, 'data' => [['id_evidence' => 1, 'nama_file' => 'Proposal Penelitian Terapan 2026', 'jenis_dokumen' => 'Proposal Penelitian', 'url_drive' => 'https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing', 'tanggal_upload' => '2026-11-20', 'status_validasi' => 'Menunggu Validasi', 'catatan_validasi' => null]], 'total' => 1, 'per_page' => 10]]]]],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+                'post' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Tambah Evidence Baru',
+                    'description' => "Menyimpan metadata evidence dan tautan bukti dokumen.\n\n**Ketentuan:**\n- `nama_file`: Nama/judul dokumen dalam bentuk teks (bukan URL)\n- `url_drive`: Tautan bukti dari domain manapun (Google Drive, Dropbox, OneDrive, dll)\n- Jika URL sudah pernah digunakan, response 409 dikirim. Tambahkan `konfirmasi_lanjut: true` untuk melanjutkan.\n- `status_validasi` otomatis diset ke 'Menunggu Validasi'",
+                    'operationId' => 'storeEvidence',
+                    'security' => [['bearerAuth' => []]],
+                    'requestBody' => [
+                        'required' => true,
+                        'content' => [
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'required' => ['nama_file', 'jenis_dokumen', 'url_drive'],
+                                    'properties' => [
+                                        'nama_file' => ['type' => 'string', 'maxLength' => 255, 'example' => 'Proposal Penelitian Terapan 2026', 'description' => 'Nama/judul dokumen dalam bentuk teks (bukan URL)'],
+                                        'jenis_dokumen' => ['type' => 'string', 'maxLength' => 255, 'example' => 'Proposal Penelitian'],
+                                        'tanggal_upload' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2026-11-20'],
+                                        'url_drive' => ['type' => 'string', 'format' => 'uri', 'maxLength' => 2048, 'example' => 'https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing', 'description' => 'Tautan dokumen dari domain manapun (Google Drive, Dropbox, OneDrive, dll)'],
+                                        'id_kegiatan' => ['type' => 'integer', 'nullable' => true, 'example' => 1],
+                                        'id_luaran' => ['type' => 'integer', 'nullable' => true, 'example' => null],
+                                        'id_sertifikasi' => ['type' => 'integer', 'nullable' => true, 'example' => null],
+                                        'id_kerjasama' => ['type' => 'integer', 'nullable' => true, 'example' => null, 'description' => 'ID kerja sama (alias: id_kerja_sama)'],
+                                        'konfirmasi_lanjut' => ['type' => 'boolean', 'example' => false, 'description' => 'Set true untuk melanjutkan meskipun URL sudah pernah digunakan sebelumnya (duplikasi)'],
+                                    ],
+                                ],
+                                'example' => ['nama_file' => 'Proposal Penelitian Terapan 2026', 'jenis_dokumen' => 'Proposal Penelitian', 'tanggal_upload' => '2026-11-20', 'url_drive' => 'https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing', 'id_kegiatan' => 1, 'konfirmasi_lanjut' => false],
+                            ],
+                        ],
+                    ],
+                    'responses' => [
+                        '201' => ['description' => 'Evidence berhasil disimpan dan menunggu validasi.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => true, 'code' => 201, 'message' => 'Evidence berhasil disimpan dan menunggu validasi.', 'data' => ['id_evidence' => 1, 'nama_file' => 'Proposal Penelitian Terapan 2026', 'jenis_dokumen' => 'Proposal Penelitian', 'url_drive' => 'https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing', 'tanggal_upload' => '2026-11-20', 'status_validasi' => 'Menunggu Validasi']]]]],
+                        '409' => ['description' => 'Peringatan duplikasi URL. Tambahkan konfirmasi_lanjut: true untuk melanjutkan.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => false, 'code' => 409, 'message' => 'Peringatan: Tautan ini sudah pernah digunakan sebelumnya.', 'data' => ['is_duplicate' => true]]]]],
+                        '422' => ['description' => 'Validasi gagal.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ValidationErrorResponse']]]],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+            ],
+            '/api/evidence/{evidence}' => [
+                'get' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Detail Evidence',
+                    'description' => 'Mengambil detail satu record evidence beserta relasi (kerja_sama, kegiatan, luaran, sertifikasi, history, validator).',
+                    'operationId' => 'showEvidence',
+                    'security' => [['bearerAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'evidence', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer', 'example' => 1], 'description' => 'ID evidence (id_evidence)'],
+                    ],
+                    'responses' => [
+                        '200' => ['description' => 'Detail evidence berhasil diambil.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => true, 'code' => 200, 'message' => 'Detail evidence berhasil diambil.', 'data' => ['id_evidence' => 1, 'nama_file' => 'Proposal Penelitian Terapan 2026', 'jenis_dokumen' => 'Proposal Penelitian', 'url_drive' => 'https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing', 'tanggal_upload' => '2026-11-20', 'status_validasi' => 'Menunggu Validasi', 'catatan_validasi' => null, 'history' => []]]]]],
+                        '404' => ['description' => 'Data evidence tidak ditemukan.'],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+                'put' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Update Evidence (Metadata dan/atau URL)',
+                    'description' => "Memperbarui metadata evidence dan/atau tautan bukti dokumen.\n\n**Aturan penting:**\n1. Jika `url_drive` diubah, `alasan_perubahan` **wajib** diisi — URL lama diarsipkan ke riwayat.\n2. Perubahan `status_validasi` hanya diizinkan untuk role **ADMINISTRATOR**, **KAPRODI**, atau **ASESOR**. Role DOSEN akan mendapat response 403.\n3. Jika URL berubah dan `status_validasi` tidak dikirim secara eksplisit, status otomatis direset ke `Menunggu Validasi`.\n4. Riwayat perubahan URL disimpan di tabel `evidence_histories`.\n\n**Status validasi yang berlaku:** `Menunggu Validasi`, `Valid`, `Ditolak`",
+                    'operationId' => 'updateEvidence',
+                    'security' => [['bearerAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'evidence', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer', 'example' => 1], 'description' => 'ID evidence (id_evidence)'],
+                    ],
+                    'requestBody' => [
+                        'required' => true,
+                        'description' => 'Field yang ingin diperbarui (semua opsional, gunakan hanya yang perlu diubah)',
+                        'content' => [
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'nama_file' => ['type' => 'string', 'maxLength' => 255, 'example' => 'Proposal Penelitian Terapan 2026 (Revisi)', 'description' => 'Nama/judul dokumen dalam bentuk teks'],
+                                        'jenis_dokumen' => ['type' => 'string', 'maxLength' => 255, 'example' => 'Laporan Akhir'],
+                                        'tanggal_upload' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'example' => '2026-11-25'],
+                                        'url_drive' => ['type' => 'string', 'format' => 'uri', 'maxLength' => 2048, 'nullable' => true, 'example' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'description' => 'Tautan bukti baru. Jika diisi dan berbeda dari URL saat ini, wajib disertai alasan_perubahan'],
+                                        'alasan_perubahan' => ['type' => 'string', 'maxLength' => 255, 'nullable' => true, 'example' => 'Pembaruan berkas perbaikan stempel basah', 'description' => 'Wajib diisi jika url_drive berubah'],
+                                        'status_validasi' => ['type' => 'string', 'enum' => ['Menunggu Validasi', 'Valid', 'Ditolak'], 'example' => 'Valid', 'description' => 'Hanya dapat diubah oleh ADMINISTRATOR, KAPRODI, atau ASESOR'],
+                                        'catatan_validasi' => ['type' => 'string', 'nullable' => true, 'example' => 'Dokumen sudah lengkap dan sah.'],
+                                        'id_kegiatan' => ['type' => 'integer', 'nullable' => true, 'example' => 1],
+                                        'id_luaran' => ['type' => 'integer', 'nullable' => true, 'example' => null],
+                                        'id_sertifikasi' => ['type' => 'integer', 'nullable' => true, 'example' => null],
+                                        'id_kerjasama' => ['type' => 'integer', 'nullable' => true, 'example' => null],
+                                    ],
+                                ],
+                                'examples' => [
+                                    'update_metadata_only' => ['summary' => 'Update Metadata Saja (Tanpa Ganti URL)', 'value' => ['nama_file' => 'Proposal Penelitian Terapan 2026 (Revisi)', 'jenis_dokumen' => 'Laporan Akhir', 'tanggal_upload' => '2026-11-25']],
+                                    'update_with_url_change' => ['summary' => 'Update dengan Ganti URL (Wajib Alasan)', 'value' => ['nama_file' => 'Laporan Akhir Revisi', 'url_drive' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'alasan_perubahan' => 'Pembaruan berkas perbaikan stempel basah']],
+                                    'update_status_admin' => ['summary' => 'Update Status Validasi (Admin/Kaprodi/Asesor)', 'value' => ['status_validasi' => 'Valid', 'catatan_validasi' => 'Dokumen sudah lengkap dan sah.']],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'responses' => [
+                        '200' => ['description' => 'Data evidence berhasil diperbarui.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => true, 'code' => 200, 'message' => 'Data evidence berhasil diperbarui.', 'data' => ['id_evidence' => 1, 'nama_file' => 'Proposal Penelitian Terapan 2026 (Revisi)', 'jenis_dokumen' => 'Laporan Akhir', 'url_drive' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'status_validasi' => 'Menunggu Validasi', 'history' => [['evidence_id' => 1, 'url_lama' => 'https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing', 'url_baru' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'alasan_perubahan' => 'Pembaruan berkas perbaikan stempel basah']]]]]]],
+                        '403' => ['description' => 'Forbidden: Role DOSEN tidak diizinkan mengubah status_validasi.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => false, 'code' => 403, 'message' => 'Forbidden: Hanya Administrator, Kaprodi, atau Asesor yang dapat mengubah status validasi.', 'data' => ['required_roles' => ['ADMINISTRATOR', 'KAPRODI', 'ASESOR'], 'current_role' => 'DOSEN']]]]],
+                        '422' => ['description' => 'Validasi gagal (alasan_perubahan wajib jika URL berubah).', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ValidationErrorResponse']]]],
+                        '404' => ['description' => 'Data evidence tidak ditemukan.'],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+                'delete' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Hapus Evidence',
+                    'description' => 'Menghapus record evidence. Riwayat di evidence_histories akan ikut terhapus (cascade).',
+                    'operationId' => 'destroyEvidence',
+                    'security' => [['bearerAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'evidence', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer', 'example' => 1], 'description' => 'ID evidence (id_evidence)'],
+                    ],
+                    'responses' => [
+                        '200' => ['description' => 'Data evidence berhasil dihapus.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => true, 'code' => 200, 'message' => 'Data evidence berhasil dihapus.', 'data' => null]]]],
+                        '404' => ['description' => 'Data evidence tidak ditemukan.'],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+            ],
+            '/api/evidence/{id}/ganti-link' => [
+                'post' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Ganti Tautan Bukti Evidence (Arsip URL Lama)',
+                    'description' => "Mengganti tautan bukti evidence dan mengarsipkan URL lama ke riwayat perubahan (`evidence_histories`).\n\n**Ketentuan:**\n- `url_drive_baru`: URL dari domain manapun (Google Drive, Dropbox, OneDrive, dll)\n- `alasan_perubahan`: Wajib diisi\n- Status validasi otomatis direset ke `Menunggu Validasi`\n- URL lama disimpan di evidence_histories",
+                    'operationId' => 'gantiLinkEvidence',
+                    'security' => [['bearerAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer', 'example' => 1], 'description' => 'ID evidence'],
+                    ],
+                    'requestBody' => [
+                        'required' => true,
+                        'content' => [
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'required' => ['url_drive_baru', 'alasan_perubahan'],
+                                    'properties' => [
+                                        'url_drive_baru' => ['type' => 'string', 'format' => 'uri', 'maxLength' => 2048, 'example' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'description' => 'Tautan bukti baru dari domain manapun'],
+                                        'alasan_perubahan' => ['type' => 'string', 'maxLength' => 255, 'example' => 'Pindah platform penyimpanan dari Google Drive ke OneDrive'],
+                                    ],
+                                ],
+                                'example' => ['url_drive_baru' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'alasan_perubahan' => 'Pindah platform penyimpanan dari Google Drive ke OneDrive'],
+                            ],
+                        ],
+                    ],
+                    'responses' => [
+                        '200' => ['description' => 'Tautan bukti berhasil diganti, tautan lama diarsipkan, dan status di-reset ke Menunggu Validasi.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => true, 'code' => 200, 'message' => 'Tautan bukti berhasil diganti, tautan lama diarsipkan, dan status di-reset ke Menunggu Validasi.', 'data' => ['id_evidence' => 1, 'url_drive' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'status_validasi' => 'Menunggu Validasi', 'history' => [['url_lama' => 'https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing', 'url_baru' => 'https://onedrive.live.com/edit.aspx?cid=newlink999', 'alasan_perubahan' => 'Pindah platform penyimpanan dari Google Drive ke OneDrive']]]]]]],
+                        '422' => ['description' => 'Validasi gagal (URL sama atau alasan kosong).', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ValidationErrorResponse']]]],
+                        '404' => ['description' => 'Data evidence tidak ditemukan.'],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+            ],
+            '/api/evidence/{id}/validasi' => [
+                'post' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Validasi Evidence (Kaprodi / Asesor / Administrator)',
+                    'description' => "Workflow validasi evidence oleh pihak berwenang.\n\n**Hak Akses:** Hanya role ADMINISTRATOR, KAPRODI, atau ASESOR (middleware jwt.role).\n\n**Status yang diizinkan:**\n- `Valid`: Evidence dinyatakan sah dan memenuhi syarat akreditasi\n- `Ditolak`: Evidence ditolak — `catatan_validasi` **wajib** diisi\n\n**Status yang TIDAK diizinkan:** `Perlu Perbaikan` (tidak digunakan di sistem ini)",
+                    'operationId' => 'validasiEvidence',
+                    'security' => [['bearerAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer', 'example' => 1], 'description' => 'ID evidence'],
+                    ],
+                    'requestBody' => [
+                        'required' => true,
+                        'content' => [
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'required' => ['status_validasi'],
+                                    'properties' => [
+                                        'status_validasi' => ['type' => 'string', 'enum' => ['Valid', 'Ditolak'], 'example' => 'Valid', 'description' => 'Status hasil validasi. Hanya Valid atau Ditolak yang diizinkan.'],
+                                        'catatan_validasi' => ['type' => 'string', 'nullable' => true, 'example' => 'Dokumen proposal lengkap dan memenuhi syarat instrumen akreditasi LAM.', 'description' => 'Wajib diisi jika status Ditolak'],
+                                    ],
+                                ],
+                                'examples' => [
+                                    'validasi_valid' => ['summary' => 'Validasi — Setujui (Valid)', 'value' => ['status_validasi' => 'Valid', 'catatan_validasi' => 'Dokumen proposal lengkap, tanda tangan sah, memenuhi syarat instrumen akreditasi LAM.']],
+                                    'validasi_ditolak' => ['summary' => 'Validasi — Tolak (Ditolak)', 'value' => ['status_validasi' => 'Ditolak', 'catatan_validasi' => 'Tanda tangan mitra belum ada. Dokumen perlu dilengkapi sebelum divalidasi.']],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'responses' => [
+                        '200' => ['description' => 'Evidence berhasil divalidasi.', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/StandardResponse'], 'example' => ['success' => true, 'code' => 200, 'message' => 'Evidence berhasil divalidasi dengan status: Valid.', 'data' => ['id_evidence' => 1, 'status_validasi' => 'Valid', 'catatan_validasi' => 'Dokumen proposal lengkap.', 'divalidasi_oleh' => 1, 'tanggal_validasi' => '2026-11-23T10:00:00Z']]]]],
+                        '422' => ['description' => 'Validasi input gagal (status tidak valid atau catatan wajib tidak diisi).', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ValidationErrorResponse']]]],
+                        '404' => ['description' => 'Data evidence tidak ditemukan.'],
+                        '403' => ['description' => 'Forbidden: Hanya ADMINISTRATOR, KAPRODI, atau ASESOR yang dapat memvalidasi evidence.'],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+            ],
+            '/api/evidence/{id}/download' => [
+                'get' => [
+                    'tags' => ['Evidence'],
+                    'summary' => 'Unduh / Akses Berkas Fisik Evidence',
+                    'description' => 'Mengakses atau mengunduh berkas fisik evidence. Jika berkas disimpan sebagai file fisik di server, file diunduh langsung. Jika evidence hanya memiliki tautan URL, response mengembalikan redirect ke URL tersebut.',
+                    'operationId' => 'downloadEvidence',
+                    'security' => [['bearerAuth' => []]],
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer', 'example' => 1], 'description' => 'ID evidence'],
+                    ],
+                    'responses' => [
+                        '200' => ['description' => 'Berkas berhasil diunduh atau redirect ke URL tautan.'],
+                        '404' => ['description' => 'Data evidence atau berkas tidak ditemukan.'],
+                        '401' => ['description' => 'Unauthenticated.'],
+                    ],
+                ],
+            ],
+
             '/api/auth/login' => [
                 'post' => [
                     'tags' => ['Auth'],

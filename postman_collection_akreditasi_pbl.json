@@ -2635,64 +2635,10 @@
                     "response": []
                 },
                 {
-                    "name": "6.2 POST Upload Evidence",
+                    "name": "6.2 POST Tambah Evidence",
                     "item": [
                         {
-                            "name": "6.2.1 POST Upload Berkas Fisik Evidence",
-                            "request": {
-                                "method": "POST",
-                                "header": [
-                                    {
-                                        "key": "Accept",
-                                        "value": "application/json",
-                                        "type": "text"
-                                    }
-                                ],
-                                "url": {
-                                    "raw": "{{base_url}}/evidence",
-                                    "host": [
-                                        "{{base_url}}"
-                                    ],
-                                    "path": [
-                                        "evidence"
-                                    ]
-                                },
-                                "body": {
-                                    "mode": "formdata",
-                                    "formdata": [
-                                        {
-                                            "key": "file",
-                                            "type": "file",
-                                            "src": [],
-                                            "description": "Berkas bukti dukung fisik PDF / Gambar (max 10MB)"
-                                        },
-                                        {
-                                            "key": "jenis_dokumen",
-                                            "value": "Proposal Penelitian Terapan",
-                                            "type": "text"
-                                        },
-                                        {
-                                            "key": "id_kegiatan",
-                                            "value": "1",
-                                            "type": "text"
-                                        },
-                                        {
-                                            "key": "id_kerja_sama",
-                                            "value": "1",
-                                            "type": "text"
-                                        },
-                                        {
-                                            "key": "status_validasi",
-                                            "value": "Menunggu Validasi",
-                                            "type": "text"
-                                        }
-                                    ]
-                                }
-                            },
-                            "response": []
-                        },
-                        {
-                            "name": "6.2.2 POST Simpan Tautan Google Drive Evidence",
+                            "name": "6.2.1 POST Tambah Evidence - Simpan Tautan Bukti",
                             "request": {
                                 "method": "POST",
                                 "header": [
@@ -2708,17 +2654,94 @@
                                     }
                                 ],
                                 "url": {
-                                    "raw": "{{base_url}}/evidence",
+                                    "raw": "{{base_url}}/api/evidence",
                                     "host": [
                                         "{{base_url}}"
                                     ],
                                     "path": [
+                                        "api",
                                         "evidence"
                                     ]
                                 },
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"nama_file\": \"https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing\",\n    \"jenis_dokumen\": \"Laporan Kemajuan Penelitian & Logbook 70%\",\n    \"id_kegiatan\": 1,\n    \"status_validasi\": \"Menunggu Validasi\",\n    \"konfirmasi_lanjut\": true\n}",
+                                    "raw": "{\n    \"nama_file\": \"Proposal Penelitian Terapan 2026\",\n    \"jenis_dokumen\": \"Proposal Penelitian\",\n    \"tanggal_upload\": \"2026-11-20\",\n    \"url_drive\": \"https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing\",\n    \"id_kegiatan\": 1,\n    \"konfirmasi_lanjut\": false\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "6.2.2 POST Tambah Evidence - URL Non-Google Drive (Dropbox / OneDrive / Lainnya)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/evidence",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "evidence"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_file\": \"Laporan Kemajuan Kerja Sama PT Maju 2026\",\n    \"jenis_dokumen\": \"Laporan Kemajuan\",\n    \"tanggal_upload\": \"2026-11-20\",\n    \"url_drive\": \"https://www.dropbox.com/s/abcdef123/laporan-kemajuan.pdf?dl=0\",\n    \"id_kerjasama\": 1,\n    \"konfirmasi_lanjut\": false\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "6.2.3 POST Tambah Evidence - Dengan Konfirmasi Duplikasi URL",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/evidence",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "evidence"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_file\": \"Sertifikat Dosen Teladan 2026\",\n    \"jenis_dokumen\": \"Sertifikat\",\n    \"url_drive\": \"https://drive.google.com/file/d/1xYz89AbCdEfGhIjKlMn/view?usp=sharing\",\n    \"id_sertifikasi\": 1,\n    \"konfirmasi_lanjut\": true\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -2780,7 +2803,7 @@
                     "response": []
                 },
                 {
-                    "name": "6.5 POST Review Validasi Kaprodi",
+                    "name": "6.5 POST Review Validasi (Kaprodi / Asesor / Administrator)",
                     "request": {
                         "method": "POST",
                         "header": [
@@ -2796,11 +2819,12 @@
                             }
                         ],
                         "url": {
-                            "raw": "{{base_url}}/evidence/1/validasi",
+                            "raw": "{{base_url}}/api/evidence/1/validasi",
                             "host": [
                                 "{{base_url}}"
                             ],
                             "path": [
+                                "api",
                                 "evidence",
                                 "1",
                                 "validasi"
@@ -2808,7 +2832,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"status_validasi\": \"Valid\",\n    \"catatan_validasi\": \"Dokumen proposal lengkap, tanda tangan mitra dan ketua peneliti sah, memenuhi syarat instrumen akreditasi LAM.\"\n}",
+                            "raw": "{\n    \"status_validasi\": \"Valid\",\n    \"catatan_validasi\": \"Dokumen proposal lengkap, tanda tangan sah, memenuhi syarat instrumen akreditasi LAM.\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -2819,7 +2843,7 @@
                     "response": []
                 },
                 {
-                    "name": "6.6 POST Ganti Link Drive",
+                    "name": "6.5b POST Validasi - Tolak Evidence (dengan Catatan)",
                     "request": {
                         "method": "POST",
                         "header": [
@@ -2835,19 +2859,20 @@
                             }
                         ],
                         "url": {
-                            "raw": "{{base_url}}/evidence/1/ganti-link",
+                            "raw": "{{base_url}}/api/evidence/1/validasi",
                             "host": [
                                 "{{base_url}}"
                             ],
                             "path": [
+                                "api",
                                 "evidence",
                                 "1",
-                                "ganti-link"
+                                "validasi"
                             ]
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"url_drive_baru\": \"https://drive.google.com/file/d/1NewLinkUpdatedRevisi2025/view?usp=sharing\",\n    \"alasan_perubahan\": \"Pembaruan berkas perbaikan stempel basah kemitraan dan lembar pengesahan\"\n}",
+                            "raw": "{\n    \"status_validasi\": \"Ditolak\",\n    \"catatan_validasi\": \"Tanda tangan mitra belum ada. Dokumen perlu dilengkapi sebelum divalidasi.\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -2858,7 +2883,169 @@
                     "response": []
                 },
                 {
-                    "name": "6.7 DELETE Evidence",
+                    "name": "6.6 POST Ganti Tautan Bukti (Domain Bebas - Arsip URL Lama)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/evidence/1/ganti-link",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "evidence",
+                                "1",
+                                "ganti-link"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"url_drive_baru\": \"https://onedrive.live.com/edit.aspx?cid=newlink999\",\n    \"alasan_perubahan\": \"Pindah platform penyimpanan dari Google Drive ke OneDrive\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "6.7 PUT Update Evidence",
+                    "item": [
+                        {
+                            "name": "6.7.1 PUT Update Metadata Saja (Tanpa Ganti URL)",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/evidence/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "evidence",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_file\": \"Proposal Penelitian Terapan 2026 (Revisi)\",\n    \"jenis_dokumen\": \"Proposal Penelitian\",\n    \"tanggal_upload\": \"2026-11-25\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "6.7.2 PUT Update dengan Ganti URL (Wajib Alasan Perubahan)",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/evidence/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "evidence",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"nama_file\": \"Laporan Akhir Kerja Sama Revisi\",\n    \"jenis_dokumen\": \"Laporan Akhir\",\n    \"tanggal_upload\": \"2026-11-25\",\n    \"url_drive\": \"https://drive.google.com/file/d/1NewRevisedDoc2026/view?usp=sharing\",\n    \"alasan_perubahan\": \"Pembaruan berkas perbaikan stempel basah dan lembar pengesahan\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "6.7.3 PUT Update Status Validasi (Khusus Administrator / Kaprodi / Asesor)",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/evidence/1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "evidence",
+                                        "1"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"status_validasi\": \"Valid\",\n    \"catatan_validasi\": \"Dokumen sudah lengkap dan sah.\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "6.8 DELETE Evidence",
                     "request": {
                         "method": "DELETE",
                         "header": [
@@ -2869,11 +3056,12 @@
                             }
                         ],
                         "url": {
-                            "raw": "{{base_url}}/evidence/1",
+                            "raw": "{{base_url}}/api/evidence/1",
                             "host": [
                                 "{{base_url}}"
                             ],
                             "path": [
+                                "api",
                                 "evidence",
                                 "1"
                             ]
