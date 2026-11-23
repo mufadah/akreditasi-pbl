@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SertifikasiController;
+use App\Http\Controllers\Api\ProduktivitasPerDosenController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
 use App\Services\K1ApiService;
@@ -90,6 +91,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(
 // Analisis Gap Kompetensi Dosen (Admin, Kaprodi, Asesor)
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->prefix('v1')->group(function () {
     Route::get('/gap-kompetensi-dosen', [GapKompetensiDosenController::class, 'index']);
+    Route::get('/produktivitas-per-dosen', [ProduktivitasPerDosenController::class, 'index']);
 });
 
 // 3. Menu Tridharma, Repository Evidence, & Interaksi (Admin, Kaprodi, Dosen, Asesor)
