@@ -25,7 +25,7 @@ class Kegiatan extends Model
         'in_kind',
         'afiliasi',
         'jenis_skim',
-    ];  
+    ];
 
     /**
      * @return array<string, string>
