@@ -4,15 +4,15 @@ namespace App\Exports;
 
 use App\Models\Luaran;
 use Illuminate\Database\Eloquent\Builder;
-use Maatwebsite\Excel\Concerns\Export;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class LuaranExport extends SafeExport implements Export, FromQuery, WithHeadings, WithMapping
+class LuaranExport extends SafeExport implements FromQuery, WithHeadings, WithMapping
 {
     /**
-     * Kolom khusus per kategori: [judul kolom, atribut model].
+     * Kolom khusus per kategori ala SINTA: [judul kolom, atribut model].
+     * Kategori kosong/produk memakai kolom umum.
      *
      * @var array<string, array<int, array{0: string, 1: string}>>
      */
@@ -99,11 +99,7 @@ class LuaranExport extends SafeExport implements Export, FromQuery, WithHeadings
             ? array_column(self::KOLOM[$this->kategori], 0)
             : ['Judul'];
 
-        return array_merge(
-            ['No', 'Jenis Luaran', 'Penulis'],
-            $khusus,
-            ['Tahun', 'Kegiatan Terkait']
-        );
+        return array_merge(['No', 'Jenis Luaran', 'Penulis'], $khusus, ['Tahun', 'Kegiatan Terkait']);
     }
 
     /**
@@ -113,45 +109,24 @@ class LuaranExport extends SafeExport implements Export, FromQuery, WithHeadings
     public function map($row): array
     {
         $jenis = $row->jenisLuaran;
-
-        $namaJenis = trim(
-            ($jenis?->nama_jenis_luaran ?? '')
-            .($jenis?->indeks ? ' ('.$jenis->indeks.')' : '')
-        );
+        $namaJenis = trim(($jenis?->nama_jenis_luaran ?? '').($jenis?->indeks ? ' ('.$jenis->indeks.')' : ''));
 
         if ($this->kategori !== null && isset(self::KOLOM[$this->kategori])) {
-            $khusus = array_map(
-                fn (array $kolom) => $this->nilai($row, $kolom[1]),
-                self::KOLOM[$this->kategori]
-            );
+            $khusus = array_map(fn (array $kolom) => $this->nilai($row, $kolom[1]), self::KOLOM[$this->kategori]);
         } else {
             $khusus = [$this->judul($row)];
         }
 
         return array_merge(
-            [
-                ++$this->nomor,
-                $namaJenis !== '' ? $namaJenis : null,
-                $row->dosen?->nama_dosen,
-            ],
+            [++$this->nomor, $namaJenis !== '' ? $namaJenis : null, $row->dosen?->nama_dosen],
             $khusus,
-            [
-                $this->tahun($row),
-                $row->kegiatan?->judul_kegiatan,
-            ]
+            [$this->tahun($row), $row->kegiatan?->judul_kegiatan],
         );
     }
 
     private function judul(Luaran $luaran): ?string
     {
-        foreach ([
-            'judul_buku',
-            'nama_jurnal',
-            'nama_prosiding',
-            'nama_seminar',
-            'judul_hak_cipta',
-            'nama_produk',
-        ] as $atribut) {
+        foreach (['judul_buku', 'nama_jurnal', 'nama_prosiding', 'nama_seminar', 'judul_hak_cipta', 'nama_produk'] as $atribut) {
             if (filled($luaran->{$atribut})) {
                 return (string) $luaran->{$atribut};
             }
@@ -177,13 +152,7 @@ class LuaranExport extends SafeExport implements Export, FromQuery, WithHeadings
             return $luaran->tahun_terbit;
         }
 
-        foreach ([
-            'tanggal_terbit',
-            'tanggal_seminar',
-            'tanggal_terbit_sertifikat_hki',
-            'tanggal_pendaftaran_hki',
-            'tanggal_pembuatan',
-        ] as $atribut) {
+        foreach (['tanggal_terbit', 'tanggal_seminar', 'tanggal_terbit_sertifikat_hki', 'tanggal_pendaftaran_hki', 'tanggal_pembuatan'] as $atribut) {
             if ($luaran->{$atribut} instanceof \DateTimeInterface) {
                 return (int) $luaran->{$atribut}->format('Y');
             }
