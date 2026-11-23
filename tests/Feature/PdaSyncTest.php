@@ -1,11 +1,17 @@
 <?php
 
+use App\Enums\PdaVerificationCode;
+use App\Enums\PdaVerificationStatus;
 use App\Models\Dosen;
 use App\Models\Kegiatan;
 use App\Models\Luaran;
+use App\Models\PdaRecord;
 use App\Services\PdaSyncService;
+use App\Services\PdaVerification\PdaDuplicateDetector;
+use App\Services\PdaVerification\PdaVerificationService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -190,4 +196,217 @@ test('pda import-dosen command runs successfully with homebase and outside lectu
         'id_dosen' => Dosen::where('nidn', '8888777766')->value('id_dosen'),
         'sumber_data' => 'PDA',
     ]);
+});
+
+/**
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function validPdaRecord(array $overrides = []): array
+{
+    return array_merge([
+        'judul' => 'Sistem Informasi Akreditasi Berbasis Web',
+        'penulis' => 'Budi Santoso',
+        'tahun' => '2024',
+        'jenis' => 'Jurnal',
+        'link_universal' => 'https://jurnal.example.test/artikel/1',
+    ], $overrides);
+}
+
+function fakePdaLinks(): void
+{
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://jurnal.example.test/*' => Http::response('<html>Artikel publik</html>', 200),
+        'https://moved.example.test/old' => Http::response('', 301, ['Location' => '/artikel/baru']),
+        'https://moved.example.test/artikel/baru' => Http::response('<html>Artikel publik</html>', 200),
+        'https://notfound.example.test/*' => Http::response('Not Found', 404),
+        'https://error.example.test/*' => Http::response('Server Error', 500),
+        'https://redirect-login.example.test/*' => Http::response('', 302, ['Location' => '/login?next=/artikel']),
+    ]);
+}
+
+test('pda verification stores a fully valid record as verified', function () {
+    fakePdaLinks();
+
+    $report = app(PdaVerificationService::class)->verifyAndStore([
+        validPdaRecord(),
+        validPdaRecord([
+            'judul' => 'Buku Ajar Jaringan Komputer',
+            'jenis' => 'buku',
+            'tahun' => 2023,
+            'link_universal' => 'https://moved.example.test/old',
+        ]),
+    ]);
+
+    expect($report->passedCount())->toBe(2)
+        ->and($report->failedCount())->toBe(0);
+
+    $record = PdaRecord::query()->where('judul', 'Sistem Informasi Akreditasi Berbasis Web')->firstOrFail();
+    expect($record->verification_status)->toBe(PdaVerificationStatus::Verified)
+        ->and($record->verification_codes)->toBe([])
+        ->and($record->verification_notes)->toBeNull()
+        ->and($record->verified_at)->not->toBeNull();
+
+    $redirected = PdaRecord::query()->where('judul', 'Buku Ajar Jaringan Komputer')->firstOrFail();
+    expect($redirected->verification_status)->toBe(PdaVerificationStatus::Verified)
+        ->and($redirected->jenis)->toBe('Buku')
+        ->and($redirected->tahun)->toBe('2023');
+
+    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://moved.example.test/artikel/baru');
+});
+
+test('pda verification stores records with missing or invalid fields as verification_failed', function () {
+    fakePdaLinks();
+
+    app(PdaVerificationService::class)->verifyAndStore([
+        validPdaRecord(['judul' => '   ']),
+        validPdaRecord(['judul' => 'Tanpa Penulis', 'penulis' => null]),
+        validPdaRecord(['judul' => 'Tahun Dua Digit', 'tahun' => '24']),
+        validPdaRecord(['judul' => 'Tahun Huruf', 'tahun' => '20a4']),
+        validPdaRecord(['judul' => 'Jenis Tidak Dikenal', 'jenis' => 'Skripsi']),
+        validPdaRecord(['judul' => 'Tanpa Link', 'link_universal' => '']),
+    ]);
+
+    $failed = PdaRecord::query()->verificationFailed()->get();
+    expect($failed)->toHaveCount(6)
+        ->and(PdaRecord::query()->verified()->count())->toBe(0);
+
+    foreach ($failed as $record) {
+        expect($record->verification_codes)->toBe([PdaVerificationCode::MissingField->value]);
+    }
+
+    expect(PdaRecord::query()->whereNull('judul')->value('verification_notes'))->toContain('judul wajib diisi')
+        ->and(PdaRecord::query()->where('judul', 'Tanpa Penulis')->value('verification_notes'))->toContain('penulis wajib diisi')
+        ->and(PdaRecord::query()->where('judul', 'Tahun Dua Digit')->value('verification_notes'))->toContain('tepat 4 digit')
+        ->and(PdaRecord::query()->where('judul', 'Tahun Huruf')->value('verification_notes'))->toContain('tepat 4 digit')
+        ->and(PdaRecord::query()->where('judul', 'Jenis Tidak Dikenal')->value('verification_notes'))->toContain('Jurnal, Prosiding, Buku, HKI, Produk')
+        ->and(PdaRecord::query()->where('judul', 'Tanpa Link')->value('verification_notes'))->toContain('link universal wajib diisi');
+});
+
+test('pda verification flags duplicates against the database and within the same batch', function () {
+    fakePdaLinks();
+
+    $existing = PdaRecord::factory()->create([
+        'judul' => 'Analisis Data Akreditasi',
+        'penulis' => 'Siti Aminah',
+        'tahun' => '2024',
+        'duplicate_key' => PdaDuplicateDetector::makeKey('Analisis Data Akreditasi', 'Siti Aminah', '2024'),
+    ]);
+    PdaRecord::factory()->verificationFailed()->create([
+        'judul' => 'Riset Yang Pernah Gagal',
+        'penulis' => 'Andi',
+        'tahun' => '2025',
+        'duplicate_key' => PdaDuplicateDetector::makeKey('Riset Yang Pernah Gagal', 'Andi', '2025'),
+    ]);
+
+    $report = app(PdaVerificationService::class)->verifyAndStore([
+        validPdaRecord(['judul' => '  ANALISIS   data akreditasi ', 'penulis' => 'siti aminah', 'tahun' => 2024]),
+        validPdaRecord(['judul' => 'Publikasi Kembar']),
+        validPdaRecord(['judul' => 'publikasi kembar ', 'penulis' => ' BUDI SANTOSO']),
+        validPdaRecord(['judul' => 'Riset Yang Pernah Gagal', 'penulis' => 'Andi', 'tahun' => '2025']),
+    ]);
+
+    [$dbDuplicate, $original, $batchDuplicate, $retried] = $report->results;
+
+    expect($dbDuplicate->codes())->toBe([PdaVerificationCode::Duplicate])
+        ->and($dbDuplicate->notes())->toContain("pda_records #{$existing->id}")
+        ->and($original->passed())->toBeTrue()
+        ->and($batchDuplicate->codes())->toBe([PdaVerificationCode::Duplicate])
+        ->and($batchDuplicate->notes())->toContain('record #2 pada batch yang sama')
+        ->and($retried->passed())->toBeTrue()
+        ->and($report->countByCode(PdaVerificationCode::Duplicate))->toBe(2);
+
+    expect(PdaRecord::query()->find($batchDuplicate->storedId)->verification_status)->toBe(PdaVerificationStatus::VerificationFailed)
+        ->and(PdaRecord::query()->find($batchDuplicate->storedId)->verification_codes)->toBe(['DUPLICATE'])
+        ->and(PdaRecord::query()->verified()->where('judul', 'Publikasi Kembar')->count())->toBe(1);
+});
+
+test('pda verification flags inaccessible, forbidden and malformed links', function () {
+    fakePdaLinks();
+
+    $report = app(PdaVerificationService::class)->verifyAndStore([
+        validPdaRecord(['judul' => 'Link 404', 'link_universal' => 'https://notfound.example.test/artikel']),
+        validPdaRecord(['judul' => 'Link 500', 'link_universal' => 'https://error.example.test/artikel']),
+        validPdaRecord(['judul' => 'Redirect Login', 'link_universal' => 'https://redirect-login.example.test/artikel']),
+        validPdaRecord(['judul' => 'Google Drive', 'link_universal' => 'https://drive.google.com/file/d/abc123/view']),
+        validPdaRecord(['judul' => 'Google Docs', 'link_universal' => 'https://docs.google.com/document/d/abc123']),
+        validPdaRecord(['judul' => 'Halaman Dashboard', 'link_universal' => 'https://jurnal.example.test/dashboard/artikel']),
+        validPdaRecord(['judul' => 'Halaman Signin', 'link_universal' => 'https://jurnal.example.test/signin']),
+        validPdaRecord(['judul' => 'URL Malformed', 'link_universal' => 'htp:/bukan url valid']),
+        validPdaRecord(['judul' => 'URL Tanpa Skema', 'link_universal' => 'jurnal.example.test/artikel']),
+    ]);
+
+    $codesByTitle = collect($report->results)->mapWithKeys(fn ($result) => [
+        $result->record->judul => array_map(fn (PdaVerificationCode $code) => $code->value, $result->codes()),
+    ])->all();
+
+    expect($codesByTitle)->toBe([
+        'Link 404' => ['INVALID_LINK'],
+        'Link 500' => ['INVALID_LINK'],
+        'Redirect Login' => ['INVALID_LINK'],
+        'Google Drive' => ['INVALID_LINK'],
+        'Google Docs' => ['INVALID_LINK'],
+        'Halaman Dashboard' => ['INVALID_LINK'],
+        'Halaman Signin' => ['INVALID_LINK'],
+        'URL Malformed' => ['MALFORMED_LINK'],
+        'URL Tanpa Skema' => ['MALFORMED_LINK'],
+    ]);
+
+    expect(PdaRecord::query()->where('judul', 'Link 404')->value('verification_notes'))->toContain('HTTP 404')
+        ->and(PdaRecord::query()->where('judul', 'Link 500')->value('verification_notes'))->toContain('HTTP 500')
+        ->and(PdaRecord::query()->where('judul', 'Redirect Login')->value('verification_notes'))->toContain('/login')
+        ->and(PdaRecord::query()->where('judul', 'Google Drive')->value('verification_notes'))->toContain('Google Drive')
+        ->and(PdaRecord::query()->verified()->count())->toBe(0);
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'google.com')
+        || str_contains($request->url(), '/login')
+        || str_contains($request->url(), '/dashboard'));
+});
+
+test('pda verification report summarises counts, integrity impact and problematic records', function () {
+    fakePdaLinks();
+
+    $records = [
+        validPdaRecord(),
+        validPdaRecord(['penulis' => 'budi santoso']),
+        validPdaRecord(['judul' => 'Link Mati', 'link_universal' => 'https://notfound.example.test/x']),
+        validPdaRecord(['judul' => 'Link Rusak', 'link_universal' => 'not-a-url']),
+        validPdaRecord(['judul' => '']),
+    ];
+
+    $dryRun = app(PdaVerificationService::class)->verify($records);
+    expect($dryRun->totalRecords())->toBe(5)
+        ->and(PdaRecord::query()->count())->toBe(0);
+
+    $report = app(PdaVerificationService::class)->verifyAndStore($records)->toArray();
+
+    expect($report['summary'])->toMatchArray([
+        'total_records' => 5,
+        'passed_count' => 1,
+        'failed_count' => 4,
+        'duplicate_count' => 1,
+        'invalid_link_count' => 1,
+        'missing_field_count' => 1,
+        'malformed_link_count' => 1,
+    ])
+        ->and($report['summary']['data_integrity_impact']['integrity_score'])->toBe(20.0)
+        ->and($report['summary']['data_integrity_impact']['level'])->toBe('high')
+        ->and($report['summary']['data_integrity_impact']['summary'])->toContain('4 dari 5 record (80%)')
+        ->and($report['problematic_records'])->toHaveCount(4)
+        ->and(array_column($report['problematic_records'], 'codes'))->toBe([
+            ['DUPLICATE'],
+            ['INVALID_LINK'],
+            ['MALFORMED_LINK'],
+            ['MISSING_FIELD'],
+        ])
+        ->and(array_column($report['problematic_records'], 'status'))->each->toBe('verification_failed')
+        ->and($report['problematic_records'][0]['issues'][0])->toHaveKeys(['code', 'field', 'message'])
+        ->and(json_encode(app(PdaVerificationService::class)->verify([])))->toBe(
+            '{"summary":{"total_records":0,"passed_count":0,"failed_count":0,"duplicate_count":0,"invalid_link_count":0,"missing_field_count":0,"malformed_link_count":0,"data_integrity_impact":{"integrity_score":100,"level":"none","summary":"Tidak ada record yang diproses."}},"problematic_records":[]}'
+        );
+
+    expect(PdaRecord::query()->count())->toBe(5)
+        ->and(PdaRecord::query()->verified()->count())->toBe(1)
+        ->and(PdaRecord::query()->verificationFailed()->count())->toBe(4);
 });
