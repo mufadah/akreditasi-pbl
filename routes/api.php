@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\JabatanAkademikController;
 use App\Http\Controllers\Api\JenisKegiatanController;
 use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
+use App\Http\Controllers\Api\AssessmentPenelitianDetailController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\KonfigurasiMetrikController;
@@ -93,6 +94,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->prefix('v1')->group(function () {
     Route::get('/gap-kompetensi-dosen', [GapKompetensiDosenController::class, 'index']);
     Route::get('/early-warning', [EarlyWarningController::class, 'index']);
+    Route::get('/assessment/penelitian-detail', [AssessmentPenelitianDetailController::class, 'index']);
     Route::get('/produktivitas-per-dosen', [ProduktivitasPerDosenController::class, 'index']);
 });
 
