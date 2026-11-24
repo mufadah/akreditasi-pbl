@@ -51,4 +51,54 @@ return [
             ],
         ],
     ],
+        'pkm' => [
+        'PKM-01' => [
+            'nama' => 'Rata-rata jumlah kegiatan PkM DTPS pada tahun penilaian',
+            'metrik' => 'rata_kegiatan',
+            'satuan' => 'kegiatan PkM per DTPS',
+            'bobot' => 0.35,
+            'rubrik' => [
+                ['skor' => 4, 'min' => 1.0],
+                ['skor' => 3, 'min' => 0.75],
+                ['skor' => 2, 'min' => 0.5],
+                ['skor' => 1, 'min' => 0.25],
+            ],
+        ],
+        'PKM-02' => [
+            'nama' => 'Persentase DTPS yang terlibat PkM',
+            'metrik' => 'persen_dosen_terlibat',
+            'satuan' => 'persen DTPS terlibat',
+            'bobot' => 0.25,
+            'rubrik' => [
+                ['skor' => 4, 'min' => 90],
+                ['skor' => 3, 'min' => 70],
+                ['skor' => 2, 'min' => 50],
+                ['skor' => 1, 'min' => 25],
+            ],
+        ],
+        'PKM-03' => [
+            'nama' => 'Rata-rata luaran PkM per DTPS',
+            'metrik' => 'rata_luaran',
+            'satuan' => 'luaran per DTPS',
+            'bobot' => 0.25,
+            'rubrik' => [
+                ['skor' => 4, 'min' => 1.0],
+                ['skor' => 3, 'min' => 0.75],
+                ['skor' => 2, 'min' => 0.5],
+                ['skor' => 1, 'min' => 0.25],
+            ],
+        ],
+        'PKM-04' => [
+            'nama' => 'Rata-rata dana PkM per DTPS',
+            'metrik' => 'rata_dana',
+            'satuan' => 'rupiah dana per DTPS',
+            'bobot' => 0.15,
+            'rubrik' => [
+                ['skor' => 4, 'min' => 5000000],
+                ['skor' => 3, 'min' => 3750000],
+                ['skor' => 2, 'min' => 2500000],
+                ['skor' => 1, 'min' => 1250000],
+            ],
+        ],
+    ],
 ];

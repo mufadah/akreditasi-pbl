@@ -48,6 +48,25 @@ beforeEach(function () {
         ],
     ]]);
 
+    config(['assessment.pkm' => [
+        'PKM-01' => [
+            'nama' => 'Uji rata-rata PkM', 'metrik' => 'rata_kegiatan', 'satuan' => 'kegiatan PkM per DTPS', 'bobot' => 0.4,
+            'rubrik' => [['skor' => 4, 'min' => 1.0], ['skor' => 3, 'min' => 0.75], ['skor' => 2, 'min' => 0.5], ['skor' => 1, 'min' => 0.25]],
+        ],
+        'PKM-02' => [
+            'nama' => 'Uji persen dosen terlibat', 'metrik' => 'persen_dosen_terlibat', 'satuan' => 'persen DTPS terlibat', 'bobot' => 0.3,
+            'rubrik' => [['skor' => 4, 'min' => 90], ['skor' => 3, 'min' => 70], ['skor' => 2, 'min' => 50], ['skor' => 1, 'min' => 25]],
+        ],
+        'PKM-03' => [
+            'nama' => 'Uji rata-rata luaran', 'metrik' => 'rata_luaran', 'satuan' => 'luaran per DTPS', 'bobot' => 0.2,
+            'rubrik' => [['skor' => 4, 'min' => 1.0], ['skor' => 3, 'min' => 0.75], ['skor' => 2, 'min' => 0.5], ['skor' => 1, 'min' => 0.25]],
+        ],
+        'PKM-04' => [
+            'nama' => 'Uji rata-rata dana', 'metrik' => 'rata_dana', 'satuan' => 'rupiah dana per DTPS', 'bobot' => 0.1,
+            'rubrik' => [['skor' => 4, 'min' => 5000000], ['skor' => 3, 'min' => 3750000], ['skor' => 2, 'min' => 2500000], ['skor' => 1, 'min' => 1250000]],
+        ],
+    ]]);
+
     $this->mock(K3ApiService::class, fn ($mock) => $mock->shouldReceive('getAmbangRubrik')->andReturn(3.5));
 });
 
@@ -204,4 +223,104 @@ test('role dosen ditolak dengan 403', function () {
 
 test('tanpa token ditolak dengan 401', function () {
     $this->getJson('/api/v1/assessment/penelitian-detail')->assertStatus(401);
+});
+
+function skenarioPkm()
+{
+    $y = today()->year;
+
+    $a = buatDosenAs('Dosen A');
+    $b = buatDosenAs('Dosen B');
+    $c = buatDosenAs('Dosen C');
+    $d = buatDosenAs('Dosen D');
+    $e = buatDosenAs('Dosen E', 'Non-DTPS');
+
+    kegiatanAs('PkM', $y, [$a, $b], 4000000, 1);
+    kegiatanAs('PkM', $y, [$a]);
+    kegiatanAs('PkM', $y, [$c, $e], 2000000, 1);
+    kegiatanAs('PkM', $y - 1, [$d], 30000000, 3);
+    kegiatanAs('Penelitian', $y, [$d], 90000000, 5);
+}
+
+test('pkm: menghitung nilai metrik, skor rubrik, dan nilai bidang', function () {
+    skenarioPkm();
+
+    $response = $this->withToken($this->adminToken)->getJson('/api/v1/assessment/pkm-detail');
+
+    $response->assertStatus(200)->assertJson(['success' => true]);
+
+    $indikator = indikatorAs($response);
+
+    expect($response->json('data.bidang'))->toBe('pkm')
+        ->and($response->json('data.total_dtps'))->toBe(4)
+        ->and($indikator['PKM-01']['nilai_metrik'])->toEqual(0.75)
+        ->and($indikator['PKM-01']['skor'])->toBe(3)
+        ->and($indikator['PKM-02']['nilai_metrik'])->toEqual(75)
+        ->and($indikator['PKM-02']['skor'])->toBe(3)
+        ->and($indikator['PKM-03']['nilai_metrik'])->toEqual(0.5)
+        ->and($indikator['PKM-03']['skor'])->toBe(2)
+        ->and($indikator['PKM-04']['nilai_metrik'])->toEqual(1500000)
+        ->and($indikator['PKM-04']['skor'])->toBe(1);
+
+    expect($response->json('data.ringkasan.nilai_bidang'))->toEqual(2.6)
+        ->and($response->json('data.ringkasan.gap_terdeteksi'))->toBe(4)
+        ->and($indikator['PKM-03']['gap'])->toEqual(1.5)
+        ->and($indikator['PKM-03']['level_dibutuhkan']['skor'])->toBe(4);
+});
+
+test('pkm dan penelitian dihitung terpisah dari data yang sama', function () {
+    skenarioPkm();
+
+    $penelitian = $this->withToken($this->adminToken)->getJson('/api/v1/assessment/penelitian-detail');
+
+    expect(indikatorAs($penelitian)['PEN-01']['nilai_metrik'])->toEqual(0.25)
+        ->and(indikatorAs($penelitian)['PEN-01']['skor'])->toBe(1);
+});
+
+test('pkm: target K3 yang lebih rendah membuat indikator terpenuhi', function () {
+    $this->mock(K3ApiService::class, fn ($mock) => $mock->shouldReceive('getAmbangRubrik')->andReturn(3.0));
+    skenarioPkm();
+
+    $response = $this->withToken($this->adminToken)->getJson('/api/v1/assessment/pkm-detail');
+
+    $indikator = indikatorAs($response);
+
+    expect($indikator['PKM-01']['status'])->toBe('Terpenuhi')
+        ->and($indikator['PKM-02']['status'])->toBe('Terpenuhi')
+        ->and($indikator['PKM-03']['status'])->toBe('Gap Terdeteksi')
+        ->and($indikator['PKM-03']['gap'])->toEqual(1)
+        ->and($indikator['PKM-04']['gap'])->toEqual(2)
+        ->and($response->json('data.ringkasan.indikator_terpenuhi'))->toBe(2);
+});
+
+test('pkm: filter tahun menghitung data tahun tersebut saja', function () {
+    skenarioPkm();
+
+    $tahun = today()->year - 1;
+    $response = $this->withToken($this->adminToken)->getJson("/api/v1/assessment/pkm-detail?tahun={$tahun}");
+
+    $indikator = indikatorAs($response);
+
+    expect($indikator['PKM-01']['nilai_metrik'])->toEqual(0.25)
+        ->and($indikator['PKM-02']['nilai_metrik'])->toEqual(25)
+        ->and($indikator['PKM-03']['nilai_metrik'])->toEqual(0.75)
+        ->and($indikator['PKM-04']['nilai_metrik'])->toEqual(7500000)
+        ->and($indikator['PKM-04']['skor'])->toBe(4);
+});
+
+test('pkm: parameter tidak valid ditolak dengan 422', function () {
+    $this->withToken($this->adminToken)->getJson('/api/v1/assessment/pkm-detail?tahun=24')->assertStatus(422);
+    $this->withToken($this->adminToken)->getJson('/api/v1/assessment/pkm-detail?jenjang=S9')->assertStatus(422);
+});
+
+test('pkm: role dosen ditolak dengan 403', function () {
+    $this->withToken($this->dosenToken)->getJson('/api/v1/assessment/pkm-detail')->assertStatus(403);
+});
+
+test('pkm: tanpa token ditolak dengan 401', function () {
+    $this->getJson('/api/v1/assessment/pkm-detail')->assertStatus(401);
+});
+
+test('bidang di luar penelitian dan pkm tidak tersedia', function () {
+    $this->withToken($this->adminToken)->getJson('/api/v1/assessment/sdm-detail')->assertStatus(404);
 });
