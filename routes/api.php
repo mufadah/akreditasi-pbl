@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\EarlyWarningController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AssessmentKerjaSamaDetailController;
 use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\ProduktivitasPerDosenController;
 use App\Http\Controllers\Api\StatistikController;
@@ -96,6 +97,7 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->prefix
     Route::get('/early-warning', [EarlyWarningController::class, 'index']);
     Route::get('/assessment/penelitian-detail', [AssessmentKegiatanDetailController::class, 'index'])->defaults('bidang', 'penelitian');
     Route::get('/assessment/pkm-detail', [AssessmentKegiatanDetailController::class, 'index'])->defaults('bidang', 'pkm');
+    Route::get('/assessment/kerjasama-detail', [AssessmentKerjaSamaDetailController::class, 'index']);
     Route::get('/produktivitas-per-dosen', [ProduktivitasPerDosenController::class, 'index'  ]);
 });
 

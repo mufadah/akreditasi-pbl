@@ -101,4 +101,18 @@ return [
             ],
         ],
     ],
+    'kerjasama' => [
+        'KS-01' => [
+            'nama' => 'Kerja Sama Tridharma Internasional dan Nasional',
+            'metrik' => 'jumlah_internasional_nasional',
+            'satuan' => 'kerja sama internasional dan nasional yang berlaku',
+            'bobot' => 1.0,
+            'rubrik' => [
+                ['skor' => 4, 'min' => 8],
+                ['skor' => 3, 'min' => 6],
+                ['skor' => 2, 'min' => 4],
+                ['skor' => 1, 'min' => 2],
+            ],
+        ],
+    ],
 ];
