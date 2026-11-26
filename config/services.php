@@ -47,6 +47,14 @@ return [
         'key' => env('K3_API_KEY', ''),
     ],
 
+    'pda' => [
+        'link_check' => [
+            'timeout' => (int) env('PDA_LINK_CHECK_TIMEOUT', 10),
+            'connect_timeout' => (int) env('PDA_LINK_CHECK_CONNECT_TIMEOUT', 5),
+            'max_redirects' => (int) env('PDA_LINK_CHECK_MAX_REDIRECTS', 5),
+        ],
+    ],
+
     'k2' => [
         'api_key' => env('K2_API_KEY', 'k2-secret-key-akreditasi'),
         'swagger_bypass_auth' => env('SWAGGER_BYPASS_AUTH', true),
