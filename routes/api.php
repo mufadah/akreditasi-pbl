@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
+use App\Http\Controllers\Api\ExportLaporanController;
 use App\Http\Controllers\Api\EarlyWarningController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
@@ -95,6 +96,8 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->prefix('v1')->group(function () {
     Route::get('/gap-kompetensi-dosen', [GapKompetensiDosenController::class, 'index']);
     Route::get('/early-warning', [EarlyWarningController::class, 'index']);
+    Route::get('/export/assessment', [ExportLaporanController::class, 'assessment']);
+    Route::get('/export/dashboard', [ExportLaporanController::class, 'dashboard']);
     Route::get('/assessment/penelitian-detail', [AssessmentKegiatanDetailController::class, 'index'])->defaults('bidang', 'penelitian');
     Route::get('/assessment/pkm-detail', [AssessmentKegiatanDetailController::class, 'index'])->defaults('bidang', 'pkm');
     Route::get('/assessment/kerjasama-detail', [AssessmentKerjaSamaDetailController::class, 'index']);
