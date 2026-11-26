@@ -76,7 +76,7 @@ class EvidenceController extends Controller
             $query->where('jenis_dokumen', 'like', "%{$jenis}%");
         }
 
-        // Filter status validasi (Menunggu Validasi, Valid, Ditolak, Perlu Perbaikan)
+        // Filter status validasi (Menunggu Validasi, Valid, Ditolak)
         if ($status = $request->query('status_validasi')) {
             $query->where('status_validasi', $status);
         }
@@ -210,7 +210,7 @@ class EvidenceController extends Controller
             'tanggal_upload' => ['sometimes', 'nullable', 'date'],
             'url_drive' => ['sometimes', 'nullable', 'url', 'max:2048'],
             'alasan_perubahan' => ['nullable', 'string', 'max:255'],
-            'status_validasi' => ['sometimes', 'in:Menunggu Validasi,Valid,Ditolak,Perlu Perbaikan'],
+            'status_validasi' => ['sometimes', 'in:Menunggu Validasi,Valid,Ditolak'],
             'catatan_validasi' => ['nullable', 'string'],
             'id_kegiatan' => ['sometimes', 'nullable', 'integer', Rule::exists('kegiatan', 'id_kegiatan')],
             'id_luaran' => ['sometimes', 'nullable', 'integer', Rule::exists('luaran', 'id_luaran')],
@@ -408,11 +408,11 @@ class EvidenceController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'status_validasi' => 'required|in:Valid,Ditolak,Perlu Perbaikan',
-            'catatan_validasi' => 'required_if:status_validasi,Ditolak,Perlu Perbaikan|nullable|string',
+            'status_validasi' => 'required|in:Valid,Ditolak',
+            'catatan_validasi' => 'required_if:status_validasi,Ditolak|nullable|string',
         ], [
-            'status_validasi.in' => 'Status validasi hanya boleh bernilai: Valid, Ditolak, atau Perlu Perbaikan.',
-            'catatan_validasi.required_if' => 'Catatan validasi wajib diisi jika status Ditolak atau Perlu Perbaikan.',
+            'status_validasi.in' => 'Status validasi hanya boleh bernilai: Valid atau Ditolak.',
+            'catatan_validasi.required_if' => 'Catatan validasi wajib diisi jika status Ditolak.',
         ]);
 
         if ($validator->fails()) {
