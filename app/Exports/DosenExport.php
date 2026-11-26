@@ -26,6 +26,8 @@ class DosenExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMappin
             'Nama',
             'Jabatan Akademik',
             'Pendidikan Terakhir',
+            'Jurusan',
+            'Program Studi',
             'Serdos',
             'Status',
         ];
@@ -46,6 +48,8 @@ class DosenExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMappin
             $row->nama_dosen,
             $row->jabatanAkademik?->nama_jabatan,
             $row->pendidikan?->jenjang,
+            $row->jurusan,
+            $row->prodi,
             $row->sertifikasi,
             $row->status_dosen,
         ];

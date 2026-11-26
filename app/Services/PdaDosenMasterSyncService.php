@@ -64,6 +64,7 @@ class PdaDosenMasterSyncService
             }
 
             if ($match['dosen'] !== null) {
+                $attributes = $this->missingHomebaseAttributes($lecturer, $match['dosen']);
                 $positionName = $this->normalizePosition(
                     $lecturer['jabatan_fungsional'] ?? $lecturer['jabatan_akademik'] ?? null
                 );
@@ -73,11 +74,19 @@ class PdaDosenMasterSyncService
                     || mb_strtolower($currentName) === 'tenaga pengajar';
 
                 if ($needsEnrichment && $position !== null && $position->id_jabatan !== $match['dosen']->id_jabatan) {
-                    $updates[] = ['dosen' => $match['dosen'], 'position' => $position];
+                    $attributes['id_jabatan'] = $position->id_jabatan;
                 } elseif ($needsEnrichment && $positionName !== null && $position === null) {
                     $unmatched++;
                 } elseif (! $needsEnrichment) {
                     $protected++;
+                }
+
+                if ($attributes !== []) {
+                    $updates[] = [
+                        'dosen' => $match['dosen'],
+                        'attributes' => $attributes,
+                        'position' => $position,
+                    ];
                 }
 
                 continue;
@@ -132,16 +141,24 @@ class PdaDosenMasterSyncService
                 'created_mku' => 0,
                 'unmatched' => $unmatched,
                 'protected' => $protected,
+                'updated_homebase' => 0,
                 'jabatan_distribution' => [],
             ];
 
             foreach ($updates as $update) {
                 $dosen = $update['dosen'];
-                $dosen->update(['id_jabatan' => $update['position']->id_jabatan]);
-                $dosen->unsetRelation('jabatanAkademik');
-                $dosen->recordHistory('PDA');
-                $result['updated_jabatan']++;
-                $this->addPositionCount($result['jabatan_distribution'], $update['position']->nama_jabatan);
+                $dosen->update($update['attributes']);
+
+                if ($dosen->wasChanged('id_jabatan')) {
+                    $dosen->unsetRelation('jabatanAkademik');
+                    $dosen->recordHistory('PDA');
+                    $result['updated_jabatan']++;
+                    $this->addPositionCount($result['jabatan_distribution'], $update['position']->nama_jabatan);
+                }
+
+                if ($dosen->wasChanged(['jurusan', 'prodi'])) {
+                    $result['updated_homebase']++;
+                }
             }
 
             foreach ([
@@ -165,7 +182,7 @@ class PdaDosenMasterSyncService
                 'd3_ti' => $result['created_ti'],
                 'mku' => $result['created_mku'],
                 'created' => $result['created_trk'] + $result['created_ti'] + $result['created_mku'],
-                'updated' => $result['updated_jabatan'],
+                'updated' => $result['updated_jabatan'] + $result['updated_homebase'],
                 'skipped' => $result['unmatched'],
                 'serdos_available' => 0,
             ];
@@ -474,6 +491,7 @@ class PdaDosenMasterSyncService
                 'id_jabatan' => $position->id_jabatan,
                 'id_pendidikan' => $educationId,
                 'status_dosen' => $status,
+                ...$this->homebaseAttributes($lecturer),
             ]
         );
 
@@ -537,6 +555,66 @@ class PdaDosenMasterSyncService
         $name = preg_replace('/\s+/', ' ', implode(' ', $parts));
 
         return trim((string) preg_replace('/\s+,\s+/', ', ', (string) $name));
+    }
+
+    /**
+     * @return array{jurusan?: string, prodi?: string}
+     */
+    private function missingHomebaseAttributes(array $lecturer, Dosen $dosen): array
+    {
+        $attributes = $this->homebaseAttributes($lecturer);
+
+        foreach (['jurusan', 'prodi'] as $field) {
+            if (trim((string) $dosen->getAttribute($field)) !== '' || ! isset($attributes[$field])) {
+                unset($attributes[$field]);
+            }
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * @return array{jurusan?: string, prodi?: string}
+     */
+    private function homebaseAttributes(array $lecturer): array
+    {
+        $attributes = [];
+        $jurusan = trim((string) (
+            $lecturer['effective_homebase_jurusan']
+            ?? $lecturer['homebase_jurusan']
+            ?? $lecturer['Jurusan']
+            ?? $lecturer['jurusan']
+            ?? ''
+        ));
+
+        if ($jurusan !== '') {
+            $attributes['jurusan'] = $jurusan;
+        }
+
+        $prodi = trim((string) (
+            $lecturer['effective_homebase_prodi_nama']
+            ?? $lecturer['homebase_prodi_nama']
+            ?? $lecturer['effective_homebase_prodi']
+            ?? $lecturer['homebase_prodi']
+            ?? $lecturer['Homebase_Prodi']
+            ?? ''
+        ));
+
+        if ($prodi === '') {
+            return $attributes;
+        }
+
+        $level = trim((string) ($lecturer['jenjang'] ?? ''));
+        if (preg_match('/^(D[1-4]|S[1-3])\s*[-–]?\s*(.+)$/iu', $prodi, $matches)) {
+            $level = $level !== '' ? $level : mb_strtoupper($matches[1]);
+            $prodi = trim($matches[2]);
+        }
+
+        $attributes['prodi'] = $level !== ''
+            ? mb_strtoupper($level).' - '.$prodi
+            : $prodi;
+
+        return $attributes;
     }
 
     private function newEmail(array $lecturer, string $name): string

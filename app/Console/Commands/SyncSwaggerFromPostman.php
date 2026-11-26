@@ -189,6 +189,8 @@ class SyncSwaggerFromPostman extends Command
             'id_dosen' => ['type' => 'integer', 'example' => 1],
             'nidn' => ['type' => 'string', 'example' => '0015088501'],
             'nama_dosen' => ['type' => 'string', 'example' => 'Dr. Ahmad Dahlan'],
+            'jurusan' => ['type' => 'string', 'nullable' => true, 'example' => 'Teknik Elektro'],
+            'prodi' => ['type' => 'string', 'nullable' => true, 'example' => 'D4 - Teknologi Rekayasa Komputer'],
             'status_dosen' => ['type' => 'string', 'enum' => ['DTPS', 'DTT', 'NONAKTIF'], 'example' => 'DTPS'],
             'pendidikan_terakhir' => ['type' => 'string', 'nullable' => true, 'example' => 'S3'],
             'jabatan_akademik' => [
@@ -228,14 +230,53 @@ class SyncSwaggerFromPostman extends Command
         }
 
         $requestBodyOperations = [
-            ['/api/dosen', 'post'],
-            ['/api/dosen/{id}', 'put'],
+            ['/api/dosen', 'post', '201'],
+            ['/api/dosen/{id}', 'put', '200'],
         ];
-        foreach ($requestBodyOperations as [$path, $method]) {
+        foreach ($requestBodyOperations as [$path, $method, $responseCode]) {
+            $requestSchema = &$paths[$path][$method]['requestBody']['content']['application/json']['schema'];
+            if (is_array($requestSchema)) {
+                foreach (['jurusan', 'prodi'] as $property) {
+                    $requestSchema['properties'][$property] = [
+                        'type' => 'string',
+                        'nullable' => true,
+                        'maxLength' => 255,
+                        'example' => $property === 'jurusan' ? 'Teknik Elektro' : 'D4 - Teknologi Rekayasa Komputer',
+                    ];
+                }
+
+                if (is_array($requestSchema['example'] ?? null)) {
+                    $requestSchema['example']['jurusan'] = 'Teknik Elektro';
+                    $requestSchema['example']['prodi'] = 'D4 - Teknologi Rekayasa Komputer';
+                }
+            }
+            unset($requestSchema);
+
             foreach (['pendidikan_terakhir', 'jabatan_akademik', 'sertifikasi_dosen'] as $property) {
                 if (isset($paths[$path][$method]['requestBody']['content']['application/json']['schema']['properties'][$property])) {
                     $paths[$path][$method]['requestBody']['content']['application/json']['schema']['properties'][$property]['nullable'] = true;
                 }
+            }
+
+            if (isset($paths[$path][$method])) {
+                $paths[$path][$method]['responses'][$responseCode] = [
+                    'description' => $method === 'post' ? 'Data dosen berhasil ditambahkan.' : 'Data dosen berhasil diperbarui.',
+                    'content' => [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'success' => ['type' => 'boolean', 'example' => true],
+                                    'message' => ['type' => 'string'],
+                                    'data' => [
+                                        'type' => 'object',
+                                        'properties' => $dosenProperties,
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ];
             }
         }
 

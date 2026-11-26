@@ -13,7 +13,7 @@ class DosenImport implements ToModel, WithHeadingRow, WithValidation
 {
     /**
      * Format kolom Excel/CSV (heading):
-     * id_jabatan (atau jabatan), id_pendidikan (atau pendidikan), nidn, nuptk, nama_dosen (atau nama), email, status_dosen, sertifikasi
+     * id_jabatan (atau jabatan), id_pendidikan (atau pendidikan), nidn, nuptk, nama_dosen (atau nama), email, status_dosen, sertifikasi, jurusan, prodi
      */
     public function model(array $row): Dosen
     {
@@ -59,6 +59,8 @@ class DosenImport implements ToModel, WithHeadingRow, WithValidation
             'email' => $email,
             'status_dosen' => $statusDosen,
             'sertifikasi' => $row['sertifikasi'] ?? null,
+            'jurusan' => $row['jurusan'] ?? null,
+            'prodi' => $row['prodi'] ?? null,
         ]);
     }
 
@@ -72,6 +74,8 @@ class DosenImport implements ToModel, WithHeadingRow, WithValidation
             '*.email' => 'nullable|email|distinct|unique:dosen,email',
             '*.status_dosen' => 'nullable|string|max:50',
             '*.sertifikasi' => 'nullable|string|max:255',
+            '*.jurusan' => 'nullable|string|max:255',
+            '*.prodi' => 'nullable|string|max:255',
         ];
     }
 }
