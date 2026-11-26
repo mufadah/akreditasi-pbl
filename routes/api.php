@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
+use App\Http\Controllers\Api\KerjaSamaImportExportController;
 use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
+use App\Http\Controllers\Api\TendikImportExportController;
 use App\Services\K1ApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +75,9 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
     Route::post('/tendik/{id}/restore', [TenagaKependidikanController::class, 'restore']);
     Route::post('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
     Route::delete('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
+    Route::get('/tendik/template', [TendikImportExportController::class, 'template']);
+    Route::get('/tendik/export', [TendikImportExportController::class, 'export']);
+    Route::post('/tendik/import', [TendikImportExportController::class, 'import']);
     Route::apiResource('tendik', TenagaKependidikanController::class);
     Route::apiResource('jenis-kegiatan', JenisKegiatanController::class);
     Route::apiResource('jenis-luaran', JenisLuaranController::class)->except(['index']);
@@ -94,6 +99,9 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
     Route::get('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'getAktivitas']);
     Route::post('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'storeAktivitas']);
     Route::post('/kerja-sama/{id}/perpanjang', [KerjaSamaController::class, 'perpanjang']);
+    Route::get('/kerja-sama/template', [KerjaSamaImportExportController::class, 'template']);
+    Route::get('/kerja-sama/export', [KerjaSamaImportExportController::class, 'export']);
+    Route::post('/kerja-sama/import', [KerjaSamaImportExportController::class, 'import']);
     Route::apiResource('kerja-sama', KerjaSamaController::class);
     Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
 
