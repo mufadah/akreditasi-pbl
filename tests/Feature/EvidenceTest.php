@@ -226,7 +226,7 @@ test('edit beberapa field sekaligus tersimpan secara konsisten', function () {
         'url_drive' => $oldUrl,
         'jenis_dokumen' => 'Proposal',
         'tanggal_upload' => '2026-01-10',
-        'status_validasi' => 'Perlu Perbaikan',
+        'status_validasi' => 'Ditolak',
     ]);
 
     $this->withToken($this->dosenToken)->putJson('/api/evidence/'.$evidence->id_evidence, [
@@ -285,7 +285,7 @@ test('status validasi dapat diubah oleh role administrator melalui endpoint upda
 });
 
 // 13. Validasi Evidence oleh KAPRODI
-test('fitur validasi menerima status Valid Ditolak Perlu Perbaikan dan menolak status tidak valid', function () {
+test('fitur validasi hanya menerima status Valid atau Ditolak dan menolak status lain', function () {
     $evidence = Evidence::first();
 
     $this->withToken($this->kaprodiToken)->postJson('/api/evidence/'.$evidence->id_evidence.'/validasi', [
@@ -297,9 +297,9 @@ test('fitur validasi menerima status Valid Ditolak Perlu Perbaikan dan menolak s
     ])->assertStatus(200)->assertJsonPath('data.status_validasi', 'Valid');
 
     $this->withToken($this->kaprodiToken)->postJson('/api/evidence/'.$evidence->id_evidence.'/validasi', [
-        'status_validasi' => 'Perlu Perbaikan',
+        'status_validasi' => 'Ditolak',
         'catatan_validasi' => 'Tanda tangan belum lengkap.',
-    ])->assertStatus(200)->assertJsonPath('data.status_validasi', 'Perlu Perbaikan');
+    ])->assertStatus(200)->assertJsonPath('data.status_validasi', 'Ditolak');
 });
 
 // 14. Delete Evidence tidak menghapus data induk

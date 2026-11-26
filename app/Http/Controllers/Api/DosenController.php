@@ -62,6 +62,8 @@ class DosenController extends Controller
                                             new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
                                             new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
                                             new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                            new OA\Property(property: 'jurusan', type: 'string', nullable: true, example: 'Teknik Elektro'),
+                                            new OA\Property(property: 'prodi', type: 'string', nullable: true, example: 'D4 - Teknologi Rekayasa Komputer'),
                                             new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
                                             new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
                                             new OA\Property(
@@ -157,6 +159,8 @@ class DosenController extends Controller
                     'pendidikan_terakhir' => 'S3 Ilmu Komputer',
                     'jabatan_akademik' => 'Lektor Kepala',
                     'sertifikasi_dosen' => 'Tersertifikasi',
+                    'jurusan' => 'Teknik Elektro',
+                    'prodi' => 'D4 - Teknologi Rekayasa Komputer',
                 ],
                 properties: [
                     new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
@@ -164,11 +168,48 @@ class DosenController extends Controller
                     new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3 Ilmu Komputer'),
                     new OA\Property(property: 'jabatan_akademik', type: 'string', nullable: true, example: 'Lektor Kepala'),
                     new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                    new OA\Property(property: 'jurusan', type: 'string', nullable: true, maxLength: 255, example: 'Teknik Elektro'),
+                    new OA\Property(property: 'prodi', type: 'string', nullable: true, maxLength: 255, example: 'D4 - Teknologi Rekayasa Komputer'),
                 ],
             ),
         ),
         responses: [
-            new OA\Response(response: 201, description: 'Data dosen berhasil ditambahkan.'),
+            new OA\Response(
+                response: 201,
+                description: 'Data dosen berhasil ditambahkan.',
+                content: new OA\JsonContent(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Data dosen berhasil ditambahkan.'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
+                                new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
+                                new OA\Property(property: 'nuptk', type: 'string', nullable: true, example: '198501012010011001'),
+                                new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                new OA\Property(property: 'email', type: 'string', format: 'email', example: 'ahmad.dahlan@polines.ac.id'),
+                                new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
+                                new OA\Property(
+                                    property: 'jabatan_akademik',
+                                    type: 'object',
+                                    nullable: true,
+                                    properties: [
+                                        new OA\Property(property: 'id_jabatan', type: 'integer', example: 3),
+                                        new OA\Property(property: 'nama_jabatan', type: 'string', example: 'Lektor Kepala'),
+                                    ],
+                                ),
+                                new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
+                                new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                                new OA\Property(property: 'jurusan', type: 'string', nullable: true, example: 'Teknik Elektro'),
+                                new OA\Property(property: 'prodi', type: 'string', nullable: true, example: 'D4 - Teknologi Rekayasa Komputer'),
+                            ],
+                        ),
+                    ],
+                ),
+            ),
         ],
     )]
     public function store(Request $request): JsonResponse
@@ -246,6 +287,8 @@ class DosenController extends Controller
             'email' => 'required|email|unique:dosen,email|max:255',
             'status_dosen' => 'nullable|string|in:DTPS,DTT,NONAKTIF',
             'sertifikasi' => 'nullable|string|max:255',
+            'jurusan' => 'nullable|string|max:255',
+            'prodi' => 'nullable|string|max:255',
             'bidang_keahlian_ids' => 'nullable|array',
             'bidang_keahlian_ids.*' => 'exists:bidang_keahlian,id_bidang_keahlian',
         ]);
@@ -303,6 +346,8 @@ class DosenController extends Controller
                                 new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
                                 new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
                                 new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                new OA\Property(property: 'jurusan', type: 'string', nullable: true, example: 'Teknik Elektro'),
+                                new OA\Property(property: 'prodi', type: 'string', nullable: true, example: 'D4 - Teknologi Rekayasa Komputer'),
                                 new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
                                 new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
                                 new OA\Property(
@@ -361,16 +406,55 @@ class DosenController extends Controller
                     'pendidikan_terakhir' => 'S3 Ilmu Komputer',
                     'jabatan_akademik' => 'Lektor Kepala',
                     'sertifikasi_dosen' => 'Tersertifikasi',
+                    'jurusan' => 'Teknik Elektro',
+                    'prodi' => 'D4 - Teknologi Rekayasa Komputer',
                 ],
                 properties: [
                     new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3 Ilmu Komputer'),
                     new OA\Property(property: 'jabatan_akademik', type: 'string', nullable: true, example: 'Lektor Kepala'),
                     new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                    new OA\Property(property: 'jurusan', type: 'string', nullable: true, maxLength: 255, example: 'Teknik Elektro'),
+                    new OA\Property(property: 'prodi', type: 'string', nullable: true, maxLength: 255, example: 'D4 - Teknologi Rekayasa Komputer'),
                 ],
             ),
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Data dosen berhasil diperbarui.'),
+            new OA\Response(
+                response: 200,
+                description: 'Data dosen berhasil diperbarui.',
+                content: new OA\JsonContent(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Data dosen berhasil diperbarui.'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id_dosen', type: 'integer', example: 1),
+                                new OA\Property(property: 'nidn', type: 'string', example: '0015088501'),
+                                new OA\Property(property: 'nuptk', type: 'string', nullable: true, example: '198501012010011001'),
+                                new OA\Property(property: 'nama_dosen', type: 'string', example: 'Dr. Ahmad Dahlan'),
+                                new OA\Property(property: 'email', type: 'string', format: 'email', example: 'ahmad.dahlan@polines.ac.id'),
+                                new OA\Property(property: 'status_dosen', type: 'string', enum: ['DTPS', 'DTT', 'NONAKTIF'], example: 'DTPS'),
+                                new OA\Property(
+                                    property: 'jabatan_akademik',
+                                    type: 'object',
+                                    nullable: true,
+                                    properties: [
+                                        new OA\Property(property: 'id_jabatan', type: 'integer', example: 3),
+                                        new OA\Property(property: 'nama_jabatan', type: 'string', example: 'Lektor Kepala'),
+                                    ],
+                                ),
+                                new OA\Property(property: 'pendidikan_terakhir', type: 'string', nullable: true, example: 'S3'),
+                                new OA\Property(property: 'sertifikasi_dosen', type: 'string', nullable: true, example: 'Tersertifikasi'),
+                                new OA\Property(property: 'jurusan', type: 'string', nullable: true, example: 'Teknik Elektro'),
+                                new OA\Property(property: 'prodi', type: 'string', nullable: true, example: 'D4 - Teknologi Rekayasa Komputer'),
+                            ],
+                        ),
+                    ],
+                ),
+            ),
         ],
     )]
     public function update(Request $request, int $id): JsonResponse
@@ -459,6 +543,8 @@ class DosenController extends Controller
             'email' => 'sometimes|required|email|max:255|unique:dosen,email,'.$id.',id_dosen',
             'status_dosen' => 'nullable|string|in:DTPS,DTT,NONAKTIF',
             'sertifikasi' => 'nullable|string|max:255',
+            'jurusan' => 'nullable|string|max:255',
+            'prodi' => 'nullable|string|max:255',
             'bidang_keahlian_ids' => 'nullable|array',
             'bidang_keahlian_ids.*' => 'exists:bidang_keahlian,id_bidang_keahlian',
         ]);

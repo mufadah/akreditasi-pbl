@@ -2098,6 +2098,16 @@
                                                                 "type": "string",
                                                                 "example": "Dr. Ahmad Dahlan"
                                                             },
+                                                            "jurusan": {
+                                                                "type": "string",
+                                                                "nullable": true,
+                                                                "example": "Teknik Elektro"
+                                                            },
+                                                            "prodi": {
+                                                                "type": "string",
+                                                                "nullable": true,
+                                                                "example": "D4 - Teknologi Rekayasa Komputer"
+                                                            },
                                                             "status_dosen": {
                                                                 "type": "string",
                                                                 "enum": [
@@ -2210,11 +2220,80 @@
                 "operationId": "924f90a1de85e1da6dddb337ce3b4c5c",
                 "responses": {
                     "201": {
-                        "description": "Data berhasil dibuat / diproses.",
+                        "description": "Data dosen berhasil ditambahkan.",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id_dosen": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nidn": {
+                                                    "type": "string",
+                                                    "example": "0015088501"
+                                                },
+                                                "nama_dosen": {
+                                                    "type": "string",
+                                                    "example": "Dr. Ahmad Dahlan"
+                                                },
+                                                "jurusan": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "Teknik Elektro"
+                                                },
+                                                "prodi": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "D4 - Teknologi Rekayasa Komputer"
+                                                },
+                                                "status_dosen": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "DTPS",
+                                                        "DTT",
+                                                        "NONAKTIF"
+                                                    ],
+                                                    "example": "DTPS"
+                                                },
+                                                "pendidikan_terakhir": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "S3"
+                                                },
+                                                "jabatan_akademik": {
+                                                    "type": "object",
+                                                    "nullable": true,
+                                                    "properties": {
+                                                        "id_jabatan": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "nama_jabatan": {
+                                                            "type": "string",
+                                                            "example": "Lektor Kepala"
+                                                        }
+                                                    }
+                                                },
+                                                "sertifikasi_dosen": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "Tersertifikasi"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2301,6 +2380,18 @@
                                             "type": "integer",
                                             "example": 1
                                         }
+                                    },
+                                    "jurusan": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255,
+                                        "example": "Teknik Elektro"
+                                    },
+                                    "prodi": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255,
+                                        "example": "D4 - Teknologi Rekayasa Komputer"
                                     }
                                 }
                             },
@@ -2360,6 +2451,16 @@
                                                 "nama_dosen": {
                                                     "type": "string",
                                                     "example": "Dr. Ahmad Dahlan"
+                                                },
+                                                "jurusan": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "Teknik Elektro"
+                                                },
+                                                "prodi": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "D4 - Teknologi Rekayasa Komputer"
                                                 },
                                                 "status_dosen": {
                                                     "type": "string",
@@ -2438,11 +2539,80 @@
                 "operationId": "0591d7824d74df746f3a09da7fd154ad",
                 "responses": {
                     "200": {
-                        "description": "Operasi berhasil diproses.",
+                        "description": "Data dosen berhasil diperbarui.",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/StandardResponse"
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id_dosen": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nidn": {
+                                                    "type": "string",
+                                                    "example": "0015088501"
+                                                },
+                                                "nama_dosen": {
+                                                    "type": "string",
+                                                    "example": "Dr. Ahmad Dahlan"
+                                                },
+                                                "jurusan": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "Teknik Elektro"
+                                                },
+                                                "prodi": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "D4 - Teknologi Rekayasa Komputer"
+                                                },
+                                                "status_dosen": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "DTPS",
+                                                        "DTT",
+                                                        "NONAKTIF"
+                                                    ],
+                                                    "example": "DTPS"
+                                                },
+                                                "pendidikan_terakhir": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "S3"
+                                                },
+                                                "jabatan_akademik": {
+                                                    "type": "object",
+                                                    "nullable": true,
+                                                    "properties": {
+                                                        "id_jabatan": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "nama_jabatan": {
+                                                            "type": "string",
+                                                            "example": "Lektor Kepala"
+                                                        }
+                                                    }
+                                                },
+                                                "sertifikasi_dosen": {
+                                                    "type": "string",
+                                                    "nullable": true,
+                                                    "example": "Tersertifikasi"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2541,6 +2711,18 @@
                                             "type": "integer",
                                             "example": 1
                                         }
+                                    },
+                                    "jurusan": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255,
+                                        "example": "Teknik Elektro"
+                                    },
+                                    "prodi": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255,
+                                        "example": "D4 - Teknologi Rekayasa Komputer"
                                     }
                                 }
                             },

@@ -6,19 +6,24 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BidangKeahlianController;
 use App\Http\Controllers\Api\DosenController;
 use App\Http\Controllers\Api\EvidenceController;
+use App\Http\Controllers\Api\GapKompetensiDosenController;
 use App\Http\Controllers\Api\JabatanAkademikController;
 use App\Http\Controllers\Api\JenisKegiatanController;
 use App\Http\Controllers\Api\JenisKerjaSamaController;
 use App\Http\Controllers\Api\JenisLuaranController;
+use App\Http\Controllers\Api\AssessmentKegiatanDetailController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
 use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
+use App\Http\Controllers\Api\EarlyWarningController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\PendidikanController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AssessmentKerjaSamaDetailController;
 use App\Http\Controllers\Api\SertifikasiController;
+use App\Http\Controllers\Api\ProduktivitasPerDosenController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
 use App\Services\K1ApiService;
@@ -84,6 +89,16 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
 // 2. Menu Validasi Evidence (Hanya Administrator, Kaprodi, dan Asesor - Dosen Ditolak 403)
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->group(function () {
     Route::post('/evidence/{id}/validasi', [EvidenceController::class, 'validasi']);
+});
+
+// Analisis Gap Kompetensi Dosen (Admin, Kaprodi, Asesor)
+Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,ASESOR'])->prefix('v1')->group(function () {
+    Route::get('/gap-kompetensi-dosen', [GapKompetensiDosenController::class, 'index']);
+    Route::get('/early-warning', [EarlyWarningController::class, 'index']);
+    Route::get('/assessment/penelitian-detail', [AssessmentKegiatanDetailController::class, 'index'])->defaults('bidang', 'penelitian');
+    Route::get('/assessment/pkm-detail', [AssessmentKegiatanDetailController::class, 'index'])->defaults('bidang', 'pkm');
+    Route::get('/assessment/kerjasama-detail', [AssessmentKerjaSamaDetailController::class, 'index']);
+    Route::get('/produktivitas-per-dosen', [ProduktivitasPerDosenController::class, 'index'  ]);
 });
 
 // 3. Menu Tridharma, Repository Evidence, & Interaksi (Admin, Kaprodi, Dosen, Asesor)
