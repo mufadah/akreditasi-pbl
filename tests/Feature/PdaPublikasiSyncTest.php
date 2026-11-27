@@ -3,6 +3,7 @@
 use App\Models\Dosen;
 use App\Models\JenisLuaran;
 use App\Models\Luaran;
+use App\Services\PdaPublikasiSyncService;
 use Database\Seeders\DatabaseSeeder;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +16,21 @@ beforeEach(function () {
     $this->seed(DatabaseSeeder::class);
 });
 
-test('pda publication sync imports matching lecturer publications and uses the required request headers', function () {
+/**
+ * Membuat fixture publikasi dengan homebase prodi TRK.
+ */
+function pdaTrkPublication(array $publication): array
+{
+    $publication['dosen'] ??= [
+        'nama' => 'Dosen Homebase TRK',
+        'homebase_prodi' => 'Teknologi Rekayasa Komputer',
+        'homebase_jurusan' => 'Teknik Elektro',
+    ];
+
+    return $publication;
+}
+
+test('pda publication sync imports matching lecturer publications and uses required headers', function () {
     $dosen = Dosen::create([
         'id_jabatan' => 1,
         'id_pendidikan' => 1,
@@ -32,19 +47,21 @@ test('pda publication sync imports matching lecturer publications and uses the r
         if ((int) ($query['page'] ?? 0) === 1) {
             return Http::response([
                 'data' => [
-                    'data' => [[
-                        'judul' => 'Publikasi Uji PDA',
-                        'jenis_publikasi' => 'Jurnal',
-                        'indeksasi' => 'SCOPUS Q2',
-                        'tahun' => 2024,
-                        'tanggal_terbit' => '17/05/2024',
-                        'doi' => '10.1234/pda.test',
-                        'url' => 'https://example.test/publikasi',
-                        'authors' => [[
-                            'nama' => 'Dosen Publikasi Test',
-                            'nip' => '198001012005011001',
-                        ]],
-                    ]],
+                    'data' => [
+                        pdaTrkPublication([
+                            'judul' => 'Publikasi Uji PDA',
+                            'jenis_publikasi' => 'Jurnal',
+                            'indeksasi' => 'SCOPUS Q2',
+                            'tahun' => 2024,
+                            'tanggal_terbit' => '17/05/2024',
+                            'doi' => '10.1234/pda.test',
+                            'url' => 'https://example.test/publikasi',
+                            'authors' => [[
+                                'nama' => 'Dosen Publikasi Test',
+                                'nip' => '198001012005011001',
+                            ]],
+                        ]),
+                    ],
                 ],
             ]);
         }
@@ -55,7 +72,9 @@ test('pda publication sync imports matching lecturer publications and uses the r
     $this->artisan('pda:sync-publikasi --pages=3 --year=2024')
         ->assertSuccessful();
 
-    $luaran = Luaran::query()->where('nama_jurnal', 'Publikasi Uji PDA')->firstOrFail();
+    $luaran = Luaran::query()
+        ->where('nama_jurnal', 'Publikasi Uji PDA')
+        ->firstOrFail();
 
     expect($luaran->id_dosen)->toBe($dosen->id_dosen)
         ->and($luaran->tahun_terbit)->toBe(2024)
@@ -63,18 +82,21 @@ test('pda publication sync imports matching lecturer publications and uses the r
         ->and($luaran->doi)->toBe('10.1234/pda.test')
         ->and($luaran->indeksasi)->toBe('SCOPUS Q2')
         ->and($luaran->tautan_jurnal)->toBe('https://example.test/publikasi')
-        ->and(JenisLuaran::find($luaran->id_jenis_luaran)->nama_jenis_luaran)->toBe('Jurnal Internasional Bereputasi');
+        ->and(JenisLuaran::find($luaran->id_jenis_luaran)->nama_jenis_luaran)
+        ->toBe('Jurnal Internasional Bereputasi');
 
     Http::assertSentCount(2);
+
     Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'page=1')
-        && str_contains($request->url(), 'limit=50')
+        && str_contains($request->url(), 'per_page=50')
         && str_contains($request->url(), 'sort=tanggal')
         && str_contains($request->url(), 'direction=desc')
         && $request->hasHeader('Referer', 'https://pda.polines.ac.id/publikasi')
-        && $request->hasHeader('X-Requested-With', 'XMLHttpRequest'));
+        && $request->hasHeader('X-Requested-With', 'XMLHttpRequest')
+    );
 });
 
-test('pda publication sync matches authors by nidn and name and skips outsiders and duplicate titles', function () {
+test('pda publication sync matches authors and skips outsiders and duplicate titles', function () {
     $nidnDosen = Dosen::create([
         'id_jabatan' => 1,
         'id_pendidikan' => 1,
@@ -83,6 +105,7 @@ test('pda publication sync matches authors by nidn and name and skips outsiders 
         'email' => 'nidn-test@polines.ac.id',
         'status_dosen' => 'DTPS',
     ]);
+
     $nameDosen = Dosen::create([
         'id_jabatan' => 1,
         'id_pendidikan' => 1,
@@ -93,34 +116,34 @@ test('pda publication sync matches authors by nidn and name and skips outsiders 
     ]);
 
     $publications = [
-        [
+        pdaTrkPublication([
             'judul' => 'Publikasi Penulis NIDN',
             'jenis' => 'Jurnal',
             'indeksasi' => 'SINTA 2',
             'tahun' => 2024,
             'authors' => [['nidn' => '0022334455']],
-        ],
-        [
+        ]),
+        pdaTrkPublication([
             'judul' => 'Publikasi Penulis Nama',
             'jenis' => 'Jurnal',
             'indeksasi' => 'SINTA 2',
             'tahun' => 2024,
             'authors' => ['Dosen Name Test'],
-        ],
-        [
+        ]),
+        pdaTrkPublication([
             'judul' => 'Publikasi Penulis Luar',
             'jenis' => 'Jurnal',
             'indeksasi' => 'SINTA 2',
             'tahun' => 2024,
             'authors' => ['Penulis Bukan Dosen TRK'],
-        ],
-        [
+        ]),
+        pdaTrkPublication([
             'judul' => 'Publikasi Penulis NIDN',
             'jenis' => 'Jurnal',
             'indeksasi' => 'SINTA 2',
             'tahun' => 2024,
             'authors' => [['nidn' => '0033445566']],
-        ],
+        ]),
     ];
 
     Http::fake(function (Request $request) use ($publications) {
@@ -128,25 +151,35 @@ test('pda publication sync matches authors by nidn and name and skips outsiders 
 
         return Http::response([
             'data' => [
-                'data' => (int) ($query['page'] ?? 0) === 1 ? $publications : [],
+                'data' => (int) ($query['page'] ?? 0) === 1
+                    ? $publications
+                    : [],
             ],
         ]);
     });
 
-    $this->artisan('pda:sync-publikasi --pages=2')
-        ->assertSuccessful();
-    $this->artisan('pda:sync-publikasi --pages=2')
-        ->assertSuccessful();
+    $this->artisan('pda:sync-publikasi --pages=2')->assertSuccessful();
+    $this->artisan('pda:sync-publikasi --pages=2')->assertSuccessful();
 
-    expect(Luaran::query()->where('nama_jurnal', 'Publikasi Penulis NIDN')->firstOrFail()->id_dosen)->toBe($nidnDosen->id_dosen)
-        ->and(Luaran::query()->where('nama_jurnal', 'Publikasi Penulis Nama')->firstOrFail()->id_dosen)->toBe($nameDosen->id_dosen)
-        ->and(Luaran::query()->whereIn('nama_jurnal', [
-            'Publikasi Penulis NIDN',
-            'Publikasi Penulis Nama',
-        ])->count())->toBe(2);
+    expect(
+        Luaran::query()
+            ->where('nama_jurnal', 'Publikasi Penulis NIDN')
+            ->firstOrFail()->id_dosen
+    )->toBe($nidnDosen->id_dosen)
+        ->and(
+            Luaran::query()
+                ->where('nama_jurnal', 'Publikasi Penulis Nama')
+                ->firstOrFail()->id_dosen
+        )->toBe($nameDosen->id_dosen)
+        ->and(
+            Luaran::query()->whereIn('nama_jurnal', [
+                'Publikasi Penulis NIDN',
+                'Publikasi Penulis Nama',
+            ])->count()
+        )->toBe(2);
 });
 
-test('pda publication sync maps proceedings link aliases to tautan_seminar', function () {
+test('pda publication sync maps proceedings link aliases to seminar link', function () {
     $dosen = Dosen::create([
         'id_jabatan' => 1,
         'id_pendidikan' => 1,
@@ -158,45 +191,153 @@ test('pda publication sync maps proceedings link aliases to tautan_seminar', fun
     ]);
 
     $publications = [
-        [
+        pdaTrkPublication([
             'judul' => 'Prosiding PDA tautan',
             'jenis_publikasi' => 'Prosiding',
             'tautan_prosiding' => 'https://example.test/tautan',
-        ],
-        [
+            'authors' => [['nip' => '198201012005011003']],
+        ]),
+        pdaTrkPublication([
             'judul' => 'Prosiding PDA url',
             'jenis_publikasi' => 'Seminar',
             'url_prosiding' => 'https://example.test/url',
-        ],
-        [
+            'authors' => [['nip' => '198201012005011003']],
+        ]),
+        pdaTrkPublication([
             'judul' => 'Prosiding PDA link',
             'jenis_publikasi' => 'Prosiding',
             'link_prosiding' => 'https://example.test/link',
-        ],
+            'authors' => [['nip' => '198201012005011003']],
+        ]),
     ];
-
-    foreach ($publications as &$publication) {
-        $publication['authors'] = [['nip' => '198201012005011003']];
-    }
-    unset($publication);
 
     Http::fake(function (Request $request) use ($publications) {
         parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
 
         return Http::response([
             'data' => [
-                'data' => (int) ($query['page'] ?? 0) === 1 ? $publications : [],
+                'data' => (int) ($query['page'] ?? 0) === 1
+                    ? $publications
+                    : [],
             ],
         ]);
     });
 
-    $this->artisan('pda:sync-publikasi --pages=2')
-        ->assertSuccessful();
+    $this->artisan('pda:sync-publikasi --pages=2')->assertSuccessful();
 
     expect($dosen->exists)->toBeTrue()
-        ->and(Luaran::query()->where('nama_prosiding', 'Prosiding PDA tautan')->value('tautan_seminar'))->toBe('https://example.test/tautan')
-        ->and(Luaran::query()->where('nama_prosiding', 'Prosiding PDA url')->value('tautan_seminar'))->toBe('https://example.test/url')
-        ->and(Luaran::query()->where('nama_prosiding', 'Prosiding PDA link')->value('tautan_seminar'))->toBe('https://example.test/link');
+        ->and(
+            Luaran::query()->where('nama_prosiding', 'Prosiding PDA tautan')
+                ->value('tautan_seminar')
+        )->toBe('https://example.test/tautan')
+        ->and(
+            Luaran::query()->where('nama_prosiding', 'Prosiding PDA url')
+                ->value('tautan_seminar')
+        )->toBe('https://example.test/url')
+        ->and(
+            Luaran::query()->where('nama_prosiding', 'Prosiding PDA link')
+                ->value('tautan_seminar')
+        )->toBe('https://example.test/link');
+});
+
+test('scrape detail reads inertia data and sorts authors by order', function () {
+    $detail = [
+        'component' => 'PublikasiShow',
+        'props' => [
+            'publikasi' => [
+                'id' => 'detail-test-123',
+                'judul' => 'Judul Detail PDA',
+                'nama_jurnal' => 'Jurnal Detail',
+                'tanggal' => '2023-04-01',
+                'jenis_publikasi' => 'Jurnal internasional bereputasi',
+                'tautan' => 'https://example.test/detail',
+                'penulis' => [
+                    ['nama' => 'Penulis Kedua', 'urutan' => 2],
+                    ['nama' => 'Penulis Pertama', 'urutan' => 1],
+                ],
+            ],
+        ],
+    ];
+
+    $html = '<html><body><div id="app" data-page="'.
+        htmlspecialchars(
+            json_encode($detail, JSON_THROW_ON_ERROR),
+            ENT_QUOTES | ENT_HTML5,
+            'UTF-8'
+        ).
+        '"></div></body></html>';
+
+    Http::fake([
+        'https://pda.polines.ac.id/publikasi/detail-test-123' => Http::response($html),
+    ]);
+
+    $service = app(PdaPublikasiSyncService::class);
+    $result = $service->scrapeLuaranDetail('detail-test-123');
+
+    expect($result['judul'])->toBe('Judul Detail PDA')
+        ->and($result['nama_jurnal'])->toBe('Jurnal Detail')
+        ->and($result['penulis'][0]['nama'])->toBe('Penulis Pertama')
+        ->and($result['penulis'][1]['nama'])->toBe('Penulis Kedua');
+});
+
+test('pda publication sync only processes target prodi', function () {
+    $dosen = Dosen::create([
+        'id_jabatan' => 1,
+        'id_pendidikan' => 1,
+        'nama_dosen' => 'Dosen TRK Filter Test',
+        'nidn' => '0066778899',
+        'nuptk' => '198401012005011005',
+        'email' => 'trk-filter-test@polines.ac.id',
+        'status_dosen' => 'DTPS',
+    ]);
+
+    $publications = [
+        pdaTrkPublication([
+            'judul' => 'Publikasi TRK',
+            'jenis_publikasi' => 'Jurnal Nasional',
+            'authors' => [['nip' => '198401012005011005']],
+        ]),
+        [
+            'judul' => 'Publikasi Teknik Mesin',
+            'jenis_publikasi' => 'Jurnal Nasional',
+            'dosen' => [
+                'nama' => 'Dosen Teknik Mesin',
+                'homebase_prodi' => 'Teknologi Rekayasa Pembangkit Energi',
+            ],
+            'authors' => [['nip' => '198401012005011005']],
+        ],
+        [
+            'judul' => 'Publikasi Tanpa Prodi',
+            'jenis_publikasi' => 'Jurnal Nasional',
+            'authors' => [['nip' => '198401012005011005']],
+        ],
+    ];
+
+    Http::fake(function (Request $request) use ($publications) {
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+        return Http::response([
+            'data' => [
+                'data' => (int) ($query['page'] ?? 0) === 1
+                    ? $publications
+                    : [],
+            ],
+        ]);
+    });
+
+    $this->artisan('pda:sync-publikasi --pages=2')->assertSuccessful();
+
+    expect(
+        Luaran::query()->where('nama_jurnal', 'Publikasi TRK')->exists()
+    )->toBeTrue()
+        ->and(
+            Luaran::query()->where('nama_jurnal', 'Publikasi Teknik Mesin')->exists()
+        )->toBeFalse()
+        ->and(
+            Luaran::query()->where('nama_jurnal', 'Publikasi Tanpa Prodi')->exists()
+        )->toBeFalse();
+
+    expect($dosen->exists)->toBeTrue();
 });
 
 test('luaran API stores and updates the seminar link field', function () {
@@ -209,7 +350,11 @@ test('luaran API stores and updates the seminar link field', function () {
         'email' => 'api-prosiding-test@polines.ac.id',
         'status_dosen' => 'DTPS',
     ]);
-    $jenisLuaran = JenisLuaran::query()->where('nama_jenis_luaran', 'like', '%Prosiding%')->firstOrFail();
+
+    $jenisLuaran = JenisLuaran::query()
+        ->where('nama_jenis_luaran', 'like', '%Prosiding%')
+        ->firstOrFail();
+
     $token = JWT::encode([
         'sub' => $dosen->id_dosen,
         'email' => $dosen->email,
@@ -228,6 +373,7 @@ test('luaran API stores and updates the seminar link field', function () {
         ->assertJsonPath('data.tautan_seminar', 'https://example.test/seminar');
 
     $luaranId = $response->json('data.id_luaran');
+
     $this->withToken($token)->putJson("/api/luaran/{$luaranId}", [
         'tautan_seminar' => 'https://example.test/seminar-updated',
     ])->assertOk()
@@ -247,36 +393,32 @@ test('pda publication sync rejects invalid options and reports remote errors', f
         ->assertExitCode(1);
 });
 
-test('pda publication sync with --import-dosen imports trk and outside teaching lecturers before syncing publications', function () {
+test('pda publication sync imports lecturers before syncing publications', function () {
     Http::fake([
         'https://pda.polines.ac.id/dosen?page=*' => Http::response([
             'current_page' => 1,
             'last_page' => 1,
-            'data' => [
-                [
-                    'Nama_dosen' => 'Dosen TRK Asli',
-                    'NIDN' => '0099887766',
-                    'NIP' => '198501012010121001',
-                    'slug' => 'dosen-trk-asli',
-                    'homebase_prodi_nama' => 'Teknologi Rekayasa Komputer',
-                ],
-            ],
+            'data' => [[
+                'Nama_dosen' => 'Dosen TRK Asli',
+                'NIDN' => '0099887766',
+                'NIP' => '198501012010121001',
+                'slug' => 'dosen-trk-asli',
+                'homebase_prodi_nama' => 'Teknologi Rekayasa Komputer',
+            ]],
         ]),
         'https://pda.polines.ac.id/internal/dosen/list*' => Http::response([
-            'data' => [
-                [
-                    'nama' => 'Dosen Luar Pengajar TRK',
-                    'nidn' => '0077889900',
-                    'nip' => '198602022012121002',
-                    'slug' => 'afandi-nur-aziz-thohari',
-                    'homebase_prodi_nama' => 'Teknik Elektro',
-                ],
-            ],
+            'data' => [[
+                'nama' => 'Dosen Luar Pengajar TRK',
+                'nidn' => '0077889900',
+                'nip' => '198602022012121002',
+                'slug' => 'afandi-nur-aziz-thohari',
+                'homebase_prodi_nama' => 'Teknik Elektro',
+            ]],
         ]),
         'https://pda.polines.ac.id/internal/publikasi/list*' => Http::response([
             'data' => [
                 'data' => [
-                    [
+                    pdaTrkPublication([
                         'judul' => 'Publikasi Riset TRK & Dosen Luar',
                         'jenis_publikasi' => 'Jurnal Internasional',
                         'indeksasi' => 'Scopus Q1',
@@ -285,7 +427,7 @@ test('pda publication sync with --import-dosen imports trk and outside teaching 
                         'authors' => [
                             ['nip' => '198602022012121002'],
                         ],
-                    ],
+                    ]),
                 ],
             ],
         ]),
@@ -296,46 +438,48 @@ test('pda publication sync with --import-dosen imports trk and outside teaching 
         ->expectsOutputToContain('Publikasi ditambahkan: 1')
         ->assertSuccessful();
 
-    $importedDosenLuar = Dosen::query()->where('nuptk', '198602022012121002')->first();
+    $importedDosenLuar = Dosen::query()
+        ->where('nuptk', '198602022012121002')
+        ->first();
+
     expect($importedDosenLuar)->not->toBeNull()
         ->and($importedDosenLuar->status_dosen)->toBe('Tidak Tetap');
 
-    $luaran = Luaran::query()->where('nama_jurnal', 'Publikasi Riset TRK & Dosen Luar')->first();
+    $luaran = Luaran::query()
+        ->where('nama_jurnal', 'Publikasi Riset TRK & Dosen Luar')
+        ->first();
+
     expect($luaran)->not->toBeNull()
         ->and($luaran->id_dosen)->toBe($importedDosenLuar->id_dosen)
         ->and($luaran->doi)->toBe('10.1234/trk.auto.2025');
 });
 
-test('pda:sync-all command runs zero-config sync for both lecturers and publications', function () {
+test('pda sync all command still synchronizes lecturers and publications', function () {
     Http::fake([
         'https://pda.polines.ac.id/dosen?page=*' => Http::response([
             'current_page' => 1,
             'last_page' => 1,
-            'data' => [
-                [
-                    'Nama_dosen' => 'Dosen TRK All-in-One',
-                    'NIDN' => '0011992288',
-                    'NIP' => '198703032015031003',
-                    'slug' => 'dosen-trk-all',
-                    'homebase_prodi_nama' => 'Teknologi Rekayasa Komputer',
-                ],
-            ],
+            'data' => [[
+                'Nama_dosen' => 'Dosen TRK All-in-One',
+                'NIDN' => '0011992288',
+                'NIP' => '198703032015031003',
+                'slug' => 'dosen-trk-all',
+                'homebase_prodi_nama' => 'Teknologi Rekayasa Komputer',
+            ]],
         ]),
         'https://pda.polines.ac.id/internal/dosen/list*' => Http::response([
-            'data' => [
-                [
-                    'nama' => 'Dosen Pengajar Luar All',
-                    'nidn' => '0044883377',
-                    'nip' => '198804042016041004',
-                    'slug' => 'aisyatul-karima',
-                    'homebase_prodi_nama' => 'Teknik Elektro',
-                ],
-            ],
+            'data' => [[
+                'nama' => 'Dosen Pengajar Luar All',
+                'nidn' => '0044883377',
+                'nip' => '198804042016041004',
+                'slug' => 'aisyatul-karima',
+                'homebase_prodi_nama' => 'Teknik Elektro',
+            ]],
         ]),
         'https://pda.polines.ac.id/internal/publikasi/list*' => Http::response([
             'data' => [
                 'data' => [
-                    [
+                    pdaTrkPublication([
                         'judul' => 'Publikasi Otomatis Sync All',
                         'jenis_publikasi' => 'Jurnal Nasional',
                         'indeksasi' => 'SINTA 2',
@@ -344,7 +488,7 @@ test('pda:sync-all command runs zero-config sync for both lecturers and publicat
                         'authors' => [
                             ['nip' => '198804042016041004'],
                         ],
-                    ],
+                    ]),
                 ],
             ],
         ]),
@@ -355,10 +499,16 @@ test('pda:sync-all command runs zero-config sync for both lecturers and publicat
         ->expectsOutputToContain('Seluruh proses sinkronisasi PDA selesai dengan sukses')
         ->assertSuccessful();
 
-    $dosen = Dosen::query()->where('nuptk', '198804042016041004')->first();
+    $dosen = Dosen::query()
+        ->where('nuptk', '198804042016041004')
+        ->first();
+
     expect($dosen)->not->toBeNull();
 
-    $luaran = Luaran::query()->where('nama_jurnal', 'Publikasi Otomatis Sync All')->first();
+    $luaran = Luaran::query()
+        ->where('nama_jurnal', 'Publikasi Otomatis Sync All')
+        ->first();
+
     expect($luaran)->not->toBeNull()
         ->and($luaran->id_dosen)->toBe($dosen->id_dosen);
 });

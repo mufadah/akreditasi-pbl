@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\JenisLuaranController;
 use App\Http\Controllers\Api\AssessmentKegiatanDetailController;
 use App\Http\Controllers\Api\KegiatanController;
 use App\Http\Controllers\Api\KerjaSamaController;
+use App\Http\Controllers\Api\KerjaSamaImportExportController;
 use App\Http\Controllers\Api\KonfigurasiMetrikController;
 use App\Http\Controllers\Api\LuaranController;
 use App\Http\Controllers\Api\MitraController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\SertifikasiController;
 use App\Http\Controllers\Api\ProduktivitasPerDosenController;
 use App\Http\Controllers\Api\StatistikController;
 use App\Http\Controllers\Api\TenagaKependidikanController;
+use App\Http\Controllers\Api\TendikImportExportController;
 use App\Services\K1ApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +48,7 @@ Route::match(['get', 'post'], '/register', [ProfileController::class, 'resourceS
 Route::middleware(['auth.jwt'])->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
     Route::get('/jenis-luaran', [JenisLuaranController::class, 'index']);
+
     Route::post('/logout', function () {
         return response()->json([
             'success' => true,
@@ -71,13 +74,15 @@ Route::middleware(['auth.jwt'])->group(function () {
 
 // 2. Menu Master Data Lainnya (Khusus Administrator)
 Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR'])->group(function () {
-
     Route::apiResource('jabatan-akademik', JabatanAkademikController::class);
     Route::apiResource('pendidikan', PendidikanController::class);
     Route::apiResource('bidang-keahlian', BidangKeahlianController::class);
     Route::post('/tendik/{id}/restore', [TenagaKependidikanController::class, 'restore']);
     Route::post('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
     Route::delete('/tendik/{id}/nonaktifkan', [TenagaKependidikanController::class, 'destroy']);
+    Route::get('/tendik/template', [TendikImportExportController::class, 'template']);
+    Route::get('/tendik/export', [TendikImportExportController::class, 'export']);
+    Route::post('/tendik/import', [TendikImportExportController::class, 'import']);
     Route::apiResource('tendik', TenagaKependidikanController::class);
     Route::apiResource('jenis-kegiatan', JenisKegiatanController::class);
     Route::apiResource('jenis-luaran', JenisLuaranController::class)->except(['index']);
@@ -109,15 +114,35 @@ Route::middleware(['auth.jwt', 'jwt.role:ADMINISTRATOR,KAPRODI,DOSEN,ASESOR'])->
     Route::get('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'getAktivitas']);
     Route::post('/kerja-sama/{id}/aktivitas', [KerjaSamaController::class, 'storeAktivitas']);
     Route::post('/kerja-sama/{id}/perpanjang', [KerjaSamaController::class, 'perpanjang']);
+    Route::get('/kerja-sama/template', [KerjaSamaImportExportController::class, 'template']);
+    Route::get('/kerja-sama/export', [KerjaSamaImportExportController::class, 'export']);
+    Route::post('/kerja-sama/import', [KerjaSamaImportExportController::class, 'import']);
     Route::apiResource('kerja-sama', KerjaSamaController::class);
     Route::apiResource('aktivitas-kerja-sama', AktivitasKerjaSamaController::class);
 
     // Kegiatan & Luaran (Unified Tridharma & Luaran Ilmiah Sesuai ERD Terbaru)
-    // Rute export harus sebelum apiResource agar tidak tertangkap sebagai {id}
+
+    // Import Penelitian dan PkM
+    Route::post('/kegiatan/import/{jenis}', [KegiatanController::class, 'importExcel']);
+
+    // Export Penelitian dan PkM berdasarkan jenis
+    Route::get('/kegiatan/export/{jenis}', [KegiatanController::class, 'exportExcel']);
+
+    // Template Excel Penelitian dan PkM
+    Route::get('/kegiatan/template/{jenis}', [KegiatanController::class, 'templateExcel']);
+
+    // Export Kegiatan berdasarkan filter
     Route::get('/kegiatan/export', [KegiatanController::class, 'export']);
+
+    // Import Luaran (Buku, Jurnal, Prosiding, HKI, Produk)
+    Route::post('/luaran/import', [LuaranController::class, 'importExcel']);
+
+    // Export Luaran multi-sheet (Buku, Jurnal, Prosiding, HKI, Produk)
     Route::get('/luaran/export', [LuaranController::class, 'export']);
+
     Route::apiResource('kegiatan', KegiatanController::class);
     Route::apiResource('luaran', LuaranController::class);
+
     Route::post('/sertifikasi/sync-profil', [SertifikasiController::class, 'syncProfil']);
     Route::apiResource('sertifikasi', SertifikasiController::class);
 

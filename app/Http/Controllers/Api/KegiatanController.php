@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Exports\KegiatanExport;
 use App\Http\Controllers\Controller;
+use App\Imports\KegiatanImport;
 use App\Models\Kegiatan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -31,8 +33,12 @@ class KegiatanController extends Controller
     /**
      * Helper format response JSON standar.
      */
-    private function respond(bool $success, int $code, string $message, mixed $data = null): JsonResponse
-    {
+    private function respond(
+        bool $success,
+        int $code,
+        string $message,
+        mixed $data = null
+    ): JsonResponse {
         return response()->json([
             'success' => $success,
             'code' => $code,
@@ -49,8 +55,11 @@ class KegiatanController extends Controller
         $req = $isUpdate ? ['sometimes', 'required'] : ['required'];
 
         return [
-            // Data utama Kegiatan
-            'id_jenis_kegiatan' => [...$req, 'integer', Rule::exists('jenis_kegiatan', 'id_jenis_kegiatan')],
+            'id_jenis_kegiatan' => [
+                ...$req,
+                'integer',
+                Rule::exists('jenis_kegiatan', 'id_jenis_kegiatan'),
+            ],
             'judul_kegiatan' => [...$req, 'string', 'max:255'],
             'lokasi_kegiatan' => ['nullable', 'string', 'max:255'],
             'afiliasi' => ['nullable', 'string', 'max:255'],
@@ -62,9 +71,12 @@ class KegiatanController extends Controller
             'status_kegiatan' => ['sometimes', 'string', 'max:50'],
             'in_kind' => ['nullable', 'string', 'max:255'],
 
-            // Validasi anggota kegiatan (opsional/nested)
             'anggota' => ['sometimes', 'array'],
-            'anggota.*.jenis_anggota' => ['required_with:anggota', 'string', 'in:dosen,mahasiswa,Dosen,Mahasiswa'],
+            'anggota.*.jenis_anggota' => [
+                'required_with:anggota',
+                'string',
+                'in:dosen,mahasiswa,Dosen,Mahasiswa',
+            ],
             'anggota.*.id_dosen' => [
                 'nullable',
                 'required_if:anggota.*.jenis_anggota,dosen,Dosen',
@@ -74,11 +86,22 @@ class KegiatanController extends Controller
             'anggota.*.id_mahasiswa' => ['nullable'],
             'anggota.*.peran' => ['required_with:anggota', 'string', 'max:50'],
 
-            // Validasi pendanaan kegiatan (opsional/nested)
             'pendanaan' => ['sometimes', 'array'],
-            'pendanaan.*.sumber_dana' => ['required_with:pendanaan', 'string', 'max:255'],
-            'pendanaan.*.jumlah_dana' => ['required_with:pendanaan', 'numeric', 'min:0'],
-            'pendanaan.*.tahun_pendanaan' => ['required_with:pendanaan', 'integer', 'digits:4'],
+            'pendanaan.*.sumber_dana' => [
+                'required_with:pendanaan',
+                'string',
+                'max:255',
+            ],
+            'pendanaan.*.jumlah_dana' => [
+                'required_with:pendanaan',
+                'numeric',
+                'min:0',
+            ],
+            'pendanaan.*.tahun_pendanaan' => [
+                'required_with:pendanaan',
+                'integer',
+                'digits:4',
+            ],
             'pendanaan.*.jenis_pendanaan' => ['nullable', 'string', 'max:100'],
             'pendanaan.*.keterangan' => ['nullable', 'string'],
         ];
@@ -89,28 +112,36 @@ class KegiatanController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = $this->filteredQuery($request)->with($this->relations);
+        $kegiatan = $this->filteredQuery($request)
+            ->with($this->relations)
+            ->latest()
+            ->paginate($request->integer('per_page', 10));
 
-        $kegiatan = $query->latest()->paginate($request->integer('per_page', 10));
-
-        return $this->respond(true, 200, 'Data kegiatan berhasil diambil.', $kegiatan);
-    }
-
-    /**
-     * Unduh daftar kegiatan (sesuai filter yang sama dengan index) sebagai file Excel.
-     */
-    public function export(Request $request): BinaryFileResponse
-    {
-        $jenis = $request->filled('jenis') ? Str::slug((string) $request->query('jenis')) : 'kegiatan';
-
-        return Excel::download(
-            new KegiatanExport($this->filteredQuery($request)),
-            $jenis.'_'.now()->format('Ymd_His').'.xlsx',
+        return $this->respond(
+            true,
+            200,
+            'Data kegiatan berhasil diambil.',
+            $kegiatan
         );
     }
 
     /**
-     * Query kegiatan dengan seluruh filter dari request (dipakai index dan export).
+     * Export daftar kegiatan sesuai filter index.
+     */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $jenis = $request->filled('jenis')
+            ? Str::slug((string) $request->query('jenis'))
+            : 'kegiatan';
+
+        return Excel::download(
+            new KegiatanExport($this->filteredQuery($request)),
+            $jenis.'_'.now()->format('Ymd_His').'.xlsx'
+        );
+    }
+
+    /**
+     * Query kegiatan dengan seluruh filter dari request.
      *
      * @return Builder<Kegiatan>
      */
@@ -118,7 +149,6 @@ class KegiatanController extends Controller
     {
         $query = Kegiatan::query();
 
-        // Filter pencarian judul atau lokasi kegiatan
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('judul_kegiatan', 'like', "%{$search}%")
@@ -126,22 +156,30 @@ class KegiatanController extends Controller
             });
         }
 
-        // Filter berdasarkan nama jenis kegiatan (penelitian / pkm), tanpa perlu mengetahui ID-nya
         if ($request->filled('jenis')) {
             $jenis = mb_strtolower((string) $request->query('jenis'));
+
             $query->whereHas('jenisKegiatan', function ($q) use ($jenis) {
                 $q->whereRaw('LOWER(nama_jenis_kegiatan) = ?', [$jenis]);
             });
         }
 
-        // Filter kegiatan yang diikuti dosen tertentu
         if ($request->filled('id_dosen')) {
             $idDosen = $request->query('id_dosen');
-            $query->whereHas('anggota', fn ($q) => $q->where('id_dosen', $idDosen));
+
+            $query->whereHas(
+                'anggota',
+                fn ($q) => $q->where('id_dosen', $idDosen)
+            );
         }
 
-        // Filter berdasarkan jenis kegiatan, tahun, dan status
-        foreach (['id_jenis_kegiatan', 'tahun_usulan', 'tahun_kegiatan', 'tahun_pelaksanaan', 'status_kegiatan'] as $filter) {
+        foreach ([
+            'id_jenis_kegiatan',
+            'tahun_usulan',
+            'tahun_kegiatan',
+            'tahun_pelaksanaan',
+            'status_kegiatan',
+        ] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->query($filter));
             }
@@ -158,7 +196,12 @@ class KegiatanController extends Controller
         $validator = Validator::make($request->all(), $this->rules());
 
         if ($validator->fails()) {
-            return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
+            return $this->respond(
+                false,
+                422,
+                'Validasi gagal.',
+                $validator->errors()
+            );
         }
 
         $validated = $validator->validated();
@@ -166,14 +209,17 @@ class KegiatanController extends Controller
         try {
             $kegiatan = DB::transaction(function () use ($validated) {
                 $kegiatan = Kegiatan::create(
-                    collect($validated)->except(['anggota', 'pendanaan'])->toArray()
+                    collect($validated)
+                        ->except(['anggota', 'pendanaan'])
+                        ->toArray()
                 );
 
                 if (! empty($validated['anggota'])) {
-                    // Normalisasi jenis_anggota ke lowercase
                     $anggotaData = array_map(function ($item) {
                         if (isset($item['jenis_anggota'])) {
-                            $item['jenis_anggota'] = strtolower($item['jenis_anggota']);
+                            $item['jenis_anggota'] = strtolower(
+                                $item['jenis_anggota']
+                            );
                         }
 
                         return $item;
@@ -183,16 +229,27 @@ class KegiatanController extends Controller
                 }
 
                 if (! empty($validated['pendanaan'])) {
-                    $kegiatan->pendanaanKegiatan()->createMany($validated['pendanaan']);
+                    $kegiatan->pendanaanKegiatan()->createMany(
+                        $validated['pendanaan']
+                    );
                 }
 
                 return $kegiatan;
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menyimpan data kegiatan: '.$e->getMessage());
+            return $this->respond(
+                false,
+                500,
+                'Gagal menyimpan data kegiatan: '.$e->getMessage()
+            );
         }
 
-        return $this->respond(true, 201, 'Data kegiatan berhasil ditambahkan.', $kegiatan->load($this->relations));
+        return $this->respond(
+            true,
+            201,
+            'Data kegiatan berhasil ditambahkan.',
+            $kegiatan->load($this->relations)
+        );
     }
 
     /**
@@ -203,10 +260,19 @@ class KegiatanController extends Controller
         $kegiatan = Kegiatan::with($this->relations)->find($id);
 
         if (! $kegiatan) {
-            return $this->respond(false, 404, 'Data kegiatan tidak ditemukan.');
+            return $this->respond(
+                false,
+                404,
+                'Data kegiatan tidak ditemukan.'
+            );
         }
 
-        return $this->respond(true, 200, 'Detail kegiatan berhasil diambil.', $kegiatan);
+        return $this->respond(
+            true,
+            200,
+            'Detail kegiatan berhasil diambil.',
+            $kegiatan
+        );
     }
 
     /**
@@ -217,13 +283,25 @@ class KegiatanController extends Controller
         $kegiatan = Kegiatan::find($id);
 
         if (! $kegiatan) {
-            return $this->respond(false, 404, 'Data kegiatan tidak ditemukan.');
+            return $this->respond(
+                false,
+                404,
+                'Data kegiatan tidak ditemukan.'
+            );
         }
 
-        $validator = Validator::make($request->all(), $this->rules(true));
+        $validator = Validator::make(
+            $request->all(),
+            $this->rules(true)
+        );
 
         if ($validator->fails()) {
-            return $this->respond(false, 422, 'Validasi gagal.', $validator->errors());
+            return $this->respond(
+                false,
+                422,
+                'Validasi gagal.',
+                $validator->errors()
+            );
         }
 
         $validated = $validator->validated();
@@ -231,14 +309,19 @@ class KegiatanController extends Controller
         try {
             DB::transaction(function () use ($kegiatan, $validated) {
                 $kegiatan->update(
-                    collect($validated)->except(['anggota', 'pendanaan'])->toArray()
+                    collect($validated)
+                        ->except(['anggota', 'pendanaan'])
+                        ->toArray()
                 );
 
                 if (array_key_exists('anggota', $validated)) {
                     $kegiatan->anggotaKegiatan()->delete();
+
                     $anggotaData = array_map(function ($item) {
                         if (isset($item['jenis_anggota'])) {
-                            $item['jenis_anggota'] = strtolower($item['jenis_anggota']);
+                            $item['jenis_anggota'] = strtolower(
+                                $item['jenis_anggota']
+                            );
                         }
 
                         return $item;
@@ -251,16 +334,150 @@ class KegiatanController extends Controller
 
                 if (array_key_exists('pendanaan', $validated)) {
                     $kegiatan->pendanaanKegiatan()->delete();
+
                     if (! empty($validated['pendanaan'])) {
-                        $kegiatan->pendanaanKegiatan()->createMany($validated['pendanaan']);
+                        $kegiatan->pendanaanKegiatan()->createMany(
+                            $validated['pendanaan']
+                        );
                     }
                 }
             });
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal memperbarui data kegiatan: '.$e->getMessage());
+            return $this->respond(
+                false,
+                500,
+                'Gagal memperbarui data kegiatan: '.$e->getMessage()
+            );
         }
 
-        return $this->respond(true, 200, 'Data kegiatan berhasil diperbarui.', $kegiatan->fresh($this->relations));
+        return $this->respond(
+            true,
+            200,
+            'Data kegiatan berhasil diperbarui.',
+            $kegiatan->fresh($this->relations)
+        );
+    }
+
+    /**
+     * Mengubah parameter URL menjadi nama jenis kegiatan.
+     */
+    private function resolveJenisKegiatan(string $jenis): ?string
+    {
+        return match (strtolower($jenis)) {
+            'penelitian' => 'Penelitian',
+            'pkm' => 'PkM',
+            default => null,
+        };
+    }
+
+    /**
+     * Import data Penelitian atau PkM dari Excel/CSV.
+     */
+    public function importExcel(
+        Request $request,
+        string $jenis
+    ): JsonResponse {
+        $namaJenis = $this->resolveJenisKegiatan($jenis);
+
+        if (! $namaJenis) {
+            return $this->respond(
+                false,
+                404,
+                'Jenis kegiatan tidak valid.'
+            );
+        }
+
+        $validator = Validator::make($request->all(), [
+            'file' => [
+                'required',
+                'file',
+                'mimes:xlsx,xls,csv,txt',
+                'max:5120',
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->respond(
+                false,
+                422,
+                'Validasi file gagal.',
+                $validator->errors()
+            );
+        }
+
+        try {
+            Excel::import(
+                new KegiatanImport($namaJenis),
+                $request->file('file')
+            );
+
+            return $this->respond(
+                true,
+                200,
+                "Data {$namaJenis} berhasil diimpor."
+            );
+        } catch (ValidationException $e) {
+            return $this->respond(
+                false,
+                422,
+                'Validasi data Excel gagal.',
+                $e->errors()
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->respond(
+                false,
+                500,
+                'Gagal mengimpor data: '.$e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Export data Penelitian atau PkM ke Excel.
+     */
+    public function exportExcel(
+        string $jenis
+    ): BinaryFileResponse|JsonResponse {
+        $namaJenis = $this->resolveJenisKegiatan($jenis);
+
+        if (! $namaJenis) {
+            return $this->respond(
+                false,
+                404,
+                'Jenis kegiatan tidak valid.'
+            );
+        }
+
+        $namaFile = strtolower($jenis).'_'.now()->format('Ymd_His').'.xlsx';
+
+        return Excel::download(
+            new KegiatanExport($namaJenis),
+            $namaFile
+        );
+    }
+
+    /**
+     * Download template kosong untuk import Penelitian atau PkM.
+     */
+    public function templateExcel(
+        string $jenis
+    ): BinaryFileResponse|JsonResponse {
+        $namaJenis = $this->resolveJenisKegiatan($jenis);
+
+        if (! $namaJenis) {
+            return $this->respond(
+                false,
+                404,
+                'Jenis kegiatan tidak valid.'
+            );
+        }
+
+        return Excel::download(
+            new KegiatanExport($namaJenis, true),
+            strtolower($jenis).'_template.xlsx'
+        );
     }
 
     /**
@@ -271,15 +488,27 @@ class KegiatanController extends Controller
         $kegiatan = Kegiatan::find($id);
 
         if (! $kegiatan) {
-            return $this->respond(false, 404, 'Data kegiatan tidak ditemukan.');
+            return $this->respond(
+                false,
+                404,
+                'Data kegiatan tidak ditemukan.'
+            );
         }
 
         try {
             $kegiatan->delete();
         } catch (\Throwable $e) {
-            return $this->respond(false, 500, 'Gagal menghapus data kegiatan: '.$e->getMessage());
+            return $this->respond(
+                false,
+                500,
+                'Gagal menghapus data kegiatan: '.$e->getMessage()
+            );
         }
 
-        return $this->respond(true, 200, 'Data kegiatan berhasil dihapus.');
+        return $this->respond(
+            true,
+            200,
+            'Data kegiatan berhasil dihapus.'
+        );
     }
 }
