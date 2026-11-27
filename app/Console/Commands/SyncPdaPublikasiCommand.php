@@ -10,19 +10,28 @@ use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 use RuntimeException;
 
-#[Signature('pda:sync-publikasi {--pages=5} {--year=} {--import-dosen : Impor/perbarui master dosen TRK dan pengajar luar sebelum sinkronisasi} {--prodi=Teknologi Rekayasa Komputer : Program studi master dosen} {--homebase-only : Hanya dosen homebase tanpa pengajar luar} {--compact : Mode ringkas tanpa rincian per publikasi}')]
+#[Signature('pda:sync-publikasi {--pages=5 : Jumlah halaman atau all untuk semua halaman} {--year=} {--import-dosen : Impor/perbarui master dosen sebelum sinkronisasi} {--prodi=Teknologi Rekayasa Komputer : Program studi master dosen} {--homebase-only : Hanya dosen homebase tanpa pengajar luar} {--compact : Mode ringkas tanpa rincian per publikasi}')]
 #[Description('Sinkronisasi publikasi ilmiah dari PDA Polines')]
 class SyncPdaPublikasiCommand extends Command
 {
-    public function handle(PdaPublikasiSyncService $syncService, PdaSyncService $pdaSyncService): int
-    {
-        $pages = filter_var($this->option('pages'), FILTER_VALIDATE_INT);
+    public function handle(
+        PdaPublikasiSyncService $syncService,
+        PdaSyncService $pdaSyncService
+    ): int {
+        $pagesOption = strtolower(trim((string) $this->option('pages')));
+        $pages = $pagesOption === 'all'
+            ? 0
+            : filter_var($pagesOption, FILTER_VALIDATE_INT);
+
         $yearOption = $this->option('year');
-        $year = $yearOption !== null && $yearOption !== '' ? (string) $yearOption : null;
+        $year = $yearOption !== null && $yearOption !== ''
+            ? (string) $yearOption
+            : null;
+
         $isCompact = (bool) $this->option('compact');
 
-        if ($pages === false || $pages < 1) {
-            $this->error('Opsi --pages harus berupa bilangan bulat minimal 1.');
+        if ($pagesOption !== 'all' && ($pages === false || $pages < 1)) {
+            $this->error('Opsi --pages harus berupa bilangan bulat minimal 1 atau all.');
 
             return self::INVALID;
         }
@@ -36,15 +45,38 @@ class SyncPdaPublikasiCommand extends Command
         if ($this->option('import-dosen')) {
             $prodi = (string) ($this->option('prodi') ?: 'Teknologi Rekayasa Komputer');
             $homebaseOnly = (bool) $this->option('homebase-only');
-            $isTrk = str_contains(strtolower($prodi), 'rekayasa komputer');
+
+            $isTrk = str_contains(
+                mb_strtolower($prodi),
+                'rekayasa komputer'
+            ) || preg_match('/\btrk\b/i', $prodi) === 1;
+
             $includePengajar = $isTrk && ! $homebaseOnly;
 
-            $this->info("Mengimpor master data dosen [{$prodi}]".($includePengajar ? ' beserta dosen luar pengajar TRK' : '').' dari PDA...');
-            $dosenRes = $pdaSyncService->importDosenMasterList(
-                prodi: $prodi,
-                includePengajarLuar: $includePengajar
+            $this->info(
+                "Mengimpor master data dosen [{$prodi}]".
+                ($includePengajar ? ' beserta dosen luar pengajar TRK' : '').
+                ' dari PDA...'
             );
-            $this->info("✔ Master dosen: Total {$dosenRes['total_dataset']}, Ditambahkan {$dosenRes['created']}, Diperbarui {$dosenRes['updated']}.");
+
+            try {
+                $dosenRes = $pdaSyncService->importDosenMasterList(
+                    prodi: $prodi,
+                    includePengajarLuar: $includePengajar
+                );
+            } catch (\Throwable $exception) {
+                $this->error(
+                    'Import master dosen gagal: '.$exception->getMessage()
+                );
+
+                return self::FAILURE;
+            }
+
+            $this->info(
+                "Master dosen: Total {$dosenRes['total_dataset']}, ".
+                "Ditambahkan {$dosenRes['created']}, ".
+                "Diperbarui {$dosenRes['updated']}."
+            );
         }
 
         $byDosen = [];
@@ -53,7 +85,7 @@ class SyncPdaPublikasiCommand extends Command
             $result = $syncService->sync(
                 maxPages: $pages,
                 year: $year,
-                onItem: function (array $item) use ($isCompact, &$byDosen) {
+                onItem: function (array $item) use ($isCompact, &$byDosen): void {
                     $nama = $item['dosen']->nama_dosen;
                     $statusDosen = $item['dosen']->status_dosen ?? 'DTPS';
 
@@ -62,21 +94,40 @@ class SyncPdaPublikasiCommand extends Command
                         'status' => $statusDosen,
                         'total' => 0,
                     ];
+
                     $byDosen[$nama]['total']++;
 
-                    if (! $isCompact) {
-                        $badge = $item['status'] === 'created'
-                            ? '<fg=green;options=bold>[BARU]</>'
-                            : '<fg=cyan>[ADA]</>';
-                        $tahun = $item['year'] ?? '-';
-                        $typeName = $item['type']['name'] ?? '';
-                        $this->line("   {$badge} [{$statusDosen}] <options=bold>{$nama}</> ({$tahun}) - {$typeName}");
-                        $this->line("         <fg=gray>↳ \"{$item['title']}\"</>");
+                    if ($isCompact) {
+                        return;
                     }
+
+                    $badge = $item['status'] === 'created'
+                        ? '<fg=green;options=bold>[BARU]</>'
+                        : '<fg=cyan>[ADA]</>';
+
+                    $tahun = $item['year'] ?? '-';
+                    $typeName = $item['type']['name'] ?? '';
+
+                    $this->line(
+                        "   {$badge} [{$statusDosen}] ".
+                        "<options=bold>{$nama}</> ({$tahun}) - {$typeName}"
+                    );
+
+                    $this->line(
+                        "         <fg=gray>↳ \"{$item['title']}\"</>"
+                    );
                 }
             );
         } catch (ConnectionException|RuntimeException $exception) {
-            $this->error('Sinkronisasi publikasi PDA gagal: '.$exception->getMessage());
+            $this->error(
+                'Sinkronisasi publikasi PDA gagal: '.$exception->getMessage()
+            );
+
+            return self::FAILURE;
+        } catch (\Throwable $exception) {
+            $this->error(
+                'Terjadi kesalahan saat sinkronisasi: '.$exception->getMessage()
+            );
 
             return self::FAILURE;
         }
@@ -86,6 +137,10 @@ class SyncPdaPublikasiCommand extends Command
         $this->info("Publikasi ditambahkan: {$result['created']}");
         $this->info("Publikasi sudah ada: {$result['already_exists']}");
         $this->info("Publikasi dilewati: {$result['skipped']}");
+
+        if ($pages === 0) {
+            $this->info('Mode sinkronisasi: seluruh halaman PDA.');
+        }
 
         return self::SUCCESS;
     }
