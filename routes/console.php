@@ -25,3 +25,9 @@ Schedule::command('pda:sync-publikasi --pages=50')->timezone('Asia/Jakarta')->cr
 
 // 3. Cadangan: Satu perintah sinkronisasi terpadu pda:sync-all bisa dipanggil kapan saja atau triwulanan
 Schedule::command('pda:sync-all --compact')->timezone('Asia/Jakarta')->cron('0 4 1 1,4,7,10 *');
+
+// Snapshot statistik dashboard Tri Dharma setiap hari pukul 05:00 WIB (arsip harian untuk riwayat tren).
+Schedule::command('statistik:snapshot')->timezone('Asia/Jakarta')->dailyAt('05:00')->withoutOverlapping();
+
+// Early warning dosen: hitung indikator risiko dan kirim notifikasi ringkasan setiap pagi pukul 06:00 WIB.
+Schedule::command('early-warning:check')->timezone('Asia/Jakarta')->dailyAt('06:00')->withoutOverlapping();

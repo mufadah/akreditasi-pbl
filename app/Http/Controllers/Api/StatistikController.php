@@ -113,12 +113,12 @@ class StatistikController extends Controller
 
         if ($tahun) {
             $luaranQuery->where(function ($q) use ($tahun) {
-                $q->where('tahun_terbit', $tahun)
-                    ->orWhereYear('tanggal_terbit', $tahun)
-                    ->orWhereYear('tanggal_seminar', $tahun)
-                    ->orWhereYear('tanggal_pendaftaran_hki', $tahun)
-                    ->orWhereYear('tanggal_pembuatan', $tahun)
-                    ->orWhereYear('created_at', $tahun);
+                $q->where('luaran.tahun_terbit', $tahun)
+                    ->orWhereYear('luaran.tanggal_terbit', $tahun)
+                    ->orWhereYear('luaran.tanggal_seminar', $tahun)
+                    ->orWhereYear('luaran.tanggal_pendaftaran_hki', $tahun)
+                    ->orWhereYear('luaran.tanggal_pembuatan', $tahun)
+                    ->orWhereYear('luaran.created_at', $tahun);
             });
         }
 
